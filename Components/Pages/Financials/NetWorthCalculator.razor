@@ -203,6 +203,17 @@
     {
         ErrorMessage = null;
 
+        var validationErrors = FinancialRecordValidator.Validate(
+            Draft.Type,
+            Draft.Name,
+            Draft.Amount,
+            Draft.AsOfDate);
+        if (validationErrors.Count > 0)
+        {
+            ErrorMessage = string.Join(" ", validationErrors);
+            return;
+        }
+
         try
         {
             var asOfDate = Draft.AsOfDate ?? DateTime.Today;
