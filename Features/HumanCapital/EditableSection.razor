@@ -1,0 +1,43 @@
+@typeparam TItem where TItem : class, new()
+
+<h3>@Title</h3>
+
+@if (Items.Count == 0)
+{
+    <p><em>None yet.</em></p>
+}
+else
+{
+    <ul class="list-unstyled">
+        @foreach (var item in Items)
+        {
+            <li class="border rounded p-2 mb-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col">@ItemTemplate(item)</div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => Remove(item)">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+<button type="button" class="btn btn-outline-primary btn-sm" @onclick="Add">+ Add</button>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public List<TItem> Items { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+
+    private void Add() => Items.Add(new TItem());
+
+    private void Remove(TItem item) => Items.Remove(item);
+}
