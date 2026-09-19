@@ -1,0 +1,167 @@
+@page "/financials"
+@page "/net-worth"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Net Worth</PageTitle>
+
+<div class="finance-page">
+    <header class="finance-header">
+        <div>
+            <h1>Net Worth</h1>
+        </div>
+        <div class="header-actions">
+            <button class="secondary-button" @onclick="() => OpenAddForm(RecordKind.Asset)">
+                <span>+</span> Add asset
+            </button>
+            <button class="primary-button" @onclick="() => OpenAddForm(RecordKind.Liability)">
+                <span>+</span> Add liability
+            </button>
+        </div>
+    </header>
+
+    <section class="finance-summary" aria-label="Financial summary">
+        <div class="summary-card summary-assets">
+            <div class="summary-card-top"><span class="summary-label">Net Worth</span></div>
+            <strong>@NetWorth.ToString("C0")</strong>
+        </div>
+        <div class="summary-card summary-assets">
+            <div class="summary-card-top"><span class="summary-label">Total assets</span></div>
+            <strong>@TotalAssets.ToString("C0")</strong>
+        </div>
+        <div class="summary-card summary-liabilities">
+            <div class="summary-card-top"><span class="summary-label">Total liabilities</span></div>
+            <strong>@TotalLiabilities.ToString("C0")</strong>
+        </div>
+    </section>
+
+    <div class="records-toolbar">
+        <div class="record-tabs" role="tablist" aria-label="Record type">
+            <button class="record-tab @(ActiveTab == RecordKind.All ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.All">Everything <span>@(AssetRecords.Count + LiabilityRecords.Count)</span></button>
+            <button class="record-tab @(ActiveTab == RecordKind.Asset ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.Asset">Assets <span>@AssetRecords.Count</span></button>
+            <button class="record-tab @(ActiveTab == RecordKind.Liability ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.Liability">Liabilities <span>@LiabilityRecords.Count</span></button>
+        </div>
+        <div class="view-note"><span class="status-dot"></span> Saved locally for now</div>
+    </div>
+
+    <section class="records-card">
+        <div class="records-heading">
+            <div><h2>@(ActiveTab == RecordKind.Liability ? "Your liabilities" : ActiveTab == RecordKind.Asset ? "Your assets" : "Your accounts")</h2><p>Values reflect the date you last checked each account.</p></div>
+            <div class="record-count">@VisibleRecords.Count @(VisibleRecords.Count == 1 ? "record" : "records")</div>
+        </div>
+
+        @if (VisibleRecords.Count == 0)
+        {
+            <div class="empty-records"><div class="empty-icon">＋</div><h3>Nothing here yet</h3><p>Add your first @(ActiveTab == RecordKind.Liability ? "liability" : "asset") to start building your snapshot.</p></div>
+        }
+        else
+        {
+            <div class="records-table-wrap">
+                <table class="records-table">
+                    <thead><tr><th>Type</th><th>Name</th><th>@(ActiveTab == RecordKind.Liability ? "Current balance" : "Current value")</th><th>As of</th><th><span class="sr-only">Actions</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var record in VisibleRecords)
+                        {
+                            <tr @key="record.Id">
+                                <td><span class="type-pill @(record.Kind == RecordKind.Asset ? "asset-pill" : "liability-pill")"><span></span>@record.Type</span></td>
+                                <td><div class="record-name"><span class="record-avatar @(record.Kind == RecordKind.Asset ? "asset-avatar" : "liability-avatar")">@GetInitials(record.Name)</span><strong>@record.Name</strong></div></td>
+                                <td class="record-amount">@record.Amount.ToString("C2")</td>
+                                <td class="record-date">@(record.AsOfDate?.ToString("MMM d, yyyy") ?? "—")</td>
+                                <td class="record-actions"><button title="Edit @record.Name" aria-label="Edit @record.Name" @onclick="() => OpenEditForm(record)">Edit</button><button class="delete-action" title="Delete @record.Name" aria-label="Delete @record.Name" @onclick="() => DeleteRecord(record)">Delete</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@if (IsFormOpen)
+{
+    <div class="modal-backdrop" @onclick="CloseForm"></div>
+    <aside class="record-drawer" aria-label="@(IsEditing ? "Edit record" : "Add record")">
+        <div class="drawer-header"><div><div class="finance-eyebrow">@(IsEditing ? "UPDATE RECORD" : "NEW RECORD")</div><h2>@(IsEditing ? "Edit" : "Add") @(Draft.Kind == RecordKind.Asset ? "asset" : "liability")</h2></div><button class="close-drawer" aria-label="Close" @onclick="CloseForm">×</button></div>
+        <p class="drawer-copy">@(Draft.Kind == RecordKind.Asset ? "Add an account or property you own." : "Add a balance or debt you currently owe.")</p>
+
+        <EditForm Model="Draft" OnValidSubmit="SaveRecord" class="record-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="form-summary" />
+            <div class="form-field"><label for="record-type">Type</label><InputSelect id="record-type" @bind-Value="Draft.Type"><option value="">Select a type</option>@foreach (var type in TypesFor(Draft.Kind)) { <option value="@type">@type</option> }</InputSelect><ValidationMessage For="() => Draft.Type" /></div>
+            <div class="form-field"><label for="record-name">Name</label><InputText id="record-name" @bind-Value="Draft.Name" placeholder="e.g. Chase checking" /><ValidationMessage For="() => Draft.Name" /></div>
+            <div class="form-field"><label for="record-amount">@(Draft.Kind == RecordKind.Asset ? "Current value" : "Current balance")</label><div class="currency-field"><span>$</span><InputNumber id="record-amount" @bind-Value="Draft.Amount" min="0" step="0.01" placeholder="0.00" /></div><ValidationMessage For="() => Draft.Amount" /></div>
+            <div class="form-field"><label for="record-date">As-of date</label><InputDate id="record-date" @bind-Value="Draft.AsOfDate" /><ValidationMessage For="() => Draft.AsOfDate" /></div>
+            <div class="drawer-actions"><button type="button" class="secondary-button" @onclick="CloseForm">Cancel</button><button type="submit" class="primary-button">@(IsEditing ? "Save changes" : "Add record")</button></div>
+        </EditForm>
+    </aside>
+}
+
+@code {
+    private readonly List<FinancialRecord> AssetRecords = new()
+    {
+        new(RecordKind.Asset, "Cash", "Checking account", 8200m, new DateTime(2026, 9, 19)),
+        new(RecordKind.Asset, "Cash", "Savings account", 18400m, new DateTime(2026, 9, 18)),
+        new(RecordKind.Asset, "Investments", "Index fund", 51200m, new DateTime(2026, 9, 15)),
+        new(RecordKind.Asset, "Property", "Primary residence", 285000m, new DateTime(2026, 9, 1))
+    };
+
+    private readonly List<FinancialRecord> LiabilityRecords = new()
+    {
+        new(RecordKind.Liability, "Mortgage", "Home mortgage", 198500m, new DateTime(2026, 9, 1)),
+        new(RecordKind.Liability, "Student loan", "Federal student loan", 12400m, new DateTime(2026, 9, 1)),
+        new(RecordKind.Liability, "Credit card", "Visa card", 1800m, new DateTime(2026, 9, 17))
+    };
+
+    private RecordKind ActiveTab { get; set; } = RecordKind.All;
+    private bool IsFormOpen { get; set; }
+    private bool IsEditing { get; set; }
+    private FinancialRecord Draft { get; set; } = NewDraft(RecordKind.Asset);
+    private FinancialRecord? EditingRecord { get; set; }
+    private decimal NetWorth => (AssetRecords.Sum(record => record.Amount)) - (LiabilityRecords.Sum(record => record.Amount));
+    private decimal TotalAssets => AssetRecords.Sum(record => record.Amount);
+    private decimal TotalLiabilities => LiabilityRecords.Sum(record => record.Amount);
+    private List<FinancialRecord> VisibleRecords => ActiveTab switch
+    {
+        RecordKind.Asset => AssetRecords,
+        RecordKind.Liability => LiabilityRecords,
+        _ => AssetRecords.Concat(LiabilityRecords).OrderByDescending(record => record.AsOfDate).ToList()
+    };
+
+    private static readonly Dictionary<RecordKind, string[]> RecordTypes = new()
+    {
+        [RecordKind.Asset] = new[] { "Cash", "Investments", "Property", "Vehicle", "Other asset" },
+        [RecordKind.Liability] = new[] { "Mortgage", "Student loan", "Credit card", "Personal loan", "Other liability" }
+    };
+
+    private static string[] TypesFor(RecordKind kind) => RecordTypes[kind];
+    private static FinancialRecord NewDraft(RecordKind kind) => new(kind, "", "", 0m, DateTime.Today);
+    private static string GetInitials(string name) => string.Join("", name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => part[0])).ToUpperInvariant();
+
+    private void OpenAddForm(RecordKind kind) { IsEditing = false; EditingRecord = null; Draft = NewDraft(kind); IsFormOpen = true; }
+    private void OpenEditForm(FinancialRecord record) { IsEditing = true; EditingRecord = record; Draft = new(record.Kind, record.Type, record.Name, record.Amount, record.AsOfDate); IsFormOpen = true; }
+    private void CloseForm() { IsFormOpen = false; }
+    private void SaveRecord()
+    {
+        var target = Draft.Kind == RecordKind.Asset ? AssetRecords : LiabilityRecords;
+        if (IsEditing && EditingRecord is not null)
+        {
+            EditingRecord.Type = Draft.Type; EditingRecord.Name = Draft.Name; EditingRecord.Amount = Draft.Amount; EditingRecord.AsOfDate = Draft.AsOfDate;
+        }
+        else { target.Add(new(Draft.Kind, Draft.Type, Draft.Name, Draft.Amount, Draft.AsOfDate)); }
+        ActiveTab = Draft.Kind; IsFormOpen = false;
+    }
+    private void DeleteRecord(FinancialRecord record) { (record.Kind == RecordKind.Asset ? AssetRecords : LiabilityRecords).Remove(record); }
+
+    private enum RecordKind { All, Asset, Liability }
+
+    private sealed class FinancialRecord
+    {
+        public FinancialRecord(RecordKind kind, string type, string name, decimal amount, DateTime? asOfDate) { Kind = kind; Type = type; Name = name; Amount = amount; AsOfDate = asOfDate; }
+        public Guid Id { get; } = Guid.NewGuid();
+        public RecordKind Kind { get; }
+        [Required(ErrorMessage = "Choose a type.")] public string Type { get; set; }
+        [Required(ErrorMessage = "Enter a name.")] public string Name { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Amount must be zero or more.")] public decimal Amount { get; set; }
+        [Required(ErrorMessage = "Choose an as-of date.")] public DateTime? AsOfDate { get; set; }
+    }
+}

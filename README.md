@@ -61,6 +61,23 @@ dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
 
 or via environment variables (`Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`).
 
+## Development
+
+Formatting is handled by [CSharpier](https://csharpier.com) (C#) and
+[Prettier](https://prettier.io) (CSS). After cloning:
+
+```
+dotnet tool restore
+npm ci
+```
+
+Then:
+
+```
+npm run format    # format C# and CSS
+npm run check     # verify formatting without writing
+```
+
 ## Status
 
 Actively being built. See the [project board](https://github.com/users/AndrewRoddy/projects/8)

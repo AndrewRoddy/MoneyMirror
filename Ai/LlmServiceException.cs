@@ -7,11 +7,9 @@ namespace PittMoney.Ai;
 /// </summary>
 public class LlmServiceException : Exception
 {
-    public LlmServiceException(string message) : base(message)
-    {
-    }
+    public LlmServiceException(string message)
+        : base(message) { }
 
-    public LlmServiceException(string message, Exception innerException) : base(message, innerException)
-    {
-    }
+    public LlmServiceException(string message, Exception innerException)
+        : base(message, innerException) { }
 }

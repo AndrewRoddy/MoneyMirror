@@ -1,0 +1,11 @@
+# Build output
+bin/
+obj/
+node_modules/
+
+# Vendored third-party assets — never reformat
+wwwroot/lib/
+
+# Minified files
+*.min.css
+*.min.js
