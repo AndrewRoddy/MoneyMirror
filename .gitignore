@@ -134,7 +134,6 @@ appsettings.Local.json
 appsettings.*.Local.json
 secrets.json
 *.secrets.json
-secrets.txt
 .env
 .env.*
 !.env.example
