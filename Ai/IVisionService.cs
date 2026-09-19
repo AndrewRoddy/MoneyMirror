@@ -20,5 +20,6 @@ public interface IVisionService
         byte[] imageBytes,
         string mediaType,
         string prompt,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

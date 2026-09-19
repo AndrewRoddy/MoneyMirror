@@ -7,11 +7,11 @@ using PittMoney.PhysicalAssets;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 builder.Services.Configure<NemotronOptions>(
-    builder.Configuration.GetSection(NemotronOptions.SectionName));
+    builder.Configuration.GetSection(NemotronOptions.SectionName)
+);
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
 builder.Services.Configure<ResumeUploadOptions>(
@@ -36,12 +36,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 if (app.Environment.IsDevelopment())
 {
