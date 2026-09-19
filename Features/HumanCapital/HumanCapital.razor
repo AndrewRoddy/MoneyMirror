@@ -7,6 +7,7 @@
 @inject IProfessionalProfileExtractionService ProfileExtractionService
 @inject IProfessionalProfileRepository ProfileRepository
 @inject IOptions<ResumeUploadOptions> UploadOptions
+@inject NavigationManager Navigation
 
 <PageTitle>Human Capital</PageTitle>
 
@@ -211,14 +212,19 @@
         try
         {
             await ProfileRepository.SaveAsync(_profile);
-            _savedMessage = "Corrections saved.";
+            _savedMessage = "Corrections saved. Taking you to your Market Potential...";
+            _isSaving = false;
+            StateHasChanged();
+
+            // #113: carry the user straight through to occupation matching /
+            // Market Potential rather than requiring manual navigation - the
+            // brief pause just lets them see the confirmation above first.
+            await Task.Delay(TimeSpan.FromSeconds(1.5));
+            Navigation.NavigateTo("/market-potential");
         }
         catch (Exception ex)
         {
             _errorMessage = $"Failed to save corrections: {ex.Message}";
-        }
-        finally
-        {
             _isSaving = false;
         }
     }

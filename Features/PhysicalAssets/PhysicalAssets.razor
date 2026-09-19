@@ -140,16 +140,34 @@
                         @if (detection.SavedItemId is { } savedId)
                         {
                             <div class="alert alert-success mt-2 mb-0 py-1" role="alert">
-                                Saved to inventory. <a href="@($"/inventory/{savedId}")">View item</a>
+                                @(detection.WasMerged ? "Merged into existing item." : "Saved to inventory.")
+                                <a href="@($"/inventory/{savedId}")">View item</a>
                             </div>
                         }
                         else
                         {
+                            @if (detection.PossibleDuplicates.Count > 0)
+                            {
+                                <div class="alert alert-warning mt-2 mb-2 py-2" role="alert">
+                                    <p class="mb-1">This looks similar to what's already in your inventory. You can save it as a new item, or merge this valuation into an existing one:</p>
+                                    @foreach (var duplicate in detection.PossibleDuplicates)
+                                    {
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-warning btn-sm me-2 mb-1"
+                                            @onclick="() => SaveToInventoryAsync(detection, mergeIntoId: duplicate.Id)"
+                                            disabled="@detection.IsSaving">
+                                            Merge into "@duplicate.Name"
+                                        </button>
+                                    }
+                                </div>
+                            }
+
                             <button
                                 class="btn btn-success btn-sm mt-2"
-                                @onclick="() => SaveToInventoryAsync(detection)"
+                                @onclick="() => SaveToInventoryAsync(detection, mergeIntoId: null)"
                                 disabled="@detection.IsSaving">
-                                @(detection.IsSaving ? "Saving..." : "Save to Inventory")
+                                @(detection.IsSaving ? "Saving..." : "Save as new item")
                             </button>
 
                             @if (detection.SaveError is not null)
@@ -329,6 +347,10 @@
                 detection.Original.Label,
                 string.IsNullOrWhiteSpace(detection.Brand) ? null : detection.Brand,
                 string.IsNullOrWhiteSpace(detection.Model) ? null : detection.Model);
+
+            detection.PossibleDuplicates = await AssetRepository.FindPossibleDuplicatesAsync(
+                detection.Original.Label,
+                IdentifiedProductModelOf(detection));
         }
         catch (AssetValuationException ex)
         {
@@ -340,7 +362,17 @@
         }
     }
 
-    private async Task SaveToInventoryAsync(ReviewableDetection detection)
+    private static string? IdentifiedProductModelOf(ReviewableDetection detection)
+    {
+        var brand = string.IsNullOrWhiteSpace(detection.Brand) ? null : detection.Brand;
+        var model = string.IsNullOrWhiteSpace(detection.Model) ? null : detection.Model;
+        return brand is not null || model is not null ? $"{brand} {model}".Trim() : null;
+    }
+
+    // PA8: a duplicate warning never blocks saving - the caller can always
+    // save as a new item (mergeIntoId: null) even when possible duplicates
+    // were found.
+    private async Task SaveToInventoryAsync(ReviewableDetection detection, Guid? mergeIntoId)
     {
         if (detection.Valuation is null)
         {
@@ -353,18 +385,34 @@
 
         try
         {
-            var brand = string.IsNullOrWhiteSpace(detection.Brand) ? null : detection.Brand;
-            var model = string.IsNullOrWhiteSpace(detection.Model) ? null : detection.Model;
-            var identifiedProductModel = brand is not null || model is not null ? $"{brand} {model}".Trim() : null;
-
-            detection.SavedItemId = await AssetRepository.AddFromScanAsync(
-                new ScannedAssetInput(
-                    detection.Original.Label,
-                    Category: null,
-                    identifiedProductModel,
-                    _imageReference,
+            if (mergeIntoId is { } existingId)
+            {
+                var merged = await AssetRepository.AddValuationAsync(
+                    existingId,
                     detection.Valuation.EstimatedValueUsd,
-                    detection.Valuation.Reasoning));
+                    "AI estimate (not evidence-based - see #148)",
+                    detection.Valuation.Reasoning);
+
+                if (!merged)
+                {
+                    detection.SaveError = "That existing item could not be found - it may have been deleted.";
+                    return;
+                }
+
+                detection.SavedItemId = existingId;
+                detection.WasMerged = true;
+            }
+            else
+            {
+                detection.SavedItemId = await AssetRepository.AddFromScanAsync(
+                    new ScannedAssetInput(
+                        detection.Original.Label,
+                        Category: null,
+                        IdentifiedProductModelOf(detection),
+                        _imageReference,
+                        detection.Valuation.EstimatedValueUsd,
+                        detection.Valuation.Reasoning));
+            }
         }
         catch (Exception ex)
         {
@@ -395,6 +443,8 @@
         public bool IsSaving { get; set; }
         public string? SaveError { get; set; }
         public Guid? SavedItemId { get; set; }
+        public bool WasMerged { get; set; }
+        public IReadOnlyList<PhysicalAssetSummary> PossibleDuplicates { get; set; } = [];
 
         public bool IsHighConfidence =>
             Original.Confidence >= HighConfidenceThreshold

@@ -166,4 +166,73 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         Assert.Equal(150m, detail.ValuationHistory[0].EstimatedValue);
         Assert.Equal(100m, detail.ValuationHistory[1].EstimatedValue);
     }
+
+    [Fact]
+    public async Task AddValuationAsync_ExistingItem_AppendsToHistoryWithoutRemovingPriorEntries()
+    {
+        var id = await _repository.AddAsync(new PhysicalAssetInput("Guitar", null, null, 100m));
+
+        var updated = await _repository.AddValuationAsync(id, 175m, "AI estimate (revalue)", "Prices went up.");
+
+        Assert.True(updated);
+        var detail = await _repository.GetByIdAsync(id);
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail!.ValuationHistory.Count);
+        Assert.Equal(175m, detail.ValuationHistory[0].EstimatedValue);
+        Assert.Equal("Prices went up.", detail.ValuationHistory[0].Notes);
+        Assert.Equal(100m, detail.ValuationHistory[1].EstimatedValue);
+
+        var summary = Assert.Single(await _repository.GetAllAsync());
+        Assert.Equal(175m, summary.CurrentValuation);
+    }
+
+    [Fact]
+    public async Task AddValuationAsync_UnknownId_ReturnsFalse()
+    {
+        var updated = await _repository.AddValuationAsync(Guid.NewGuid(), 100m, "AI estimate", null);
+
+        Assert.False(updated);
+    }
+
+    [Fact]
+    public async Task FindPossibleDuplicatesAsync_MatchingProductModel_ReturnsExistingItem()
+    {
+        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+
+        var duplicates = await _repository.FindPossibleDuplicatesAsync("Acoustic guitar", "fender cd-60s");
+
+        var duplicate = Assert.Single(duplicates);
+        Assert.Equal("Guitar", duplicate.Name);
+    }
+
+    [Fact]
+    public async Task FindPossibleDuplicatesAsync_MatchingNameOnly_ReturnsExistingItem()
+    {
+        await _repository.AddAsync(new PhysicalAssetInput("Lamp", null, null, null));
+
+        var duplicates = await _repository.FindPossibleDuplicatesAsync("lamp", null);
+
+        Assert.Single(duplicates);
+    }
+
+    [Fact]
+    public async Task FindPossibleDuplicatesAsync_NoMatch_ReturnsEmpty()
+    {
+        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+
+        var duplicates = await _repository.FindPossibleDuplicatesAsync("Lamp", "IKEA Foto");
+
+        Assert.Empty(duplicates);
+    }
+
+    [Fact]
+    public async Task FindPossibleDuplicatesAsync_DifferentProductModelButSameName_StillMatchesOnName()
+    {
+        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+
+        var duplicates = await _repository.FindPossibleDuplicatesAsync("Guitar", "Gibson Les Paul");
+
+        var duplicate = Assert.Single(duplicates);
+        Assert.Equal("Guitar", duplicate.Name);
+    }
 }

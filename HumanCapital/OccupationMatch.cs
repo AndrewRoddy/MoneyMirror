@@ -10,4 +10,10 @@ namespace MoneyMirror.HumanCapital;
 /// temporary stand-in for the real #23 (ILaborMarketService) pipeline,
 /// which sets this false.
 /// </param>
-public record OccupationMatch(string Title, string Explanation, bool IsAiEstimated);
+/// <param name="KeySkills">
+/// Skills typically in demand for this occupation, per the same AI
+/// judgment as <paramref name="IsAiEstimated"/> describes. Feeds
+/// <see cref="SkillGapAnalyzer"/>, which does the actual profile
+/// comparison deterministically - this list is just input data.
+/// </param>
+public record OccupationMatch(string Title, string Explanation, bool IsAiEstimated, IReadOnlyList<string> KeySkills);

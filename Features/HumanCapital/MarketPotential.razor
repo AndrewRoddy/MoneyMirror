@@ -66,6 +66,44 @@ else
                 </li>
             }
         </ul>
+
+        <h2>Marketable Skills</h2>
+        <p class="text-muted">Skills you already have that the matched occupations above are looking for.</p>
+        @if (_skillGaps is null || _skillGaps.MarketableSkills.Count == 0)
+        {
+            <p><em>None of your listed skills matched the occupations above yet.</em></p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var signal in _skillGaps.MarketableSkills)
+                {
+                    <li>
+                        <strong>@signal.Skill</strong>
+                        <span class="text-muted"> - wanted for @string.Join(", ", signal.Occupations)</span>
+                    </li>
+                }
+            </ul>
+        }
+
+        <h2>Skill Gaps</h2>
+        <p class="text-muted">In-demand skills the matched occupations above want that aren't in your profile yet.</p>
+        @if (_skillGaps is null || _skillGaps.SkillGaps.Count == 0)
+        {
+            <p><em>No gaps identified from the occupations above.</em></p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var signal in _skillGaps.SkillGaps)
+                {
+                    <li>
+                        <strong>@signal.Skill</strong>
+                        <span class="text-muted"> - wanted for @string.Join(", ", signal.Occupations)</span>
+                    </li>
+                }
+            </ul>
+        }
     }
 }
 
@@ -75,6 +113,7 @@ else
     private string? _errorMessage;
     private IReadOnlyList<OccupationMatch>? _occupations;
     private CompensationEstimate? _compensation;
+    private SkillGapAnalysis? _skillGaps;
 
     protected override async Task OnInitializedAsync()
     {
@@ -89,6 +128,7 @@ else
 
             _occupations = await OccupationMatchingService.MatchAsync(profile);
             _compensation = await CompensationService.EstimateAsync(_occupations);
+            _skillGaps = SkillGapAnalyzer.Analyze(profile.Skills, _occupations);
         }
         catch (OccupationMatchingException ex)
         {
