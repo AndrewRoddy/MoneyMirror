@@ -1,18 +1,5 @@
 /*
- * Pitt Money theme - University of Pittsburgh brand palette.
- * Source: brand.pitt.edu, Brand Elements > Color Palettes.
- *
- * The palette below is the official one, verbatim, in Pitt's own three tiers.
- * Do not add colors to it and do not invent in-between shades: every variation
- * the app needs is derived with color-mix() in the Roles section.
- *
- * Pitt's usage rules, which the Roles section follows:
- *   - Royal and Gold are primary and should dominate (backgrounds, banners,
- *     major sections, primary actions).
- *   - Secondary colors support them - subheadings and complementary elements.
- *   - Accent colors are used SPARINGLY, for emphasis and informational needs
- *     (icons, graphs, data viz). No more than four at once. We use three:
- *     Light Green, Infrared and Merlot. Light Blue is reserved for charts.
+ * Money Mirror theme 
  *
  * Components must use ROLE tokens (--text, --brand, --positive), never the raw
  * palette and never a literal hex.

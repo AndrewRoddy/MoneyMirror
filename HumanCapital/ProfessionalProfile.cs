@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// A structured professional profile extracted from a resume. Sections with
@@ -23,3 +23,4 @@ public record ProfessionalProfile(
         Publications: [],
         Awards: []);
 }
+

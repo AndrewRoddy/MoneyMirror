@@ -2,9 +2,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
-using PittMoney.Ai.Configuration;
+using MoneyMirror.Ai.Configuration;
 
-namespace PittMoney.Ai;
+namespace MoneyMirror.Ai;
 
 /// <summary>
 /// <see cref="ILlmService"/> implementation calling NVIDIA Nemotron's

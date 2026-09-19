@@ -1,3 +1,8 @@
+using MoneyMirror.Ai;
+using MoneyMirror.Ai.Configuration;
+using MoneyMirror.Components;
+using MoneyMirror.HumanCapital;
+using MoneyMirror.PhysicalAssets;
 using Microsoft.EntityFrameworkCore;
 
 using PittMoney.Ai;

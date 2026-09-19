@@ -1,4 +1,4 @@
-namespace PittMoney.Ai;
+namespace MoneyMirror.Ai;
 
 /// <summary>
 /// Thin seam over the LLM provider (NVIDIA Nemotron): a prompt in, a completion out.

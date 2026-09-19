@@ -1,7 +1,7 @@
 using System.Text.Json;
-using PittMoney.Ai;
+using MoneyMirror.Ai;
 
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// <see cref="IPhysicalAssetDetectionService"/> implementation: prompts the
@@ -101,3 +101,4 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
 
     private record DetectionResponse(IReadOnlyList<DetectedAsset> Objects);
 }
+

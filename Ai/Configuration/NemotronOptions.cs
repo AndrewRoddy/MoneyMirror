@@ -1,4 +1,4 @@
-namespace PittMoney.Ai.Configuration;
+namespace MoneyMirror.Ai.Configuration;
 
 /// <summary>
 /// Configuration for the NVIDIA Nemotron LLM provider, bound from the "Ai:Nemotron" section.

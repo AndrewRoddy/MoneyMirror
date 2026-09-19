@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// <see cref="IResumeUploadValidator"/> implementation: extension allow-list
@@ -42,3 +42,4 @@ public class ResumeUploadValidator : IResumeUploadValidator
         return ResumeUploadValidationResult.Success();
     }
 }
+

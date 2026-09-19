@@ -1,4 +1,4 @@
-namespace PittMoney.Ai;
+namespace MoneyMirror.Ai;
 
 /// <summary>
 /// Thin seam over the multimodal vision model provider: an image (plus an
