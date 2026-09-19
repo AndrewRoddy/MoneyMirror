@@ -4,13 +4,7 @@ using MoneyMirror.Components;
 using MoneyMirror.HumanCapital;
 using MoneyMirror.PhysicalAssets;
 using Microsoft.EntityFrameworkCore;
-
-using PittMoney.Ai;
-using PittMoney.Ai.Configuration;
-using PittMoney.Components;
-using PittMoney.HumanCapital;
-using PittMoney.Data;
-using PittMoney.PhysicalAssets;
+using MoneyMirror.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,7 +42,7 @@ else
     Console.WriteLine("Default Connection Configured.");
 }
 
-builder.Services.AddDbContext<PittMoneyDbContext>(options =>
+builder.Services.AddDbContext<MoneyMirrorDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 var app = builder.Build();
@@ -81,7 +75,7 @@ if (app.Environment.IsDevelopment())
     // automatically apply migrations
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider
-        .GetRequiredService<PittMoneyDbContext>();
+        .GetRequiredService<MoneyMirrorDbContext>();
 
     await db.Database.MigrateAsync();
 

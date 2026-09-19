@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using PittMoney.Data;
+using MoneyMirror.Data;
 
 #nullable disable
 
-namespace PittMoney.backend.Data.Migrations
+namespace MoneyMirror.backend.Data.Migrations
 {
-    [DbContext(typeof(PittMoneyDbContext))]
-    partial class PittMoneyDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(MoneyMirrorDbContext))]
+    partial class MoneyMirrorDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -22,7 +22,7 @@ namespace PittMoney.backend.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("PittMoney.Data.Entities.AssetValuationRecord", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.AssetValuationRecord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -51,7 +51,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("AssetValuationRecords");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Certification", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Certification", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -83,7 +83,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("Certifications");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.EducationRecord", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.EducationRecord", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -115,7 +115,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("EducationRecords");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Experience", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Experience", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -148,7 +148,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("Experiences");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.FinancialAccount", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.FinancialAccount", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -177,7 +177,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("FinancialAccounts");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Liability", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Liability", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -206,7 +206,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("Liabilities");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.PhysicalAsset", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.PhysicalAsset", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -237,7 +237,7 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("PhysicalAssets");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.ProfessionalProfile", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.ProfessionalProfile", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -266,7 +266,7 @@ namespace PittMoney.backend.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Skill", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Skill", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -292,9 +292,9 @@ namespace PittMoney.backend.Data.Migrations
                     b.ToTable("Skills");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.AssetValuationRecord", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.AssetValuationRecord", b =>
                 {
-                    b.HasOne("PittMoney.Data.Entities.PhysicalAsset", "PhysicalAsset")
+                    b.HasOne("MoneyMirror.Data.Entities.PhysicalAsset", "PhysicalAsset")
                         .WithMany("ValuationRecords")
                         .HasForeignKey("PhysicalAssetId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -303,9 +303,9 @@ namespace PittMoney.backend.Data.Migrations
                     b.Navigation("PhysicalAsset");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Certification", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Certification", b =>
                 {
-                    b.HasOne("PittMoney.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
+                    b.HasOne("MoneyMirror.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
                         .WithMany("Certifications")
                         .HasForeignKey("ProfessionalProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -314,9 +314,9 @@ namespace PittMoney.backend.Data.Migrations
                     b.Navigation("ProfessionalProfile");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.EducationRecord", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.EducationRecord", b =>
                 {
-                    b.HasOne("PittMoney.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
+                    b.HasOne("MoneyMirror.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
                         .WithMany("EducationRecords")
                         .HasForeignKey("ProfessionalProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -325,9 +325,9 @@ namespace PittMoney.backend.Data.Migrations
                     b.Navigation("ProfessionalProfile");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Experience", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Experience", b =>
                 {
-                    b.HasOne("PittMoney.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
+                    b.HasOne("MoneyMirror.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
                         .WithMany("Experiences")
                         .HasForeignKey("ProfessionalProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -336,9 +336,9 @@ namespace PittMoney.backend.Data.Migrations
                     b.Navigation("ProfessionalProfile");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.Skill", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.Skill", b =>
                 {
-                    b.HasOne("PittMoney.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
+                    b.HasOne("MoneyMirror.Data.Entities.ProfessionalProfile", "ProfessionalProfile")
                         .WithMany("Skills")
                         .HasForeignKey("ProfessionalProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -347,12 +347,12 @@ namespace PittMoney.backend.Data.Migrations
                     b.Navigation("ProfessionalProfile");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.PhysicalAsset", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.PhysicalAsset", b =>
                 {
                     b.Navigation("ValuationRecords");
                 });
 
-            modelBuilder.Entity("PittMoney.Data.Entities.ProfessionalProfile", b =>
+            modelBuilder.Entity("MoneyMirror.Data.Entities.ProfessionalProfile", b =>
                 {
                     b.Navigation("Certifications");
 

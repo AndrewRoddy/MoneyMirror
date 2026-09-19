@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace PittMoney.backend.Data.Migrations
+namespace MoneyMirror.backend.Data.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

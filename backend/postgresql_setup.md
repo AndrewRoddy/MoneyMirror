@@ -9,10 +9,10 @@ Setup the server
 You will need to setup your own secret connection string in order to connect to the db from the built app:
 `dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=----;Database=------;Username=-------;Password=-------"`
 
-## Create pittmoney db
+## Create MoneyMirror db
 
-Create a local database named `pittmoney`:
+Create a local database named `MoneyMirror`:
 
 ```sql
-CREATE DATABASE pittmoney;
+CREATE DATABASE MoneyMirror;
 ```

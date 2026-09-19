@@ -1,4 +1,4 @@
-namespace PittMoney.Data.Entities;
+namespace MoneyMirror.Data.Entities;
 
 public class EducationRecord
 {

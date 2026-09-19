@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
-using PittMoney.PhysicalAssets;
+using MoneyMirror.PhysicalAssets;
 
-namespace PittMoney.Tests.PhysicalAssets;
+namespace MoneyMirror.Tests.PhysicalAssets;
 
 public class ImageUploadValidatorTests
 {

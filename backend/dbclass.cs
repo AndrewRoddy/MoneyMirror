@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using PittMoney.Data.Entities;
+using MoneyMirror.Data.Entities;
 
-namespace PittMoney.Data;
+namespace MoneyMirror.Data;
 
-public class PittMoneyDbContext : DbContext
+public class MoneyMirrorDbContext : DbContext
 {
-    public PittMoneyDbContext(DbContextOptions<PittMoneyDbContext> options) : base(options) { }
+    public MoneyMirrorDbContext(DbContextOptions<MoneyMirrorDbContext> options) : base(options) { }
 
     // Entities for database
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();

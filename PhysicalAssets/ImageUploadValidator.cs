@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// <see cref="IImageUploadValidator"/> implementation: extension allow-list
