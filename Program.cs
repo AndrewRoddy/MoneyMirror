@@ -3,6 +3,7 @@ using PittMoney.Ai.Configuration;
 using PittMoney.Components;
 using PittMoney.HumanCapital;
 using PittMoney.PhysicalAssets;
+using PittMoney.Features.Financial;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,8 @@ builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionSer
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
 builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
+// Temporary in-memory store; #8 (FC1) swaps this for the EF Core/PostgreSQL implementation.
+builder.Services.AddSingleton<IFinancialEntryStore, InMemoryFinancialEntryStore>();
 
 var app = builder.Build();
 
