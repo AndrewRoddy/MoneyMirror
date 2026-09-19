@@ -37,16 +37,31 @@
 
     <div class="records-toolbar">
         <div class="record-tabs" role="tablist" aria-label="Record type">
-            <button class="record-tab @(ActiveTab == RecordKind.All ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.All">Everything <span>@(AssetRecords.Count + LiabilityRecords.Count)</span></button>
-            <button class="record-tab @(ActiveTab == RecordKind.Asset ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.Asset">Assets <span>@AssetRecords.Count</span></button>
-            <button class="record-tab @(ActiveTab == RecordKind.Liability ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.Liability">Liabilities <span>@LiabilityRecords.Count</span></button>
+            <button class="record-tab @(ActiveTab == RecordKind.All ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.All">
+                Everything 
+                <span>
+                    @(AssetRecords.Count + LiabilityRecords.Count)
+                </span>
+            </button>
+            <button class="record-tab @(ActiveTab == RecordKind.Asset ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.Asset">
+                Assets 
+                <span>
+                    @AssetRecords.Count
+                </span>
+            </button>
+            <button class="record-tab @(ActiveTab == RecordKind.Liability ? "selected" : "")" @onclick="() => ActiveTab = RecordKind.Liability">
+                Liabilities 
+                <span>
+                    @LiabilityRecords.Count
+                </span>
+            </button>
         </div>
         <div class="view-note"><span class="status-dot"></span> Saved locally for now</div>
     </div>
 
     <section class="records-card">
         <div class="records-heading">
-            <div><h2>@(ActiveTab == RecordKind.Liability ? "Your liabilities" : ActiveTab == RecordKind.Asset ? "Your assets" : "Your accounts")</h2><p>Values reflect the date you last checked each account.</p></div>
+            <div><h2>@(ActiveTab == RecordKind.Liability ? "Your liabilities" : ActiveTab == RecordKind.Asset ? "Assets" : "Accounts")</h2></div>
             <div class="record-count">@VisibleRecords.Count @(VisibleRecords.Count == 1 ? "record" : "records")</div>
         </div>
 
@@ -64,8 +79,7 @@
                         {
                             <tr @key="record.Id">
                                 <td><span class="type-pill @(record.Kind == RecordKind.Asset ? "asset-pill" : "liability-pill")"><span></span>@record.Type</span></td>
-                                <td><div class="record-name"><span class="record-avatar @(record.Kind == RecordKind.Asset ? "asset-avatar" : "liability-avatar")">@GetInitials(record.Name)</span><strong>@record.Name</strong></div></td>
-                                <td class="record-amount">@record.Amount.ToString("C2")</td>
+                                <td><div class="record-name"><strong>@record.Name</strong></div></td><td class="record-amount">@record.Amount.ToString("C2")</td>
                                 <td class="record-date">@(record.AsOfDate?.ToString("MMM d, yyyy") ?? "—")</td>
                                 <td class="record-actions"><button title="Edit @record.Name" aria-label="Edit @record.Name" @onclick="() => OpenEditForm(record)">Edit</button><button class="delete-action" title="Delete @record.Name" aria-label="Delete @record.Name" @onclick="() => DeleteRecord(record)">Delete</button></td>
                             </tr>
