@@ -20,6 +20,13 @@ public class PittMoneyDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ProfessionalProfile>().HasData(new ProfessionalProfile
+        {
+            Id = ProfessionalProfile.DefaultId,
+            DisplayName = "Default Profile",
+            UpdatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)
+        });
+
         modelBuilder.Entity<FinancialAccount>().Property(account => account.CurrentBalance)
             .HasPrecision(18, 2);
         modelBuilder.Entity<Liability>().Property(liability => liability.OutstandingBalance)

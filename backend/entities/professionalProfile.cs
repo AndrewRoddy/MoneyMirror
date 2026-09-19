@@ -2,6 +2,9 @@ namespace PittMoney.Data.Entities;
 
 public class ProfessionalProfile
 {
+	public static readonly Guid DefaultId =
+		Guid.Parse("00000000-0000-0000-0000-000000000001");
+
 	public Guid Id { get; set; } = Guid.NewGuid();
 	public string DisplayName { get; set; } = string.Empty;
 	public string? Summary { get; set; }
