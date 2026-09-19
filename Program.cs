@@ -1,3 +1,4 @@
+using PittMoney.Ai;
 using PittMoney.Ai.Configuration;
 using PittMoney.Components;
 
@@ -11,6 +12,8 @@ builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName));
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
+
+builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 
 var app = builder.Build();
 
