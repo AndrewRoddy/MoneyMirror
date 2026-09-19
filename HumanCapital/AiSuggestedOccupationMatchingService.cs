@@ -59,7 +59,13 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
             throw new OccupationMatchingException("The LLM returned an unusable occupation match response.");
         }
 
-        return response.Occupations.Select(o => new OccupationMatch(o.Title, o.Explanation, IsAiEstimated: true)).ToList();
+        return response
+            .Occupations.Select(o => new OccupationMatch(
+                o.Title,
+                o.Explanation,
+                IsAiEstimated: true,
+                o.KeySkills ?? []))
+            .ToList();
     }
 
     private static string BuildPrompt(ProfessionalProfile profile)
@@ -102,13 +108,16 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 
             {
               "occupations": [
-                {"title": string, "explanation": string}
+                {"title": string, "explanation": string, "keySkills": string[]}
               ]
             }
 
             "explanation" should briefly name the specific skills/experience from
             the profile above that justify the match (one sentence). Only suggest
             occupations with a clear, explainable connection to the profile.
+
+            "keySkills" should list 3-6 skills typically in demand for that
+            occupation (not limited to skills already in the profile above).
             """;
     }
 
@@ -137,5 +146,5 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 
     private record MatchResponse(IReadOnlyList<OccupationEntry> Occupations);
 
-    private record OccupationEntry(string Title, string Explanation);
+    private record OccupationEntry(string Title, string Explanation, IReadOnlyList<string>? KeySkills);
 }

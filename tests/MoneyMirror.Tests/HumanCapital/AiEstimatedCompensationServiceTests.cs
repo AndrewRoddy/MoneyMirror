@@ -19,7 +19,7 @@ public class AiEstimatedCompensationServiceTests
 
     private static readonly IReadOnlyList<OccupationMatch> SampleOccupations =
     [
-        new OccupationMatch("Software Engineer", "Strong C# background", IsAiEstimated: true),
+        new OccupationMatch("Software Engineer", "Strong C# background", IsAiEstimated: true, KeySkills: ["C#", "SQL"]),
     ];
 
     private const string ValidJson = """
