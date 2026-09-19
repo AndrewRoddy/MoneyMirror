@@ -1,7 +1,7 @@
 using System.Text.Json;
-using PittMoney.Ai;
+using MoneyMirror.Ai;
 
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// <see cref="IProfessionalProfileExtractionService"/> implementation: prompts
@@ -102,3 +102,4 @@ public class NemotronProfileExtractionService : IProfessionalProfileExtractionSe
         return trimmed.Trim();
     }
 }
+

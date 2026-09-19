@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
-using PittMoney.HumanCapital;
+using MoneyMirror.HumanCapital;
 
-namespace PittMoney.Tests.HumanCapital;
+namespace MoneyMirror.Tests.HumanCapital;
 
 public class ResumeUploadValidatorTests
 {
@@ -50,3 +50,4 @@ public class ResumeUploadValidatorTests
         Assert.Contains("empty", result.Error);
     }
 }
+

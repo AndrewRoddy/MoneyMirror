@@ -1,7 +1,7 @@
 @page "/human-capital"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
-@using PittMoney.HumanCapital
+@using MoneyMirror.HumanCapital
 @inject IResumeUploadValidator UploadValidator
 @inject IResumeTextExtractionService TextExtractionService
 @inject IProfessionalProfileExtractionService ProfileExtractionService
@@ -154,3 +154,4 @@
         return $" ({start ?? "?"} – {end ?? "present"})";
     }
 }
+

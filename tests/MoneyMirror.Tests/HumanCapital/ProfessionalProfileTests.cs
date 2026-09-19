@@ -1,6 +1,6 @@
-using PittMoney.HumanCapital;
+using MoneyMirror.HumanCapital;
 
-namespace PittMoney.Tests.HumanCapital;
+namespace MoneyMirror.Tests.HumanCapital;
 
 public class ProfessionalProfileTests
 {
@@ -18,3 +18,4 @@ public class ProfessionalProfileTests
         Assert.Empty(profile.Awards);
     }
 }
+

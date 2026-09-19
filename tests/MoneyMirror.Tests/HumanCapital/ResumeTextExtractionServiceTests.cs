@@ -1,6 +1,6 @@
-using PittMoney.HumanCapital;
+using MoneyMirror.HumanCapital;
 
-namespace PittMoney.Tests.HumanCapital;
+namespace MoneyMirror.Tests.HumanCapital;
 
 /// <summary>
 /// Integration tests: parses real PDF/DOCX fixtures on disk end to end
@@ -48,3 +48,4 @@ public class ResumeTextExtractionServiceTests
         Assert.Contains(".txt", ex.Message);
     }
 }
+

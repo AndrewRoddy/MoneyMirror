@@ -1,4 +1,4 @@
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// Thrown when the vision call for object detection fails, or its response
@@ -15,3 +15,4 @@ public class AssetDetectionException : Exception
     {
     }
 }
+

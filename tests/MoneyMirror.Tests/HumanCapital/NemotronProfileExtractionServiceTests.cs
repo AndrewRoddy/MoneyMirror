@@ -1,7 +1,7 @@
-using PittMoney.Ai;
-using PittMoney.HumanCapital;
+using MoneyMirror.Ai;
+using MoneyMirror.HumanCapital;
 
-namespace PittMoney.Tests.HumanCapital;
+namespace MoneyMirror.Tests.HumanCapital;
 
 public class NemotronProfileExtractionServiceTests
 {
@@ -83,3 +83,4 @@ public class NemotronProfileExtractionServiceTests
             () => service.ExtractAsync("some resume text"));
     }
 }
+

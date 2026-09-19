@@ -1,4 +1,4 @@
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// Finds the distinct objects in a photo and, where possible, identifies
@@ -21,3 +21,4 @@ public interface IPhysicalAssetDetectionService
         string mediaType,
         CancellationToken cancellationToken = default);
 }
+
