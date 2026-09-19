@@ -1,0 +1,12 @@
+Jane Doe
+Software Engineer
+
+Education
+B.S. Computer Science, University of Pittsburgh
+
+Experience
+Backend Engineer at Acme Corp, 2022-2026
+Built distributed systems in C# and Go.
+
+Skills
+C#, Python, SQL, Distributed Systems
