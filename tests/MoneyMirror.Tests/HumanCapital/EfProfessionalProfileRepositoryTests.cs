@@ -120,4 +120,42 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
         Assert.Empty(entity.Skills);
         Assert.Empty(entity.Experiences);
     }
+
+    [Fact]
+    public async Task GetAsync_NothingSavedYet_ReturnsEmpty()
+    {
+        var profile = await _repository.GetAsync();
+
+        Assert.Empty(profile.Education);
+        Assert.Empty(profile.Certifications);
+        Assert.Empty(profile.Skills);
+        Assert.Empty(profile.Experience);
+        Assert.Empty(profile.Projects);
+        Assert.Empty(profile.Publications);
+        Assert.Empty(profile.Awards);
+    }
+
+    [Fact]
+    public async Task GetAsync_AfterSave_RoundTripsEducationExperienceSkillsCertifications()
+    {
+        await _repository.SaveAsync(SampleProfile);
+
+        var profile = await _repository.GetAsync();
+
+        var education = Assert.Single(profile.Education);
+        Assert.Equal("University of Pittsburgh", education.Institution);
+        Assert.Equal("2018-01-01", education.StartDate);
+
+        var experience = Assert.Single(profile.Experience);
+        Assert.Equal("Acme Corp", experience.Organization);
+        Assert.Null(experience.EndDate); // "Present" was never a parseable date
+
+        Assert.Equal(2, profile.Skills.Count);
+        Assert.Single(profile.Certifications);
+
+        // Not persisted (no backing table) - always empty on read, not fabricated.
+        Assert.Empty(profile.Projects);
+        Assert.Empty(profile.Publications);
+        Assert.Empty(profile.Awards);
+    }
 }
