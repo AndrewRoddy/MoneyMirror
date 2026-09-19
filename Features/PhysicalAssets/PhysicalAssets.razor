@@ -4,6 +4,7 @@
 @using PittMoney.PhysicalAssets
 @inject IImageUploadValidator UploadValidator
 @inject IPossessionImageStorage ImageStorage
+@inject IPhysicalAssetDetectionService DetectionService
 @inject IOptions<ImageUploadOptions> UploadOptions
 
 <PageTitle>Physical Assets</PageTitle>
@@ -16,7 +17,7 @@
 
 @if (_isProcessing)
 {
-    <p><em>Uploading @_fileName...</em></p>
+    <p><em>Analyzing @_fileName...</em></p>
 }
 
 @if (_errorMessage is not null)
@@ -30,16 +31,69 @@
     <img src="@($"/api/possession-images/{_imageReference}")" alt="Uploaded possession photo" style="max-width: 400px;" />
 }
 
+@if (_detections is not null)
+{
+    @if (_detections.Count == 0)
+    {
+        <p><em>No objects detected in this photo.</em></p>
+    }
+    else
+    {
+        <h2>Review Detected Items</h2>
+        <p>Confirm, correct, or discard each detection below.</p>
+
+        @for (var i = 0; i < _detections.Count; i++)
+        {
+            var detection = _detections[i];
+            <div class="border rounded p-3 mb-2 @(detection.Included ? "" : "opacity-50")">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="include-@i" @bind="detection.Included" />
+                    <label class="form-check-label" for="include-@i">
+                        <strong>@detection.Original.Label</strong>
+                        (@((detection.Original.Confidence * 100).ToString("F0"))% confidence)
+                        @if (detection.IsLowConfidence)
+                        {
+                            <span class="badge bg-warning text-dark">Needs review</span>
+                        }
+                    </label>
+                </div>
+
+                @if (detection.Included)
+                {
+                    <div class="row mt-2">
+                        <div class="col">
+                            <label for="brand-@i" class="form-label">Brand</label>
+                            <input id="brand-@i" class="form-control" placeholder="Unknown" @bind="detection.Brand" />
+                        </div>
+                        <div class="col">
+                            <label for="model-@i" class="form-label">Model</label>
+                            <input id="model-@i" class="form-control" placeholder="Unknown" @bind="detection.Model" />
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p class="mb-0"><em>Discarded - not a real item.</em></p>
+                }
+            </div>
+        }
+    }
+}
+
 @code {
+    private const double LowConfidenceThreshold = 0.6;
+
     private bool _isProcessing;
     private string? _errorMessage;
     private string? _fileName;
     private string? _imageReference;
+    private List<ReviewableDetection>? _detections;
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         _errorMessage = null;
         _imageReference = null;
+        _detections = null;
 
         var file = e.File;
         _fileName = file.Name;
@@ -56,10 +110,28 @@
 
         try
         {
-            await using var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes);
-            _imageReference = await ImageStorage.SaveAsync(stream, file.Name);
+            byte[] bytes;
+            await using (var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes))
+            {
+                using var buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer);
+                bytes = buffer.ToArray();
+            }
+
+            using (var saveStream = new MemoryStream(bytes))
+            {
+                _imageReference = await ImageStorage.SaveAsync(saveStream, file.Name);
+            }
+
+            var mediaType = PossessionImageContentType.FromFileName(file.Name);
+            var detected = await DetectionService.DetectAsync(bytes, mediaType);
+            _detections = detected.Select(d => new ReviewableDetection(d)).ToList();
         }
         catch (PossessionImageStorageException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (AssetDetectionException ex)
         {
             _errorMessage = ex.Message;
         }
@@ -67,5 +139,23 @@
         {
             _isProcessing = false;
         }
+    }
+
+    /// <summary>
+    /// In-memory review state for one DetectedAsset: whether the user is
+    /// keeping it, and any brand/model correction. This is the seam between
+    /// PA3's detection output and PA7's eventual save step - it holds no
+    /// persisted state of its own.
+    /// </summary>
+    private class ReviewableDetection(DetectedAsset original)
+    {
+        public DetectedAsset Original { get; } = original;
+        public bool Included { get; set; } = true;
+        public string Brand { get; set; } = original.Identification?.Brand ?? string.Empty;
+        public string Model { get; set; } = original.Identification?.Model ?? string.Empty;
+
+        public bool IsLowConfidence =>
+            Original.Confidence < LowConfidenceThreshold
+            || (Original.Identification is not null && Original.Identification.Confidence < LowConfidenceThreshold);
     }
 }
