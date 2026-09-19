@@ -30,6 +30,7 @@ builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionS
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
+builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 
 // setup connection to postgresql database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

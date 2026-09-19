@@ -1,0 +1,83 @@
+using MoneyMirror.Ai;
+using MoneyMirror.HumanCapital;
+
+namespace MoneyMirror.Tests.HumanCapital;
+
+public class AiSuggestedOccupationMatchingServiceTests
+{
+    private class FakeLlmService(string response) : ILlmService
+    {
+        public Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default) =>
+            Task.FromResult(response);
+    }
+
+    private class ThrowingLlmService : ILlmService
+    {
+        public Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default) =>
+            throw new LlmServiceException("provider unavailable");
+    }
+
+    private static readonly ProfessionalProfile SampleProfile = ProfessionalProfile.Empty with
+    {
+        Skills = [new Skill("C#", null), new Skill("SQL", null)],
+        Experience = [new Experience("Acme Corp", "Backend Engineer", "2022", null, "Built APIs")],
+    };
+
+    private const string ValidJson = """
+        {
+          "occupations": [
+            {"title": "Software Engineer", "explanation": "Strong C# and SQL background from backend engineering experience."},
+            {"title": "Database Administrator", "explanation": "SQL skills and hands-on backend experience."}
+          ]
+        }
+        """;
+
+    [Fact]
+    public async Task MatchAsync_ValidJson_ReturnsMatchesMarkedAsAiEstimated()
+    {
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(ValidJson));
+
+        var matches = await service.MatchAsync(SampleProfile);
+
+        Assert.Equal(2, matches.Count);
+        Assert.Equal("Software Engineer", matches[0].Title);
+        Assert.All(matches, m => Assert.True(m.IsAiEstimated));
+    }
+
+    [Fact]
+    public async Task MatchAsync_JsonWrappedInCodeFence_StripsFenceAndParses()
+    {
+        var fenced = $"```json\n{ValidJson}\n```";
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(fenced));
+
+        var matches = await service.MatchAsync(SampleProfile);
+
+        Assert.Equal(2, matches.Count);
+    }
+
+    [Fact]
+    public async Task MatchAsync_EmptyProfile_ReturnsEmptyWithoutCallingLlm()
+    {
+        var service = new AiSuggestedOccupationMatchingService(new ThrowingLlmService());
+
+        var matches = await service.MatchAsync(ProfessionalProfile.Empty);
+
+        Assert.Empty(matches);
+    }
+
+    [Fact]
+    public async Task MatchAsync_MalformedJson_ThrowsOccupationMatchingException()
+    {
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService("not json"));
+
+        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+    }
+
+    [Fact]
+    public async Task MatchAsync_LlmServiceFails_ThrowsOccupationMatchingException()
+    {
+        var service = new AiSuggestedOccupationMatchingService(new ThrowingLlmService());
+
+        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+    }
+}

@@ -43,13 +43,47 @@
         <h2>Review Detected Items</h2>
         <p>Confirm, correct, or discard each detection below.</p>
 
-        @for (var i = 0; i < _detections.Count; i++)
+        <div class="row g-2 mb-3" aria-label="Detection filters and sorting">
+            <div class="col-sm-4">
+                <label for="detection-category-filter" class="form-label">Category</label>
+                <select id="detection-category-filter" class="form-select" @bind="_categoryFilter">
+                    <option value="all">All categories</option>
+                    @foreach (var category in CategoryOptions)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label for="detection-confidence-filter" class="form-label">Confidence</label>
+                <select id="detection-confidence-filter" class="form-select" @bind="_confidenceFilter">
+                    <option value="all">Any confidence</option>
+                    <option value="high">High (80% or higher)</option>
+                    <option value="medium">Medium (60% to 79%)</option>
+                    <option value="low">Low (below 60%)</option>
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label for="detection-sort" class="form-label">Sort by</label>
+                <select id="detection-sort" class="form-select" @bind="_sortOrder">
+                    <option value="confidence-desc">Confidence (high to low)</option>
+                    <option value="confidence-asc">Confidence (low to high)</option>
+                    <option value="category-asc">Category (A to Z)</option>
+                </select>
+            </div>
+        </div>
+
+        <p class="text-muted" aria-live="polite">
+            Showing @FilteredDetections.Count of @_detections.Count detections.
+        </p>
+
+        @foreach (var detection in FilteredDetections)
         {
-            var detection = _detections[i];
+            var detectionIndex = DetectionIndex(detection);
             <div class="border rounded p-3 mb-2 @(detection.Included ? "" : "opacity-50")">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="include-@i" @bind="detection.Included" />
-                    <label class="form-check-label" for="include-@i">
+                    <input class="form-check-input" type="checkbox" id="include-@detectionIndex" @bind="detection.Included" />
+                    <label class="form-check-label" for="include-@detectionIndex">
                         <strong>@detection.Original.Label</strong>
                         (@((detection.Original.Confidence * 100).ToString("F0"))% confidence)
                         @if (detection.IsLowConfidence)
@@ -63,12 +97,12 @@
                 {
                     <div class="row mt-2">
                         <div class="col">
-                            <label for="brand-@i" class="form-label">Brand</label>
-                            <input id="brand-@i" class="form-control" placeholder="Unknown" @bind="detection.Brand" />
+                            <label for="brand-@detectionIndex" class="form-label">Brand</label>
+                            <input id="brand-@detectionIndex" class="form-control" placeholder="Unknown" @bind="detection.Brand" />
                         </div>
                         <div class="col">
-                            <label for="model-@i" class="form-label">Model</label>
-                            <input id="model-@i" class="form-control" placeholder="Unknown" @bind="detection.Model" />
+                            <label for="model-@detectionIndex" class="form-label">Model</label>
+                            <input id="model-@detectionIndex" class="form-control" placeholder="Unknown" @bind="detection.Model" />
                         </div>
                     </div>
 
@@ -107,12 +141,65 @@
     private string? _fileName;
     private string? _imageReference;
     private List<ReviewableDetection>? _detections;
+    private string _categoryFilter = "all";
+    private string _confidenceFilter = "all";
+    private string _sortOrder = "confidence-desc";
+
+    private IReadOnlyList<string> CategoryOptions => _detections is null
+        ? Array.Empty<string>()
+        : _detections
+            .Select(detection => detection.Original.Label)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(category => category, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<ReviewableDetection> FilteredDetections
+    {
+        get
+        {
+            if (_detections is null)
+            {
+                return Array.Empty<ReviewableDetection>();
+            }
+
+            IEnumerable<ReviewableDetection> filtered = _detections;
+
+            if (!string.Equals(_categoryFilter, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                filtered = filtered.Where(detection =>
+                    string.Equals(detection.Original.Label, _categoryFilter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            filtered = _confidenceFilter switch
+            {
+                "high" => filtered.Where(detection => detection.Original.Confidence >= 0.8),
+                "medium" => filtered.Where(detection => detection.Original.Confidence >= LowConfidenceThreshold && detection.Original.Confidence < 0.8),
+                "low" => filtered.Where(detection => detection.Original.Confidence < LowConfidenceThreshold),
+                _ => filtered
+            };
+
+            return _sortOrder switch
+            {
+                "confidence-asc" => filtered.OrderBy(detection => detection.Original.Confidence).ToList(),
+                "category-asc" => filtered
+                    .OrderBy(detection => detection.Original.Label, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(detection => detection.Original.Confidence)
+                    .ToList(),
+                _ => filtered.OrderByDescending(detection => detection.Original.Confidence).ToList()
+            };
+        }
+    }
+
+    private int DetectionIndex(ReviewableDetection detection) => _detections?.IndexOf(detection) ?? 0;
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         _errorMessage = null;
         _imageReference = null;
         _detections = null;
+        _categoryFilter = "all";
+        _confidenceFilter = "all";
+        _sortOrder = "confidence-desc";
 
         var file = e.File;
         _fileName = file.Name;
