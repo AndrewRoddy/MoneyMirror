@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="131 131 418 418" role="img">
+
+  <title>Money Mirror favicon logo</title>
+  <desc>A solid navy disc with an ascending growth line and its endpoint knocked out as
+        transparent negative space, the line running off the disc's left edge.</desc>
+
+  <defs>
+    <!-- The growth line. The first point is collinear with the original
+         start (200,400) and sits outside the disc, so the knockout breaks
+         through the left edge instead of stopping inside it. -->
+    <polyline id="growthLine" points="50,450 200,400 260,380 300,410 360,340 420,360 480,280"/>
+
+    <!-- White keeps the disc, black punches through it. -->
+    <mask id="knockout">
+      <circle cx="340" cy="340" r="209" fill="#ffffff"/>
+      <use href="#growthLine" fill="none" stroke="#000000" stroke-width="26"
+           stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="475" cy="290" r="26" fill="#000000"/>
+    </mask>
+  </defs>
+
+  <circle cx="340" cy="340" r="209" fill="#003594" mask="url(#knockout)"/>
+</svg>
