@@ -28,6 +28,7 @@ builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionS
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
+builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 
 var app = builder.Build();
 
