@@ -9,5 +9,5 @@ public class NemotronOptions
 
     public string ApiKey { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = "https://integrate.api.nvidia.com/v1";
-    public string Model { get; set; } = "nvidia/llama-3.1-nemotron-70b-instruct";
+    public string Model { get; set; } = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning";
 }
