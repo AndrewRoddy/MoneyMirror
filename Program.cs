@@ -13,10 +13,13 @@ builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName));
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
+builder.Services.Configure<ResumeUploadOptions>(
+    builder.Configuration.GetSection(ResumeUploadOptions.SectionName));
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
+builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 
 var app = builder.Build();
 
