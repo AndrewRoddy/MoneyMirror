@@ -5,24 +5,32 @@ using PittMoney.Ai.Configuration;
 using PittMoney.Components;
 using PittMoney.HumanCapital;
 using PittMoney.Data;
+using PittMoney.PhysicalAssets;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
 builder.Services.Configure<NemotronOptions>(
-    builder.Configuration.GetSection(NemotronOptions.SectionName));
+    builder.Configuration.GetSection(NemotronOptions.SectionName)
+);
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
 builder.Services.Configure<ResumeUploadOptions>(
     builder.Configuration.GetSection(ResumeUploadOptions.SectionName));
+builder.Services.Configure<ImageUploadOptions>(
+    builder.Configuration.GetSection(ImageUploadOptions.SectionName));
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
+builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
+builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
+builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
+builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
+builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
 
 // setup connection to postgresql database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -53,8 +61,15 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+app.MapGet("/api/possession-images/{reference}", async (string reference, IPossessionImageStorage storage) =>
+{
+    var stream = await storage.OpenReadAsync(reference);
+    return stream is null
+        ? Results.NotFound()
+        : Results.File(stream, PossessionImageContentType.FromFileName(reference));
+});
 
 if (app.Environment.IsDevelopment())
 {

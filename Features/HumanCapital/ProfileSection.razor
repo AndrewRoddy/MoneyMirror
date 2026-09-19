@@ -1,0 +1,20 @@
+<h3>@Title</h3>
+@if (IsEmpty)
+{
+    <p><em>None found.</em></p>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsEmpty { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

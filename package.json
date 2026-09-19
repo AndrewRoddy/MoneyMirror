@@ -1,0 +1,18 @@
+{
+  "name": "pitt-money",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dev tooling for Pitt Money (formatters only — the app itself is ASP.NET Core).",
+  "license": "UNLICENSED",
+  "scripts": {
+    "format": "npm run format:cs && npm run format:css",
+    "format:cs": "dotnet csharpier format .",
+    "format:css": "prettier --write \"**/*.css\"",
+    "check": "npm run check:cs && npm run check:css",
+    "check:cs": "dotnet csharpier check .",
+    "check:css": "prettier --check \"**/*.css\""
+  },
+  "devDependencies": {
+    "prettier": "3.9.8"
+  }
+}

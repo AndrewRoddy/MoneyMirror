@@ -21,7 +21,10 @@ public class NemotronLlmService : ILlmService
         _options = options.Value;
     }
 
-    public async Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default)
+    public async Task<string> CompleteAsync(
+        string prompt,
+        CancellationToken cancellationToken = default
+    )
     {
         var requestBody = new ChatCompletionRequest
         {
@@ -33,11 +36,16 @@ public class NemotronLlmService : ILlmService
         try
         {
             using var httpRequest = new HttpRequestMessage(
-                HttpMethod.Post, $"{_options.BaseUrl.TrimEnd('/')}/chat/completions")
+                HttpMethod.Post,
+                $"{_options.BaseUrl.TrimEnd('/')}/chat/completions"
+            )
             {
                 Content = JsonContent.Create(requestBody),
             };
-            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                _options.ApiKey
+            );
 
             response = await _httpClient.SendAsync(httpRequest, cancellationToken);
         }
@@ -56,13 +64,16 @@ public class NemotronLlmService : ILlmService
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 throw new LlmServiceException(
-                    $"Nemotron LLM provider returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}");
+                    $"Nemotron LLM provider returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}"
+                );
             }
 
             ChatCompletionResponse? completion;
             try
             {
-                completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(cancellationToken);
+                completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(
+                    cancellationToken
+                );
             }
             catch (Exception ex)
             {
@@ -72,7 +83,9 @@ public class NemotronLlmService : ILlmService
             var content = completion?.Choices?.FirstOrDefault()?.Message?.Content;
             if (string.IsNullOrEmpty(content))
             {
-                throw new LlmServiceException("Nemotron LLM response contained no completion content.");
+                throw new LlmServiceException(
+                    "Nemotron LLM response contained no completion content."
+                );
             }
 
             return content;

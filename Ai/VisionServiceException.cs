@@ -7,11 +7,9 @@ namespace PittMoney.Ai;
 /// </summary>
 public class VisionServiceException : Exception
 {
-    public VisionServiceException(string message) : base(message)
-    {
-    }
+    public VisionServiceException(string message)
+        : base(message) { }
 
-    public VisionServiceException(string message, Exception innerException) : base(message, innerException)
-    {
-    }
+    public VisionServiceException(string message, Exception innerException)
+        : base(message, innerException) { }
 }
