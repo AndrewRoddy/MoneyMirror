@@ -5,8 +5,8 @@ namespace PittMoney.Data;
 
 public class PittMoneyDbContext : DbContext
 {
-    public PittMoneyDbContext(DbContextOptions<PittMoneyDbContext> options) : base(options) {}
-    
+    public PittMoneyDbContext(DbContextOptions<PittMoneyDbContext> options) : base(options) { }
+
     // Entities for database
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
     public DbSet<Liability> Liabilities => Set<Liability>();
