@@ -61,6 +61,32 @@ dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
 
 or via environment variables (`Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`).
 
+## Run the full stack with Docker
+
+Docker Compose runs both the ASP.NET Core app and PostgreSQL. Create a local
+environment file and start the stack:
+
+```
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+The app is available at `http://localhost:8000` by default. Change `APP_PORT`
+in `.env` to use another host port. 
+
+Compose passes environment variables using ASP.NET Core's double-underscore
+configuration syntax. This keeps secrets out of the image and lets environment
+variables override the empty placeholders in `appsettings.json`:
+
+| Environment variable | .NET configuration key |
+| --- | --- |
+| `POSTGRES_*` | `ConnectionStrings:DefaultConnection` |
+| `NEMOTRON_API_KEY` | `Ai:Nemotron:ApiKey` |
+| `VISION_API_KEY` | `Ai:VisionModel:ApiKey` |
+
+Stop the stack with `docker compose down`. Add `-v` only when you also want to
+delete the persisted database and uploaded-image volumes.
+
 ## Development
 
 Formatting is handled by [CSharpier](https://csharpier.com) (C#) and
@@ -74,8 +100,8 @@ npm ci
 Then:
 
 ```
-npm run format    # format C# and CSS
-npm run check     # verify formatting without writing
+npm run format
+npm run check
 ```
 
 ## Status

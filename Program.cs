@@ -77,7 +77,10 @@ app.MapGet("/api/possession-images/{reference}", async (string reference, IPosse
         : Results.File(stream, PossessionImageContentType.FromFileName(reference));
 });
 
-if (app.Environment.IsDevelopment())
+var shouldApplyMigrations = app.Environment.IsDevelopment()
+    || builder.Configuration.GetValue<bool>("Database:ApplyMigrations");
+
+if (shouldApplyMigrations)
 {
     // automatically apply migrations
     await using var scope = app.Services.CreateAsyncScope();
@@ -86,36 +89,39 @@ if (app.Environment.IsDevelopment())
 
     await db.Database.MigrateAsync();
 
-    // Dev-only smoke test for the F3 AI seam (#44) - proves ILlmService and
-    // IVisionService round-trip against real providers. No feature logic.
-    app.MapGet("/dev/ai-smoke-test", async (ILlmService llm, IVisionService vision) =>
+    if (app.Environment.IsDevelopment())
     {
-        var results = new Dictionary<string, string>();
+        // Dev-only smoke test for the F3 AI seam (#44) - proves ILlmService and
+        // IVisionService round-trip against real providers. No feature logic.
+        app.MapGet("/dev/ai-smoke-test", async (ILlmService llm, IVisionService vision) =>
+        {
+            var results = new Dictionary<string, string>();
 
-        try
-        {
-            results["llm"] = await llm.CompleteAsync("Reply with exactly the word: pong");
-        }
-        catch (LlmServiceException ex)
-        {
-            results["llmError"] = ex.Message;
-        }
+            try
+            {
+                results["llm"] = await llm.CompleteAsync("Reply with exactly the word: pong");
+            }
+            catch (LlmServiceException ex)
+            {
+                results["llmError"] = ex.Message;
+            }
 
-        try
-        {
-            // 1x1 white pixel PNG - just enough to prove the call round-trips.
-            var pixel = Convert.FromBase64String(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
-            results["vision"] = await vision.DetectAsync(
-                pixel, "image/png", "Describe this image in one short sentence.");
-        }
-        catch (VisionServiceException ex)
-        {
-            results["visionError"] = ex.Message;
-        }
+            try
+            {
+                // 1x1 white pixel PNG - just enough to prove the call round-trips.
+                var pixel = Convert.FromBase64String(
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+                results["vision"] = await vision.DetectAsync(
+                    pixel, "image/png", "Describe this image in one short sentence.");
+            }
+            catch (VisionServiceException ex)
+            {
+                results["visionError"] = ex.Message;
+            }
 
-        return Results.Ok(results);
-    });
+            return Results.Ok(results);
+        });
+    }
 }
 
 app.Run();

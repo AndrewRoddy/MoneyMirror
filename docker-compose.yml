@@ -1,14 +1,36 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: money-mirror-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      Database__ApplyMigrations: "true"
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-MoneyMirror};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+      Ai__Nemotron__ApiKey: ${NEMOTRON_API_KEY:-}
+      Ai__VisionModel__ApiKey: ${VISION_API_KEY:-}
+    ports:
+      - "${APP_PORT:-8000}:8080"
+    volumes:
+      - app_data:/app/App_Data
+    networks:
+      - app
+      - database
+
   postgres:
     image: postgres:16-alpine
-    container_name: pitt-money-postgres
+    container_name: money-mirror-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-MoneyMirror}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +38,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - database
 
 volumes:
+  app_data:
   postgres_data:
+
+networks:
+  app:
+  database:
+    internal: true
