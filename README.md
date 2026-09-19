@@ -47,6 +47,20 @@ Market Potential is displayed alongside net worth, not folded into it.
 Single modular monolith, single database, single implicit user/profile — no accounts,
 auth, or multi-tenancy.
 
+## Configuration
+
+The app reads AI provider settings from the `Ai:Nemotron` and `Ai:VisionModel`
+configuration sections (`BaseUrl`, `Model`, `ApiKey`). `appsettings.json` ships
+with empty `ApiKey` placeholders — never commit real keys there. Set them locally
+with .NET user-secrets instead:
+
+```
+dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
+dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
+```
+
+or via environment variables (`Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`).
+
 ## Status
 
 Actively being built. See the [project board](https://github.com/users/AndrewRoddy/projects/8)

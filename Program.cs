@@ -1,3 +1,4 @@
+using PittMoney.Ai.Configuration;
 using PittMoney.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -5,6 +6,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<NemotronOptions>(
+    builder.Configuration.GetSection(NemotronOptions.SectionName));
+builder.Services.Configure<VisionModelOptions>(
+    builder.Configuration.GetSection(VisionModelOptions.SectionName));
 
 var app = builder.Build();
 
