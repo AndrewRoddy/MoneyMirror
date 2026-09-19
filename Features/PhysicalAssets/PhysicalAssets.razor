@@ -77,6 +77,16 @@
             Showing @FilteredDetections.Count of @_detections.Count detections.
         </p>
 
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-3" aria-label="Bulk detection actions">
+            <button type="button" class="btn btn-outline-success" @onclick="AcceptHighConfidence">
+                Accept all high-confidence
+            </button>
+            <button type="button" class="btn btn-outline-danger" @onclick="DiscardLowConfidence">
+                Discard all low-confidence
+            </button>
+            <span class="text-muted small">Bulk actions apply to all detections in this photo.</span>
+        </div>
+
         @foreach (var detection in FilteredDetections)
         {
             var detectionIndex = DetectionIndex(detection);
@@ -135,6 +145,7 @@
 
 @code {
     private const double LowConfidenceThreshold = 0.6;
+    private const double HighConfidenceThreshold = 0.8;
 
     private bool _isProcessing;
     private string? _errorMessage;
@@ -191,6 +202,32 @@
     }
 
     private int DetectionIndex(ReviewableDetection detection) => _detections?.IndexOf(detection) ?? 0;
+
+    private void AcceptHighConfidence()
+    {
+        if (_detections is null)
+        {
+            return;
+        }
+
+        foreach (var detection in _detections.Where(detection => detection.IsHighConfidence))
+        {
+            detection.Included = true;
+        }
+    }
+
+    private void DiscardLowConfidence()
+    {
+        if (_detections is null)
+        {
+            return;
+        }
+
+        foreach (var detection in _detections.Where(detection => detection.IsLowConfidence))
+        {
+            detection.Included = false;
+        }
+    }
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
@@ -286,6 +323,10 @@
         public bool IsEstimating { get; set; }
         public AssetValuation? Valuation { get; set; }
         public string? ValuationError { get; set; }
+
+        public bool IsHighConfidence =>
+            Original.Confidence >= HighConfidenceThreshold
+            && (Original.Identification is null || Original.Identification.Confidence >= HighConfidenceThreshold);
 
         public bool IsLowConfidence =>
             Original.Confidence < LowConfidenceThreshold
