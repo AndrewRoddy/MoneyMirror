@@ -7,5 +7,6 @@ public class FinancialAccount
     public string AccountType { get; set; } = string.Empty;
     public decimal CurrentBalance { get; set; }
     public string? InstitutionName { get; set; }
+    public DateTimeOffset AsOfDate { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

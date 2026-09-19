@@ -2,6 +2,10 @@
 @page "/net-worth"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@using MoneyMirror.Data
+@using MoneyMirror.Data.Entities
+@inject MoneyMirrorDbContext DbContext
 
 <PageTitle>Net Worth</PageTitle>
 
@@ -19,6 +23,16 @@
             </button>
         </div>
     </header>
+
+    @if (IsLoading)
+    {
+        <div class="alert alert-info" role="status">Loading your financial records...</div>
+    }
+
+    @if (ErrorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+    }
 
     <section class="finance-summary" aria-label="Financial summary">
         <div class="summary-card summary-assets">
@@ -110,24 +124,14 @@
 }
 
 @code {
-    private readonly List<FinancialRecord> AssetRecords = new()
-    {
-        new(RecordKind.Asset, "Cash", "Checking account", 8200m, new DateTime(2026, 9, 19)),
-        new(RecordKind.Asset, "Cash", "Savings account", 18400m, new DateTime(2026, 9, 18)),
-        new(RecordKind.Asset, "Investments", "Index fund", 51200m, new DateTime(2026, 9, 15)),
-        new(RecordKind.Asset, "Property", "Primary residence", 285000m, new DateTime(2026, 9, 1))
-    };
-
-    private readonly List<FinancialRecord> LiabilityRecords = new()
-    {
-        new(RecordKind.Liability, "Mortgage", "Home mortgage", 198500m, new DateTime(2026, 9, 1)),
-        new(RecordKind.Liability, "Student loan", "Federal student loan", 12400m, new DateTime(2026, 9, 1)),
-        new(RecordKind.Liability, "Credit card", "Visa card", 1800m, new DateTime(2026, 9, 17))
-    };
+    private readonly List<FinancialRecord> AssetRecords = [];
+    private readonly List<FinancialRecord> LiabilityRecords = [];
 
     private RecordKind ActiveTab { get; set; } = RecordKind.All;
     private bool IsFormOpen { get; set; }
     private bool IsEditing { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private string? ErrorMessage { get; set; }
     private FinancialRecord Draft { get; set; } = NewDraft(RecordKind.Asset);
     private FinancialRecord? EditingRecord { get; set; }
     private decimal NetWorth => (AssetRecords.Sum(record => record.Amount)) - (LiabilityRecords.Sum(record => record.Amount));
@@ -148,33 +152,181 @@
 
     private static string[] TypesFor(RecordKind kind) => RecordTypes[kind];
     private static FinancialRecord NewDraft(RecordKind kind) => new(kind, "", "", 0m, DateTime.Today);
-    private static string GetInitials(string name) => string.Join("", name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => part[0])).ToUpperInvariant();
+    private static DateTimeOffset ToDateTimeOffset(DateTime date) =>
+        new(DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified), TimeSpan.Zero);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var accounts = await DbContext.FinancialAccounts
+                .AsNoTracking()
+                .OrderByDescending(account => account.UpdatedAt)
+                .ToListAsync();
+            var liabilities = await DbContext.Liabilities
+                .AsNoTracking()
+                .OrderByDescending(liability => liability.UpdatedAt)
+                .ToListAsync();
+
+            AssetRecords.AddRange(accounts.Select(account => new FinancialRecord(
+                account.Id,
+                RecordKind.Asset,
+                account.AccountType,
+                account.Name,
+                account.CurrentBalance,
+                account.AsOfDate.LocalDateTime)));
+            LiabilityRecords.AddRange(liabilities.Select(liability => new FinancialRecord(
+                liability.Id,
+                RecordKind.Liability,
+                liability.LiabilityType,
+                liability.Name,
+                liability.OutstandingBalance,
+                liability.AsOfDate.LocalDateTime)));
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Financial records could not be loaded. Please try again.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
     private void OpenAddForm(RecordKind kind) { IsEditing = false; EditingRecord = null; Draft = NewDraft(kind); IsFormOpen = true; }
     private void OpenEditForm(FinancialRecord record) { IsEditing = true; EditingRecord = record; Draft = new(record.Kind, record.Type, record.Name, record.Amount, record.AsOfDate); IsFormOpen = true; }
     private void CloseForm() { IsFormOpen = false; }
-    private void SaveRecord()
+    private async Task SaveRecord()
     {
-        var target = Draft.Kind == RecordKind.Asset ? AssetRecords : LiabilityRecords;
-        if (IsEditing && EditingRecord is not null)
+        ErrorMessage = null;
+
+        try
         {
-            EditingRecord.Type = Draft.Type; EditingRecord.Name = Draft.Name; EditingRecord.Amount = Draft.Amount; EditingRecord.AsOfDate = Draft.AsOfDate;
+            var asOfDate = Draft.AsOfDate ?? DateTime.Today;
+
+            if (IsEditing && EditingRecord is not null)
+            {
+                if (Draft.Kind == RecordKind.Asset)
+                {
+                    var account = await DbContext.FinancialAccounts.FindAsync(EditingRecord.Id)
+                        ?? throw new InvalidOperationException("The financial account no longer exists.");
+                    account.AccountType = Draft.Type;
+                    account.Name = Draft.Name;
+                    account.CurrentBalance = Draft.Amount;
+                    account.AsOfDate = ToDateTimeOffset(asOfDate);
+                    account.UpdatedAt = DateTimeOffset.UtcNow;
+                }
+                else
+                {
+                    var liability = await DbContext.Liabilities.FindAsync(EditingRecord.Id)
+                        ?? throw new InvalidOperationException("The liability no longer exists.");
+                    liability.LiabilityType = Draft.Type;
+                    liability.Name = Draft.Name;
+                    liability.OutstandingBalance = Draft.Amount;
+                    liability.AsOfDate = ToDateTimeOffset(asOfDate);
+                    liability.UpdatedAt = DateTimeOffset.UtcNow;
+                }
+
+                await DbContext.SaveChangesAsync();
+                EditingRecord.Type = Draft.Type;
+                EditingRecord.Name = Draft.Name;
+                EditingRecord.Amount = Draft.Amount;
+                EditingRecord.AsOfDate = Draft.AsOfDate;
+            }
+            else if (Draft.Kind == RecordKind.Asset)
+            {
+                DbContext.FinancialAccounts.Add(new FinancialAccount
+                {
+                    Id = Draft.Id,
+                    AccountType = Draft.Type,
+                    Name = Draft.Name,
+                    CurrentBalance = Draft.Amount,
+                    AsOfDate = ToDateTimeOffset(asOfDate),
+                    UpdatedAt = DateTimeOffset.UtcNow
+                });
+                await DbContext.SaveChangesAsync();
+                AssetRecords.Add(Draft.ToRecord());
+            }
+            else
+            {
+                DbContext.Liabilities.Add(new Liability
+                {
+                    Id = Draft.Id,
+                    LiabilityType = Draft.Type,
+                    Name = Draft.Name,
+                    OutstandingBalance = Draft.Amount,
+                    AsOfDate = ToDateTimeOffset(asOfDate),
+                    UpdatedAt = DateTimeOffset.UtcNow
+                });
+                await DbContext.SaveChangesAsync();
+                LiabilityRecords.Add(Draft.ToRecord());
+            }
+
+            ActiveTab = Draft.Kind;
+            IsFormOpen = false;
         }
-        else { target.Add(new(Draft.Kind, Draft.Type, Draft.Name, Draft.Amount, Draft.AsOfDate)); }
-        ActiveTab = Draft.Kind; IsFormOpen = false;
+        catch (Exception)
+        {
+            ErrorMessage = "Financial record could not be saved. Please try again.";
+        }
     }
-    private void DeleteRecord(FinancialRecord record) { (record.Kind == RecordKind.Asset ? AssetRecords : LiabilityRecords).Remove(record); }
+
+    private async Task DeleteRecord(FinancialRecord record)
+    {
+        ErrorMessage = null;
+
+        try
+        {
+            if (record.Kind == RecordKind.Asset)
+            {
+                var account = await DbContext.FinancialAccounts.FindAsync(record.Id);
+                if (account is not null)
+                {
+                    DbContext.FinancialAccounts.Remove(account);
+                }
+            }
+            else
+            {
+                var liability = await DbContext.Liabilities.FindAsync(record.Id);
+                if (liability is not null)
+                {
+                    DbContext.Liabilities.Remove(liability);
+                }
+            }
+
+            await DbContext.SaveChangesAsync();
+            (record.Kind == RecordKind.Asset ? AssetRecords : LiabilityRecords).Remove(record);
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Financial record could not be deleted. Please try again.";
+        }
+    }
 
     private enum RecordKind { All, Asset, Liability }
 
     private sealed class FinancialRecord
     {
-        public FinancialRecord(RecordKind kind, string type, string name, decimal amount, DateTime? asOfDate) { Kind = kind; Type = type; Name = name; Amount = amount; AsOfDate = asOfDate; }
-        public Guid Id { get; } = Guid.NewGuid();
+        public FinancialRecord(RecordKind kind, string type, string name, decimal amount, DateTime? asOfDate)
+            : this(Guid.NewGuid(), kind, type, name, amount, asOfDate) { }
+
+        public FinancialRecord(Guid id, RecordKind kind, string type, string name, decimal amount, DateTime? asOfDate)
+        {
+            Id = id;
+            Kind = kind;
+            Type = type;
+            Name = name;
+            Amount = amount;
+            AsOfDate = asOfDate;
+        }
+
+        public Guid Id { get; }
         public RecordKind Kind { get; }
         [Required(ErrorMessage = "Choose a type.")] public string Type { get; set; }
         [Required(ErrorMessage = "Enter a name.")] public string Name { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Amount must be zero or more.")] public decimal Amount { get; set; }
         [Required(ErrorMessage = "Choose an as-of date.")] public DateTime? AsOfDate { get; set; }
+
+        public FinancialRecord ToRecord() => new(Id, Kind, Type, Name, Amount, AsOfDate);
     }
 }
