@@ -32,6 +32,7 @@ builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImage
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
 builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 builder.Services.AddScoped<ICompensationEstimationService, AiEstimatedCompensationService>();
+builder.Services.AddScoped<IProfessionalProfileRepository, EfProfessionalProfileRepository>();
 
 // setup connection to postgresql database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

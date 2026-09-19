@@ -5,6 +5,7 @@
 @inject IResumeUploadValidator UploadValidator
 @inject IResumeTextExtractionService TextExtractionService
 @inject IProfessionalProfileExtractionService ProfileExtractionService
+@inject IProfessionalProfileRepository ProfileRepository
 @inject IOptions<ResumeUploadOptions> UploadOptions
 
 <PageTitle>Human Capital</PageTitle>
@@ -105,11 +106,14 @@
         </ul>
     </ProfileSection>
 
-    <button type="button" class="btn btn-primary mt-2" @onclick="SaveCorrections">Save Corrections</button>
+    <button type="button" class="btn btn-primary mt-2" @onclick="SaveCorrectionsAsync" disabled="@_isSaving">
+        @(_isSaving ? "Saving..." : "Save Corrections")
+    </button>
 }
 
 @code {
     private bool _isProcessing;
+    private bool _isSaving;
     private string? _errorMessage;
     private string? _savedMessage;
     private string? _fileName;
@@ -171,11 +175,10 @@
     }
 
     /// <summary>
-    /// Rebuilds _profile from the edited lists - the "stored profile" this
-    /// saves back to is currently just in-memory page state, since the data
-    /// layer (#6) isn't merged yet; #89 will add real persistence later.
+    /// Rebuilds _profile from the edited lists and persists it to the
+    /// default profile via IProfessionalProfileRepository (#89).
     /// </summary>
-    private void SaveCorrections()
+    private async Task SaveCorrectionsAsync()
     {
         if (_profile is null)
         {
@@ -191,7 +194,24 @@
             Projects = _projects.Select(e => e.ToRecord()).ToList(),
         };
 
-        _savedMessage = "Corrections saved.";
+        _errorMessage = null;
+        _savedMessage = null;
+        _isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            await ProfileRepository.SaveAsync(_profile);
+            _savedMessage = "Corrections saved.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to save corrections: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
     }
 
     private class EditableEducation
