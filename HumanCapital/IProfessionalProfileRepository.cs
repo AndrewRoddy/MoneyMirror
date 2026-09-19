@@ -7,6 +7,12 @@ namespace MoneyMirror.HumanCapital;
 public interface IProfessionalProfileRepository
 {
     /// <summary>
+    /// Loads the default profile, or <see cref="ProfessionalProfile.Empty"/>
+    /// if nothing has been saved yet.
+    /// </summary>
+    Task<ProfessionalProfile> GetAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Saves <paramref name="profile"/>, replacing any previously stored
     /// sections for the default profile.
     /// </summary>
