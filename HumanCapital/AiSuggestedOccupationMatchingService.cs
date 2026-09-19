@@ -64,7 +64,9 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
                 o.Title,
                 o.Explanation,
                 IsAiEstimated: true,
-                o.KeySkills ?? []))
+                o.KeySkills ?? [],
+                o.TypicalMinUsd,
+                o.TypicalMaxUsd))
             .ToList();
     }
 
@@ -108,7 +110,7 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 
             {
               "occupations": [
-                {"title": string, "explanation": string, "keySkills": string[]}
+                {"title": string, "explanation": string, "keySkills": string[], "typicalMinUsd": number, "typicalMaxUsd": number}
               ]
             }
 
@@ -118,6 +120,10 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 
             "keySkills" should list 3-6 skills typically in demand for that
             occupation (not limited to skills already in the profile above).
+
+            "typicalMinUsd"/"typicalMaxUsd" should be a rough typical US annual
+            salary range for that specific occupation (not the whole profile).
+            Omit both if you cannot give a reasonable estimate.
             """;
     }
 
@@ -146,5 +152,10 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 
     private record MatchResponse(IReadOnlyList<OccupationEntry> Occupations);
 
-    private record OccupationEntry(string Title, string Explanation, IReadOnlyList<string>? KeySkills);
+    private record OccupationEntry(
+        string Title,
+        string Explanation,
+        IReadOnlyList<string>? KeySkills,
+        int? TypicalMinUsd,
+        int? TypicalMaxUsd);
 }

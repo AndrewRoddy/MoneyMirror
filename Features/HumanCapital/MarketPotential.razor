@@ -62,6 +62,10 @@ else
                 <li>
                     <strong>@occupation.Title</strong>
                     <span class="badge bg-secondary">AI-suggested</span>
+                    @if (occupation.TypicalMinUsd is not null && occupation.TypicalMaxUsd is not null)
+                    {
+                        <span class="text-muted"> - $@occupation.TypicalMinUsd.Value.ToString("N0") &ndash; $@occupation.TypicalMaxUsd.Value.ToString("N0")</span>
+                    }
                     <p class="text-muted mb-2">@occupation.Explanation</p>
                 </li>
             }
@@ -104,6 +108,55 @@ else
                 }
             </ul>
         }
+
+        <h2>Potential Growth Path</h2>
+        <p class="text-muted">
+            The matched occupations above, ordered by estimated typical pay - an illustrative path
+            across occupations you're already matched to, not a guaranteed timeline.
+        </p>
+        @if (_progression is null || _progression.Count == 0)
+        {
+            <p><em>Not enough compensation data on the matched occupations to build a path.</em></p>
+        }
+        else
+        {
+            <ol>
+                @foreach (var step in _progression)
+                {
+                    <li>@step.OccupationTitle <span class="text-muted">(~$@step.MidpointUsd.ToString("N0"))</span></li>
+                }
+            </ol>
+        }
+
+        <h2>Opportunities</h2>
+        <p class="text-muted">
+            Matched occupations that typically pay more than your lowest matched occupation, where
+            you're only missing a few of the skills they want.
+        </p>
+        @if (_opportunities is null || _opportunities.Count == 0)
+        {
+            <p><em>No standout opportunities identified from the occupations above.</em></p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var opportunity in _opportunities)
+                {
+                    <li>
+                        <strong>@opportunity.OccupationTitle</strong>
+                        @if (opportunity.TypicalMinUsd is not null && opportunity.TypicalMaxUsd is not null)
+                        {
+                            <span class="text-muted"> - $@opportunity.TypicalMinUsd.Value.ToString("N0") &ndash; $@opportunity.TypicalMaxUsd.Value.ToString("N0")</span>
+                        }
+                        <p class="text-muted mb-1">@opportunity.Explanation</p>
+                        @if (opportunity.MissingSkills.Count > 0)
+                        {
+                            <p class="mb-2">Skills to close the gap: @string.Join(", ", opportunity.MissingSkills)</p>
+                        }
+                    </li>
+                }
+            </ul>
+        }
     }
 }
 
@@ -114,6 +167,8 @@ else
     private IReadOnlyList<OccupationMatch>? _occupations;
     private CompensationEstimate? _compensation;
     private SkillGapAnalysis? _skillGaps;
+    private IReadOnlyList<ProgressionStep>? _progression;
+    private IReadOnlyList<Opportunity>? _opportunities;
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,6 +184,8 @@ else
             _occupations = await OccupationMatchingService.MatchAsync(profile);
             _compensation = await CompensationService.EstimateAsync(_occupations);
             _skillGaps = SkillGapAnalyzer.Analyze(profile.Skills, _occupations);
+            _progression = OpportunityFinder.BuildProgression(_occupations);
+            _opportunities = OpportunityFinder.FindOpportunities(profile.Skills, _occupations);
         }
         catch (OccupationMatchingException ex)
         {
