@@ -76,3 +76,4 @@ public class AiEstimatedValuationServiceTests
         await Assert.ThrowsAsync<AssetValuationException>(() => service.EstimateAsync("sofa", null, null));
     }
 }
+

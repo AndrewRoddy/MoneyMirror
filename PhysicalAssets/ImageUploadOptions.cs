@@ -17,3 +17,4 @@ public class ImageUploadOptions
     /// </summary>
     public string StorageDirectory { get; set; } = "App_Data/possession-images";
 }
+

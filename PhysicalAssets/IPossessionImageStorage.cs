@@ -18,3 +18,4 @@ public interface IPossessionImageStorage
     /// </summary>
     Task<Stream?> OpenReadAsync(string reference, CancellationToken cancellationToken = default);
 }
+

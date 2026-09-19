@@ -114,3 +114,4 @@ public class AiEstimatedValuationService : IAssetValuationService
 
     private record EstimateResponse(decimal EstimatedValueUsd, string Reasoning);
 }
+

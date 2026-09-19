@@ -9,3 +9,4 @@ public interface IImageUploadValidator
 {
     ImageUploadValidationResult Validate(string fileName, long fileSizeBytes);
 }
+

@@ -79,3 +79,4 @@ public class FilesystemPossessionImageStorageTests : IDisposable
         Assert.Null(result);
     }
 }
+

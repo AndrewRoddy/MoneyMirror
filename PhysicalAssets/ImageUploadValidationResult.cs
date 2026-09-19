@@ -9,3 +9,4 @@ public record ImageUploadValidationResult(bool IsValid, string? Error)
 
     public static ImageUploadValidationResult Failure(string error) => new(false, error);
 }
+

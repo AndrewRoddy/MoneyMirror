@@ -55,3 +55,4 @@ public class FilesystemPossessionImageStorage : IPossessionImageStorage
         return Task.FromResult<Stream?>(stream);
     }
 }
+

@@ -42,3 +42,4 @@ public class ImageUploadValidator : IImageUploadValidator
         return ImageUploadValidationResult.Success();
     }
 }
+

@@ -19,3 +19,4 @@ public interface IAssetValuationService
         string? model,
         CancellationToken cancellationToken = default);
 }
+

@@ -13,3 +13,4 @@ public class PossessionImageStorageException : Exception
     {
     }
 }
+

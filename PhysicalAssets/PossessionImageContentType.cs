@@ -12,3 +12,4 @@ public static class PossessionImageContentType
         _ => "application/octet-stream",
     };
 }
+
