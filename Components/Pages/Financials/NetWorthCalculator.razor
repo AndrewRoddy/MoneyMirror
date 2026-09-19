@@ -6,7 +6,9 @@
 @using MoneyMirror.Data
 @using MoneyMirror.Data.Entities
 @using MoneyMirror.Financial
+@using MoneyMirror.PhysicalAssets
 @inject MoneyMirrorDbContext DbContext
+@inject IPhysicalAssetRepository AssetRepository
 
 <PageTitle>Net Worth</PageTitle>
 
@@ -35,14 +37,20 @@
         <div class="alert alert-danger" role="alert">@ErrorMessage</div>
     }
 
-    <section class="finance-summary" aria-label="Financial summary">
+    <section class="finance-summary" aria-label="Net worth summary">
         <div class="summary-card summary-assets">
             <div class="summary-card-top"><span class="summary-label">Net Worth</span></div>
             <strong>@NetWorth.ToString("C0")</strong>
+            <span class="summary-foot">Financial assets + physical capital − liabilities</span>
         </div>
         <div class="summary-card summary-assets">
-            <div class="summary-card-top"><span class="summary-label">Total assets</span></div>
-            <strong>@TotalAssets.ToString("C0")</strong>
+            <div class="summary-card-top"><span class="summary-label">Financial assets</span></div>
+            <strong>@TotalFinancialAssets.ToString("C0")</strong>
+        </div>
+        <div class="summary-card summary-assets">
+            <div class="summary-card-top"><span class="summary-label">Physical capital</span></div>
+            <strong>@TotalPhysicalCapital.ToString("C0")</strong>
+            <span class="summary-foot"><a href="/inventory">View inventory</a></span>
         </div>
         <div class="summary-card summary-liabilities">
             <div class="summary-card-top"><span class="summary-label">Total liabilities</span></div>
@@ -127,6 +135,7 @@
 @code {
     private readonly List<FinancialRecord> AssetRecords = [];
     private readonly List<FinancialRecord> LiabilityRecords = [];
+    private IReadOnlyList<PhysicalAssetSummary> PhysicalAssets = [];
 
     private RecordKind ActiveTab { get; set; } = RecordKind.All;
     private bool IsFormOpen { get; set; }
@@ -135,10 +144,15 @@
     private string? ErrorMessage { get; set; }
     private FinancialRecord Draft { get; set; } = NewDraft(RecordKind.Asset);
     private FinancialRecord? EditingRecord { get; set; }
+
+    // FC2's formula extended per #75: financial assets + physical capital -
+    // liabilities. Still purely deterministic - no AI participates here.
     private decimal NetWorth => FinancialNetWorthCalculator.Calculate(
-        AssetRecords.Select(record => record.Amount),
+        AssetRecords.Select(record => record.Amount)
+            .Concat(PhysicalAssets.Select(asset => asset.CurrentValuation ?? 0m)),
         LiabilityRecords.Select(record => record.Amount));
-    private decimal TotalAssets => AssetRecords.Sum(record => record.Amount);
+    private decimal TotalFinancialAssets => AssetRecords.Sum(record => record.Amount);
+    private decimal TotalPhysicalCapital => PhysicalAssets.Sum(asset => asset.CurrentValuation ?? 0m);
     private decimal TotalLiabilities => LiabilityRecords.Sum(record => record.Amount);
     private List<FinancialRecord> VisibleRecords => ActiveTab switch
     {
@@ -185,6 +199,8 @@
                 liability.Name,
                 liability.OutstandingBalance,
                 liability.AsOfDate.LocalDateTime)));
+
+            PhysicalAssets = await AssetRepository.GetAllAsync();
         }
         catch (Exception)
         {
