@@ -1,0 +1,95 @@
+@page "/inventory/{Id:guid}"
+@rendermode InteractiveServer
+@using MoneyMirror.PhysicalAssets
+@inject IPhysicalAssetRepository AssetRepository
+
+<PageTitle>@(_asset?.Name ?? "Inventory Item")</PageTitle>
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_asset is null)
+{
+    @if (_errorMessage is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+}
+else
+{
+    <h1>@_asset.Name</h1>
+
+    @if (_asset.ImageReference is not null)
+    {
+        <img
+            src="@($"/api/possession-images/{_asset.ImageReference}")"
+            alt="@_asset.Name"
+            style="max-width: 400px;"
+            class="mb-3 d-block" />
+    }
+
+    <dl class="row">
+        <dt class="col-sm-3">Category</dt>
+        <dd class="col-sm-9">@(_asset.Category ?? "—")</dd>
+
+        <dt class="col-sm-3">Product/Model</dt>
+        <dd class="col-sm-9">@(_asset.IdentifiedProductModel ?? "—")</dd>
+
+        <dt class="col-sm-3">Source</dt>
+        <dd class="col-sm-9">@(_asset.IsManuallyAdded ? "Manually added" : "Scanned")</dd>
+    </dl>
+
+    <h2>Valuation History</h2>
+    @if (_asset.ValuationHistory.Count == 0)
+    {
+        <p><em>No valuations yet.</em></p>
+    }
+    else
+    {
+        <ul class="list-unstyled">
+            @foreach (var entry in _asset.ValuationHistory)
+            {
+                <li class="border rounded p-3 mb-2">
+                    <span class="fw-bold">$@entry.EstimatedValue.ToString("N2")</span>
+                    <span class="text-muted">on @entry.ValuedAt.ToString("d")</span>
+                    @if (entry.Source is not null)
+                    {
+                        <span class="badge bg-secondary">@entry.Source</span>
+                    }
+                    @if (entry.Notes is not null)
+                    {
+                        <p class="mb-0 mt-1">@entry.Notes</p>
+                    }
+                </li>
+            }
+        </ul>
+    }
+
+    <a href="/inventory">&larr; Back to inventory</a>
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private PhysicalAssetDetail? _asset;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _asset = await AssetRepository.GetByIdAsync(Id);
+            if (_asset is null)
+            {
+                _errorMessage = "This item could not be found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load item: {ex.Message}";
+        }
+    }
+}

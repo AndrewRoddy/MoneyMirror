@@ -1,0 +1,31 @@
+namespace MoneyMirror.PhysicalAssets;
+
+/// <summary>
+/// CRUD over the physical asset inventory. The landing surface for both
+/// entry paths (manual add here, and PA7's AI-confirmed items) - both
+/// write to the same table.
+/// </summary>
+public interface IPhysicalAssetRepository
+{
+    Task<IReadOnlyList<PhysicalAssetSummary>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <returns>Null if no item with <paramref name="id"/> exists.</returns>
+    Task<PhysicalAssetDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a manually-entered item, returning its new Id.</summary>
+    Task<Guid> AddAsync(PhysicalAssetInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds a PA4-confirmed, PA6-valued detection - the scan-pipeline
+    /// counterpart to <see cref="AddAsync"/>. Records the valuation and its
+    /// evidence/explanation alongside the new item.
+    /// </summary>
+    Task<Guid> AddFromScanAsync(ScannedAssetInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Updates an existing item's fields. Does not touch its valuation history.</summary>
+    /// <returns>False if no item with <paramref name="id"/> exists.</returns>
+    Task<bool> UpdateAsync(Guid id, PhysicalAssetInput input, CancellationToken cancellationToken = default);
+
+    /// <returns>False if no item with <paramref name="id"/> exists.</returns>
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+}

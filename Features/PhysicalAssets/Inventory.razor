@@ -1,0 +1,204 @@
+@page "/inventory"
+@rendermode InteractiveServer
+@using MoneyMirror.PhysicalAssets
+@inject IPhysicalAssetRepository AssetRepository
+
+<PageTitle>Inventory</PageTitle>
+
+<h1>Physical Asset Inventory</h1>
+
+<p>Every item you own, however it got here - scanned or manually added.</p>
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_assets is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <p>
+        <strong>Total value: $@_assets.Sum(a => a.CurrentValuation ?? 0).ToString("N2")</strong>
+        @if (_assets.Any(a => a.CurrentValuation is null))
+        {
+            <span class="text-muted"> (some items have no valuation yet)</span>
+        }
+    </p>
+
+    @if (_assets.Count == 0)
+    {
+        <p><em>No items yet. Add one below, or scan a possession.</em></p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Product/Model</th>
+                    <th>Source</th>
+                    <th>Valuation</th>
+                    <th>Valued</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var asset in _assets)
+                {
+                    <tr>
+                        @if (_editingId == asset.Id)
+                        {
+                            <td><input class="form-control form-control-sm" @bind="_editName" /></td>
+                            <td><input class="form-control form-control-sm" @bind="_editCategory" /></td>
+                            <td><input class="form-control form-control-sm" @bind="_editModel" /></td>
+                            <td>@(asset.IsManuallyAdded ? "Manual" : "Scanned")</td>
+                            <td colspan="2">
+                                <input
+                                    class="form-control form-control-sm"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="New valuation (optional)"
+                                    @bind="_editValuation" />
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="SaveEditAsync">Save</button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                            </td>
+                        }
+                        else
+                        {
+                            <td><a href="@($"/inventory/{asset.Id}")">@asset.Name</a></td>
+                            <td>@asset.Category</td>
+                            <td>@asset.IdentifiedProductModel</td>
+                            <td>@(asset.IsManuallyAdded ? "Manual" : "Scanned")</td>
+                            <td>@(asset.CurrentValuation is { } v ? $"${v:N2}" : "—")</td>
+                            <td>@(asset.ValuationDate?.ToString("d") ?? "—")</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => BeginEdit(asset)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(asset.Id)">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+<h2>Add Item</h2>
+<div class="row g-2">
+    <div class="col"><input class="form-control" placeholder="Name" @bind="_newName" /></div>
+    <div class="col"><input class="form-control" placeholder="Category" @bind="_newCategory" /></div>
+    <div class="col"><input class="form-control" placeholder="Product/Model" @bind="_newModel" /></div>
+    <div class="col">
+        <input class="form-control" type="number" step="0.01" placeholder="Value (optional)" @bind="_newValuation" />
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" @onclick="AddAsync" disabled="@string.IsNullOrWhiteSpace(_newName)">Add</button>
+    </div>
+</div>
+
+@code {
+    private List<PhysicalAssetSummary>? _assets;
+    private string? _errorMessage;
+
+    private string _newName = string.Empty;
+    private string? _newCategory;
+    private string? _newModel;
+    private decimal? _newValuation;
+
+    private Guid? _editingId;
+    private string _editName = string.Empty;
+    private string? _editCategory;
+    private string? _editModel;
+    private decimal? _editValuation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _assets = (await AssetRepository.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load inventory: {ex.Message}";
+        }
+    }
+
+    private async Task AddAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newName))
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        try
+        {
+            await AssetRepository.AddAsync(new PhysicalAssetInput(_newName, _newCategory, _newModel, _newValuation));
+            _newName = string.Empty;
+            _newCategory = null;
+            _newModel = null;
+            _newValuation = null;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to add item: {ex.Message}";
+        }
+    }
+
+    private void BeginEdit(PhysicalAssetSummary asset)
+    {
+        _editingId = asset.Id;
+        _editName = asset.Name;
+        _editCategory = asset.Category;
+        _editModel = asset.IdentifiedProductModel;
+        _editValuation = null;
+    }
+
+    private void CancelEdit() => _editingId = null;
+
+    private async Task SaveEditAsync()
+    {
+        if (_editingId is not { } id)
+        {
+            return;
+        }
+
+        _errorMessage = null;
+        try
+        {
+            await AssetRepository.UpdateAsync(id, new PhysicalAssetInput(_editName, _editCategory, _editModel, _editValuation));
+            _editingId = null;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to save changes: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        _errorMessage = null;
+        try
+        {
+            await AssetRepository.DeleteAsync(id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to delete item: {ex.Message}";
+        }
+    }
+}
