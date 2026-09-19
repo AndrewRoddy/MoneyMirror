@@ -16,6 +16,8 @@ builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
 builder.Services.Configure<ResumeUploadOptions>(
     builder.Configuration.GetSection(ResumeUploadOptions.SectionName));
+builder.Services.Configure<ImageUploadOptions>(
+    builder.Configuration.GetSection(ImageUploadOptions.SectionName));
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
@@ -23,6 +25,9 @@ builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionSer
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
 builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
+builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
+builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
+builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
 
 var app = builder.Build();
 
@@ -40,6 +45,14 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+app.MapGet("/api/possession-images/{reference}", async (string reference, IPossessionImageStorage storage) =>
+{
+    var stream = await storage.OpenReadAsync(reference);
+    return stream is null
+        ? Results.NotFound()
+        : Results.File(stream, PossessionImageContentType.FromFileName(reference));
+});
 
 if (app.Environment.IsDevelopment())
 {
