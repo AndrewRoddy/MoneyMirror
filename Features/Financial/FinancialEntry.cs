@@ -1,4 +1,4 @@
-namespace PittMoney.Features.Financial;
+namespace MoneyMirror.Features.Financial;
 
 public enum FinancialEntryType
 {

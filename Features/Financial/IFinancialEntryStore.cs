@@ -1,4 +1,4 @@
-namespace PittMoney.Features.Financial;
+namespace MoneyMirror.Features.Financial;
 
 /// <summary>
 /// Storage seam for financial entries. #8 (FC1) replaces the in-memory

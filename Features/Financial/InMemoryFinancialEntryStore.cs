@@ -1,4 +1,4 @@
-namespace PittMoney.Features.Financial;
+namespace MoneyMirror.Features.Financial;
 
 /// <summary>
 /// Placeholder store until #8 lands EF Core + PostgreSQL. Singleton so all

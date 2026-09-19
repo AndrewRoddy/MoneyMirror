@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using PittMoney.Features.Financial;
+using MoneyMirror.Features.Financial;
 
-namespace PittMoney.Components.Pages.Financials;
+namespace MoneyMirror.Components.Pages.Financials;
 
 /// <summary>
 /// Code-behind for <c>NetWorthCalculator.razor</c>. Keeps the page's in-component

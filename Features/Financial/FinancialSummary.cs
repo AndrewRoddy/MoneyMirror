@@ -1,4 +1,4 @@
-namespace PittMoney.Features.Financial;
+namespace MoneyMirror.Features.Financial;
 
 /// <summary>
 /// Net-worth figures: sum(assets) - sum(liabilities). Pure C#, no I/O, no AI.

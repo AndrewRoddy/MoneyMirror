@@ -5,6 +5,7 @@ using MoneyMirror.HumanCapital;
 using MoneyMirror.PhysicalAssets;
 using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Data;
+using MoneyMirror.Features.Financial;
 
 var builder = WebApplication.CreateBuilder(args);
 

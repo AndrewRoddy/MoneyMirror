@@ -1,6 +1,6 @@
-using PittMoney.Features.Financial;
+using MoneyMirror.Features.Financial;
 
-namespace PittMoney.Tests.Financial;
+namespace MoneyMirror.Tests.Financial;
 
 public class FinancialSummaryTests
 {
