@@ -5,6 +5,7 @@ using MoneyMirror.HumanCapital;
 using MoneyMirror.PhysicalAssets;
 using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Data;
+using MoneyMirror.Features.Financial;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,8 @@ builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionSer
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
 builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
+// Temporary in-memory store; #8 (FC1) swaps this for the EF Core/PostgreSQL implementation.
+builder.Services.AddSingleton<IFinancialEntryStore, InMemoryFinancialEntryStore>();
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
