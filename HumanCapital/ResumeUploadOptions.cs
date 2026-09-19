@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// Tunables for resume upload validation, bound from the
@@ -11,3 +11,4 @@ public class ResumeUploadOptions
     /// <summary>Maximum accepted upload size, in bytes. Defaults to 10 MB.</summary>
     public long MaxFileSizeBytes { get; set; } = 10 * 1024 * 1024;
 }
+

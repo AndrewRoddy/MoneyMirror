@@ -1,7 +1,7 @@
 @page "/human-capital"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
-@using PittMoney.HumanCapital
+@using MoneyMirror.HumanCapital
 @inject IResumeUploadValidator UploadValidator
 @inject IResumeTextExtractionService TextExtractionService
 @inject IProfessionalProfileExtractionService ProfileExtractionService
@@ -27,59 +27,65 @@
 
 @if (_profile is not null)
 {
-    <h2>Extracted Profile</h2>
+    <h2>Review Extracted Profile</h2>
+    <p>Fix anything the extraction got wrong, then save your corrections.</p>
 
-    <ProfileSection Title="Education" IsEmpty="@(_profile.Education.Count == 0)">
-        <ul>
-            @foreach (var item in _profile.Education)
-            {
-                <li>
-                    <strong>@item.Institution</strong>
-                    @(item.Degree is not null ? $" — {item.Degree}" : "")
-                    @(item.FieldOfStudy is not null ? $" in {item.FieldOfStudy}" : "")
-                    @(FormatDateRange(item.StartDate, item.EndDate))
-                </li>
-            }
-        </ul>
-    </ProfileSection>
+    @if (_savedMessage is not null)
+    {
+        <div class="alert alert-success" role="alert">@_savedMessage</div>
+    }
 
-    <ProfileSection Title="Experience" IsEmpty="@(_profile.Experience.Count == 0)">
-        <ul>
-            @foreach (var item in _profile.Experience)
-            {
-                <li>
-                    <strong>@(item.Title ?? "Role")</strong> at @item.Organization
-                    @FormatDateRange(item.StartDate, item.EndDate)
-                    @if (item.Description is not null)
-                    {
-                        <div>@item.Description</div>
-                    }
-                </li>
-            }
-        </ul>
-    </ProfileSection>
+    <EditableSection Title="Education" TItem="EditableEducation" Items="_education">
+        <ItemTemplate Context="item">
+            <div class="row g-2">
+                <div class="col"><input class="form-control form-control-sm" placeholder="Institution" @bind="item.Institution" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Degree" @bind="item.Degree" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Field of study" @bind="item.FieldOfStudy" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Start" @bind="item.StartDate" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="End" @bind="item.EndDate" /></div>
+            </div>
+        </ItemTemplate>
+    </EditableSection>
 
-    <ProfileSection Title="Skills" IsEmpty="@(_profile.Skills.Count == 0)">
-        <p>@string.Join(", ", _profile.Skills.Select(s => s.Name))</p>
-    </ProfileSection>
+    <EditableSection Title="Experience" TItem="EditableExperience" Items="_experience">
+        <ItemTemplate Context="item">
+            <div class="row g-2">
+                <div class="col"><input class="form-control form-control-sm" placeholder="Organization" @bind="item.Organization" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Title" @bind="item.Title" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Start" @bind="item.StartDate" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="End" @bind="item.EndDate" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Description" @bind="item.Description" /></div>
+            </div>
+        </ItemTemplate>
+    </EditableSection>
 
-    <ProfileSection Title="Certifications" IsEmpty="@(_profile.Certifications.Count == 0)">
-        <ul>
-            @foreach (var item in _profile.Certifications)
-            {
-                <li>@item.Name @(item.IssuingOrganization is not null ? $" — {item.IssuingOrganization}" : "")</li>
-            }
-        </ul>
-    </ProfileSection>
+    <EditableSection Title="Certifications" TItem="EditableCertification" Items="_certifications">
+        <ItemTemplate Context="item">
+            <div class="row g-2">
+                <div class="col"><input class="form-control form-control-sm" placeholder="Name" @bind="item.Name" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Issuing organization" @bind="item.IssuingOrganization" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Issue date" @bind="item.IssueDate" /></div>
+            </div>
+        </ItemTemplate>
+    </EditableSection>
 
-    <ProfileSection Title="Projects" IsEmpty="@(_profile.Projects.Count == 0)">
-        <ul>
-            @foreach (var item in _profile.Projects)
-            {
-                <li><strong>@item.Name</strong>@(item.Description is not null ? $": {item.Description}" : "")</li>
-            }
-        </ul>
-    </ProfileSection>
+    <EditableSection Title="Skills" TItem="EditableSkill" Items="_skills">
+        <ItemTemplate Context="item">
+            <div class="row g-2">
+                <div class="col"><input class="form-control form-control-sm" placeholder="Skill" @bind="item.Name" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Category" @bind="item.Category" /></div>
+            </div>
+        </ItemTemplate>
+    </EditableSection>
+
+    <EditableSection Title="Projects" TItem="EditableProject" Items="_projects">
+        <ItemTemplate Context="item">
+            <div class="row g-2">
+                <div class="col"><input class="form-control form-control-sm" placeholder="Name" @bind="item.Name" /></div>
+                <div class="col"><input class="form-control form-control-sm" placeholder="Description" @bind="item.Description" /></div>
+            </div>
+        </ItemTemplate>
+    </EditableSection>
 
     <ProfileSection Title="Publications" IsEmpty="@(_profile.Publications.Count == 0)">
         <ul>
@@ -98,17 +104,27 @@
             }
         </ul>
     </ProfileSection>
+
+    <button type="button" class="btn btn-primary mt-2" @onclick="SaveCorrections">Save Corrections</button>
 }
 
 @code {
     private bool _isProcessing;
     private string? _errorMessage;
+    private string? _savedMessage;
     private string? _fileName;
     private ProfessionalProfile? _profile;
+
+    private List<EditableEducation> _education = [];
+    private List<EditableExperience> _experience = [];
+    private List<EditableCertification> _certifications = [];
+    private List<EditableSkill> _skills = [];
+    private List<EditableProject> _projects = [];
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         _errorMessage = null;
+        _savedMessage = null;
         _profile = null;
 
         var file = e.File;
@@ -129,6 +145,7 @@
             await using var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes);
             var text = await TextExtractionService.ExtractTextAsync(stream, file.Name);
             _profile = await ProfileExtractionService.ExtractAsync(text);
+            LoadEditableLists(_profile);
         }
         catch (ResumeTextExtractionException ex)
         {
@@ -144,13 +161,120 @@
         }
     }
 
-    private static string FormatDateRange(string? start, string? end)
+    private void LoadEditableLists(ProfessionalProfile profile)
     {
-        if (start is null && end is null)
+        _education = profile.Education.Select(EditableEducation.From).ToList();
+        _experience = profile.Experience.Select(EditableExperience.From).ToList();
+        _certifications = profile.Certifications.Select(EditableCertification.From).ToList();
+        _skills = profile.Skills.Select(EditableSkill.From).ToList();
+        _projects = profile.Projects.Select(EditableProject.From).ToList();
+    }
+
+    /// <summary>
+    /// Rebuilds _profile from the edited lists - the "stored profile" this
+    /// saves back to is currently just in-memory page state, since the data
+    /// layer (#6) isn't merged yet; #89 will add real persistence later.
+    /// </summary>
+    private void SaveCorrections()
+    {
+        if (_profile is null)
         {
-            return string.Empty;
+            return;
         }
 
-        return $" ({start ?? "?"} – {end ?? "present"})";
+        _profile = _profile with
+        {
+            Education = _education.Select(e => e.ToRecord()).ToList(),
+            Experience = _experience.Select(e => e.ToRecord()).ToList(),
+            Certifications = _certifications.Select(e => e.ToRecord()).ToList(),
+            Skills = _skills.Select(e => e.ToRecord()).ToList(),
+            Projects = _projects.Select(e => e.ToRecord()).ToList(),
+        };
+
+        _savedMessage = "Corrections saved.";
     }
+
+    private class EditableEducation
+    {
+        public string Institution { get; set; } = string.Empty;
+        public string Degree { get; set; } = string.Empty;
+        public string FieldOfStudy { get; set; } = string.Empty;
+        public string StartDate { get; set; } = string.Empty;
+        public string EndDate { get; set; } = string.Empty;
+
+        public static EditableEducation From(EducationRecord r) =>
+            new()
+            {
+                Institution = r.Institution,
+                Degree = r.Degree ?? string.Empty,
+                FieldOfStudy = r.FieldOfStudy ?? string.Empty,
+                StartDate = r.StartDate ?? string.Empty,
+                EndDate = r.EndDate ?? string.Empty,
+            };
+
+        public EducationRecord ToRecord() =>
+            new(Institution, NullIfBlank(Degree), NullIfBlank(FieldOfStudy), NullIfBlank(StartDate), NullIfBlank(EndDate));
+    }
+
+    private class EditableExperience
+    {
+        public string Organization { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string StartDate { get; set; } = string.Empty;
+        public string EndDate { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        public static EditableExperience From(Experience r) =>
+            new()
+            {
+                Organization = r.Organization,
+                Title = r.Title ?? string.Empty,
+                StartDate = r.StartDate ?? string.Empty,
+                EndDate = r.EndDate ?? string.Empty,
+                Description = r.Description ?? string.Empty,
+            };
+
+        public Experience ToRecord() =>
+            new(Organization, NullIfBlank(Title), NullIfBlank(StartDate), NullIfBlank(EndDate), NullIfBlank(Description));
+    }
+
+    private class EditableCertification
+    {
+        public string Name { get; set; } = string.Empty;
+        public string IssuingOrganization { get; set; } = string.Empty;
+        public string IssueDate { get; set; } = string.Empty;
+
+        public static EditableCertification From(Certification r) =>
+            new()
+            {
+                Name = r.Name,
+                IssuingOrganization = r.IssuingOrganization ?? string.Empty,
+                IssueDate = r.IssueDate ?? string.Empty,
+            };
+
+        public Certification ToRecord() => new(Name, NullIfBlank(IssuingOrganization), NullIfBlank(IssueDate));
+    }
+
+    private class EditableSkill
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+
+        public static EditableSkill From(Skill r) => new() { Name = r.Name, Category = r.Category ?? string.Empty };
+
+        public Skill ToRecord() => new(Name, NullIfBlank(Category));
+    }
+
+    private class EditableProject
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        public static EditableProject From(Project r) => new() { Name = r.Name, Description = r.Description ?? string.Empty };
+
+        public Project ToRecord() => new(Name, NullIfBlank(Description));
+    }
+
+    private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }
+

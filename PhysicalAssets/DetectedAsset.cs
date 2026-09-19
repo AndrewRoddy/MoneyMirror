@@ -1,4 +1,4 @@
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// One object found in a photo: a generic label plus, where a specific
@@ -9,3 +9,4 @@ public record DetectedAsset(
     double Confidence,
     BoundingBox? Region,
     AssetIdentification? Identification);
+

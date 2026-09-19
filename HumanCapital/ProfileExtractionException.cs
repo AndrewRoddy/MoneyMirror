@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// Thrown when the LLM call for profile extraction fails, or returns a
@@ -15,3 +15,4 @@ public class ProfileExtractionException : Exception
     {
     }
 }
+

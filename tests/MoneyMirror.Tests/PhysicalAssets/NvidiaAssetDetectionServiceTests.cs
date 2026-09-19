@@ -1,7 +1,7 @@
-using PittMoney.Ai;
-using PittMoney.PhysicalAssets;
+using MoneyMirror.Ai;
+using MoneyMirror.PhysicalAssets;
 
-namespace PittMoney.Tests.PhysicalAssets;
+namespace MoneyMirror.Tests.PhysicalAssets;
 
 public class NvidiaAssetDetectionServiceTests
 {
@@ -116,3 +116,4 @@ public class NvidiaAssetDetectionServiceTests
         await Assert.ThrowsAsync<AssetDetectionException>(() => service.DetectAsync(Image, "image/jpeg"));
     }
 }
+

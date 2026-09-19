@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// Thrown when a resume document's file type isn't supported, or the
@@ -15,3 +15,4 @@ public class ResumeTextExtractionException : Exception
     {
     }
 }
+

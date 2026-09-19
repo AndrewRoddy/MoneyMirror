@@ -1,7 +1,295 @@
 @page "/physical-assets"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Options
+@using MoneyMirror.PhysicalAssets
+@inject IImageUploadValidator UploadValidator
+@inject IPossessionImageStorage ImageStorage
+@inject IPhysicalAssetDetectionService DetectionService
+@inject IAssetValuationService ValuationService
+@inject IOptions<ImageUploadOptions> UploadOptions
 
 <PageTitle>Physical Assets</PageTitle>
 
 <h1>Physical Assets</h1>
 
 <p>Photograph and value your possessions here.</p>
+
+<InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@_isProcessing" />
+
+@if (_isProcessing)
+{
+    <p><em>Analyzing @_fileName...</em></p>
+}
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_imageReference is not null)
+{
+    <p>Uploaded:</p>
+    <img src="@($"/api/possession-images/{_imageReference}")" alt="Uploaded possession photo" style="max-width: 400px;" />
+}
+
+@if (_detections is not null)
+{
+    @if (_detections.Count == 0)
+    {
+        <p><em>No objects detected in this photo.</em></p>
+    }
+    else
+    {
+        <h2>Review Detected Items</h2>
+        <p>Confirm, correct, or discard each detection below.</p>
+
+        <div class="row g-2 mb-3" aria-label="Detection filters and sorting">
+            <div class="col-sm-4">
+                <label for="detection-category-filter" class="form-label">Category</label>
+                <select id="detection-category-filter" class="form-select" @bind="_categoryFilter">
+                    <option value="all">All categories</option>
+                    @foreach (var category in CategoryOptions)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label for="detection-confidence-filter" class="form-label">Confidence</label>
+                <select id="detection-confidence-filter" class="form-select" @bind="_confidenceFilter">
+                    <option value="all">Any confidence</option>
+                    <option value="high">High (80% or higher)</option>
+                    <option value="medium">Medium (60% to 79%)</option>
+                    <option value="low">Low (below 60%)</option>
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label for="detection-sort" class="form-label">Sort by</label>
+                <select id="detection-sort" class="form-select" @bind="_sortOrder">
+                    <option value="confidence-desc">Confidence (high to low)</option>
+                    <option value="confidence-asc">Confidence (low to high)</option>
+                    <option value="category-asc">Category (A to Z)</option>
+                </select>
+            </div>
+        </div>
+
+        <p class="text-muted" aria-live="polite">
+            Showing @FilteredDetections.Count of @_detections.Count detections.
+        </p>
+
+        @foreach (var detection in FilteredDetections)
+        {
+            var detectionIndex = DetectionIndex(detection);
+            <div class="border rounded p-3 mb-2 @(detection.Included ? "" : "opacity-50")">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="include-@detectionIndex" @bind="detection.Included" />
+                    <label class="form-check-label" for="include-@detectionIndex">
+                        <strong>@detection.Original.Label</strong>
+                        (@((detection.Original.Confidence * 100).ToString("F0"))% confidence)
+                        @if (detection.IsLowConfidence)
+                        {
+                            <span class="badge bg-warning text-dark">Needs review</span>
+                        }
+                    </label>
+                </div>
+
+                @if (detection.Included)
+                {
+                    <div class="row mt-2">
+                        <div class="col">
+                            <label for="brand-@detectionIndex" class="form-label">Brand</label>
+                            <input id="brand-@detectionIndex" class="form-control" placeholder="Unknown" @bind="detection.Brand" />
+                        </div>
+                        <div class="col">
+                            <label for="model-@detectionIndex" class="form-label">Model</label>
+                            <input id="model-@detectionIndex" class="form-control" placeholder="Unknown" @bind="detection.Model" />
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@detection.IsEstimating">
+                        @(detection.IsEstimating ? "Estimating..." : "Estimate value")
+                    </button>
+
+                    @if (detection.ValuationError is not null)
+                    {
+                        <div class="alert alert-danger mt-2 mb-0 py-1" role="alert">@detection.ValuationError</div>
+                    }
+
+                    @if (detection.Valuation is not null)
+                    {
+                        <div class="mt-2">
+                            <span class="fw-bold">$@detection.Valuation.EstimatedValueUsd.ToString("N2")</span>
+                            <span class="badge bg-secondary">AI estimate - not based on live market data</span>
+                            <p class="text-muted mb-0">@detection.Valuation.Reasoning</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="mb-0"><em>Discarded - not a real item.</em></p>
+                }
+            </div>
+        }
+    }
+}
+
+@code {
+    private const double LowConfidenceThreshold = 0.6;
+
+    private bool _isProcessing;
+    private string? _errorMessage;
+    private string? _fileName;
+    private string? _imageReference;
+    private List<ReviewableDetection>? _detections;
+    private string _categoryFilter = "all";
+    private string _confidenceFilter = "all";
+    private string _sortOrder = "confidence-desc";
+
+    private IReadOnlyList<string> CategoryOptions => _detections is null
+        ? Array.Empty<string>()
+        : _detections
+            .Select(detection => detection.Original.Label)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(category => category, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private IReadOnlyList<ReviewableDetection> FilteredDetections
+    {
+        get
+        {
+            if (_detections is null)
+            {
+                return Array.Empty<ReviewableDetection>();
+            }
+
+            IEnumerable<ReviewableDetection> filtered = _detections;
+
+            if (!string.Equals(_categoryFilter, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                filtered = filtered.Where(detection =>
+                    string.Equals(detection.Original.Label, _categoryFilter, StringComparison.OrdinalIgnoreCase));
+            }
+
+            filtered = _confidenceFilter switch
+            {
+                "high" => filtered.Where(detection => detection.Original.Confidence >= 0.8),
+                "medium" => filtered.Where(detection => detection.Original.Confidence >= LowConfidenceThreshold && detection.Original.Confidence < 0.8),
+                "low" => filtered.Where(detection => detection.Original.Confidence < LowConfidenceThreshold),
+                _ => filtered
+            };
+
+            return _sortOrder switch
+            {
+                "confidence-asc" => filtered.OrderBy(detection => detection.Original.Confidence).ToList(),
+                "category-asc" => filtered
+                    .OrderBy(detection => detection.Original.Label, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(detection => detection.Original.Confidence)
+                    .ToList(),
+                _ => filtered.OrderByDescending(detection => detection.Original.Confidence).ToList()
+            };
+        }
+    }
+
+    private int DetectionIndex(ReviewableDetection detection) => _detections?.IndexOf(detection) ?? 0;
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _imageReference = null;
+        _detections = null;
+        _categoryFilter = "all";
+        _confidenceFilter = "all";
+        _sortOrder = "confidence-desc";
+
+        var file = e.File;
+        _fileName = file.Name;
+
+        var validation = UploadValidator.Validate(file.Name, file.Size);
+        if (!validation.IsValid)
+        {
+            _errorMessage = validation.Error;
+            return;
+        }
+
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            byte[] bytes;
+            await using (var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes))
+            {
+                using var buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer);
+                bytes = buffer.ToArray();
+            }
+
+            using (var saveStream = new MemoryStream(bytes))
+            {
+                _imageReference = await ImageStorage.SaveAsync(saveStream, file.Name);
+            }
+
+            var mediaType = PossessionImageContentType.FromFileName(file.Name);
+            var detected = await DetectionService.DetectAsync(bytes, mediaType);
+            _detections = detected.Select(d => new ReviewableDetection(d)).ToList();
+        }
+        catch (PossessionImageStorageException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (AssetDetectionException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task EstimateValueAsync(ReviewableDetection detection)
+    {
+        detection.ValuationError = null;
+        detection.IsEstimating = true;
+        StateHasChanged();
+
+        try
+        {
+            detection.Valuation = await ValuationService.EstimateAsync(
+                detection.Original.Label,
+                string.IsNullOrWhiteSpace(detection.Brand) ? null : detection.Brand,
+                string.IsNullOrWhiteSpace(detection.Model) ? null : detection.Model);
+        }
+        catch (AssetValuationException ex)
+        {
+            detection.ValuationError = ex.Message;
+        }
+        finally
+        {
+            detection.IsEstimating = false;
+        }
+    }
+
+    /// <summary>
+    /// In-memory review state for one DetectedAsset: whether the user is
+    /// keeping it, any brand/model correction, and (#138) an optional
+    /// AI-estimated valuation. This is the seam between PA3's detection
+    /// output and PA7's eventual save step - it holds no persisted state
+    /// of its own.
+    /// </summary>
+    private class ReviewableDetection(DetectedAsset original)
+    {
+        public DetectedAsset Original { get; } = original;
+        public bool Included { get; set; } = true;
+        public string Brand { get; set; } = original.Identification?.Brand ?? string.Empty;
+        public string Model { get; set; } = original.Identification?.Model ?? string.Empty;
+        public bool IsEstimating { get; set; }
+        public AssetValuation? Valuation { get; set; }
+        public string? ValuationError { get; set; }
+
+        public bool IsLowConfidence =>
+            Original.Confidence < LowConfidenceThreshold
+            || (Original.Identification is not null && Original.Identification.Confidence < LowConfidenceThreshold);
+    }
+}
+

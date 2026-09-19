@@ -1,8 +1,8 @@
 {
-  "name": "pitt-money",
+  "name": "money-mirror",
   "version": "1.0.0",
   "private": true,
-  "description": "Dev tooling for Pitt Money (formatters only — the app itself is ASP.NET Core).",
+  "description": "Dev tooling for Money Mirror (formatters only — the app itself is ASP.NET Core).",
   "license": "UNLICENSED",
   "scripts": {
     "format": "npm run format:cs && npm run format:css",
