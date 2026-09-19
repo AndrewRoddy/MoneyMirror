@@ -1,6 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+
 using PittMoney.Ai;
 using PittMoney.Ai.Configuration;
 using PittMoney.Components;
+using PittMoney.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,20 @@ builder.Services.Configure<VisionModelOptions>(
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 
+// setup connection to postgresql database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+}
+else
+{
+    Console.WriteLine("Default Connection Configured.");
+}
+
+builder.Services.AddDbContext<PittMoneyDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -26,7 +43,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 
