@@ -1,0 +1,172 @@
+## ---------------------------------------------------------------
+## .NET / Visual Studio
+## ---------------------------------------------------------------
+
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+[Dd]ebug/
+[Rr]elease/
+[Dd]ebugPublic/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+bld/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Publish output
+publish/
+[Pp]ublish[Pp]rofiles/*.pubxml.user
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
+PublishScripts/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# Test / coverage results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+*.VisualState.xml
+nunit-*.xml
+
+# Profiler / analysis
+*.psess
+*.vsp
+*.vspx
+*.dotCover
+*.sap
+*.svclog
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+.nuget/
+
+# Entity Framework / LocalDB
+*.mdf
+*.ldf
+*.ndf
+*.dbmdl
+*.jfm
+
+# Misc build artifacts
+*.pidb
+*.svclog
+*.scc
+*.tlog
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.cache
+ClientBin/
+~$*
+*~
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+
+# ASP.NET Scaffolding / Web
+ScaffoldingReadMe.txt
+*.[Rr]e[Ss]harper
+_ReSharper*/
+
+## ---------------------------------------------------------------
+## Secrets & local configuration
+## ---------------------------------------------------------------
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.secrets.json
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+
+## ---------------------------------------------------------------
+## Node / frontend tooling
+## ---------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.parcel-cache/
+.vite/
+dist/
+.next/
+.nuxt/
+.svelte-kit/
+*.tsbuildinfo
+
+## ---------------------------------------------------------------
+## OS files
+## ---------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+[Tt]humbs.db
+Desktop.ini
+$RECYCLE.BIN/
