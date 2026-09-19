@@ -1,0 +1,106 @@
+@page "/market-potential"
+@rendermode InteractiveServer
+@using MoneyMirror.HumanCapital
+@inject IProfessionalProfileRepository ProfileRepository
+@inject IOccupationMatchingService OccupationMatchingService
+@inject ICompensationEstimationService CompensationService
+
+<PageTitle>Market Potential</PageTitle>
+
+<div class="alert alert-info" role="alert">
+    <strong>Market Potential</strong> is a separate estimate of what your skills and experience could earn -
+    it is never added to, or combined with, your financial net worth.
+</div>
+
+<h1>Market Potential</h1>
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (_hasNoProfile)
+{
+    <p>
+        No profile on file yet. <a href="/human-capital">Upload a resume</a> to get started.
+    </p>
+}
+else
+{
+    <p>
+        Based on the profile below. <a href="/human-capital">Review or correct it</a> if something looks wrong.
+    </p>
+
+    <h2>Estimated Compensation Range</h2>
+    @if (_compensation is null)
+    {
+        <p><em>Not available.</em></p>
+    }
+    else
+    {
+        <p class="fs-4 fw-bold">
+            $@_compensation.MinUsd.ToString("N0") &ndash; $@_compensation.MaxUsd.ToString("N0")
+            <span class="badge bg-secondary fs-6 align-middle">AI estimate - not based on live wage data</span>
+        </p>
+        <p class="text-muted">@_compensation.Explanation</p>
+    }
+
+    <h2>Matched Occupations</h2>
+    @if (_occupations is null || _occupations.Count == 0)
+    {
+        <p><em>No matches available.</em></p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var occupation in _occupations)
+            {
+                <li>
+                    <strong>@occupation.Title</strong>
+                    <span class="badge bg-secondary">AI-suggested</span>
+                    <p class="text-muted mb-2">@occupation.Explanation</p>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private bool _isLoading = true;
+    private bool _hasNoProfile;
+    private string? _errorMessage;
+    private IReadOnlyList<OccupationMatch>? _occupations;
+    private CompensationEstimate? _compensation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var profile = await ProfileRepository.GetAsync();
+            if (profile.Education.Count == 0 && profile.Experience.Count == 0 && profile.Skills.Count == 0)
+            {
+                _hasNoProfile = true;
+                return;
+            }
+
+            _occupations = await OccupationMatchingService.MatchAsync(profile);
+            _compensation = await CompensationService.EstimateAsync(_occupations);
+        }
+        catch (OccupationMatchingException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (CompensationEstimationException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

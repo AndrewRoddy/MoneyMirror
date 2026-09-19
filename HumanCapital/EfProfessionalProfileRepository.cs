@@ -20,6 +20,53 @@ public class EfProfessionalProfileRepository : IProfessionalProfileRepository
         _db = db;
     }
 
+    public async Task<ProfessionalProfile> GetAsync(CancellationToken cancellationToken = default)
+    {
+        var entity = await _db
+            .ProfessionalProfiles.Include(p => p.EducationRecords)
+            .Include(p => p.Certifications)
+            .Include(p => p.Skills)
+            .Include(p => p.Experiences)
+            .FirstOrDefaultAsync(p => p.Id == DataEntities.ProfessionalProfile.DefaultId, cancellationToken);
+
+        if (entity is null)
+        {
+            return ProfessionalProfile.Empty;
+        }
+
+        // Projects/Publications/Awards have no backing table yet, so they
+        // always come back empty here - not fabricated, just not persisted.
+        return new ProfessionalProfile(
+            Education: entity
+                .EducationRecords.Select(e => new EducationRecord(
+                    e.InstitutionName,
+                    e.Degree,
+                    e.FieldOfStudy,
+                    FormatDate(e.StartedAt),
+                    FormatDate(e.CompletedAt)
+                ))
+                .ToList(),
+            Certifications: entity
+                .Certifications.Select(c => new Certification(c.Name, c.IssuingOrganization, FormatDate(c.IssuedAt)))
+                .ToList(),
+            Skills: entity.Skills.Select(s => new Skill(s.Name, s.ProficiencyLevel)).ToList(),
+            Experience: entity
+                .Experiences.Select(e => new Experience(
+                    e.EmployerName,
+                    e.JobTitle,
+                    FormatDate(e.StartedAt),
+                    FormatDate(e.EndedAt),
+                    e.Description
+                ))
+                .ToList(),
+            Projects: [],
+            Publications: [],
+            Awards: []
+        );
+    }
+
+    private static string? FormatDate(DateTimeOffset? date) => date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
     public async Task SaveAsync(ProfessionalProfile profile, CancellationToken cancellationToken = default)
     {
         var entity = await _db
