@@ -2,7 +2,7 @@
     max-width: 1100px;
     margin: 0 auto;
     padding: 2.5rem 2rem 4rem;
-    color: #18332a;
+    color: var(--text);
 }
 
 .finance-header,
@@ -37,13 +37,13 @@
 .finance-subtitle,
 .records-heading p,
 .drawer-copy {
-    color: #6f7d76;
+    color: var(--text-muted);
 }
 .finance-subtitle {
     margin: 0.5rem 0 0;
 }
 .finance-eyebrow {
-    color: #527764;
+    color: var(--accent-text);
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -54,7 +54,7 @@
     height: 1px;
     margin-left: 0.4rem;
     vertical-align: middle;
-    background: #9abfa6;
+    background: var(--accent);
 }
 
 .header-actions,
@@ -72,14 +72,14 @@ button {
     font-weight: 600;
 }
 .primary-button {
-    border: 1px solid #295c48;
-    color: white;
-    background: #295c48;
+    border: 1px solid var(--brand);
+    color: var(--text-inverse);
+    background: var(--brand);
 }
 .secondary-button {
-    border: 1px solid #cbded1;
-    color: #295c48;
-    background: white;
+    border: 1px solid var(--border);
+    color: var(--brand);
+    background: var(--surface);
 }
 
 .finance-summary {
@@ -94,15 +94,15 @@ button {
 }
 .summary-card {
     padding: 0.5rem;
-    border: 1px solid #e0e8e1;
+    border: 1px solid var(--border);
     border-radius: 0.7rem;
-    background: white;
+    background: var(--surface);
 }
 .summary-card-top {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #718079;
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 .summary-icon {
@@ -111,10 +111,10 @@ button {
     height: 1.5rem;
     place-items: center;
     border-radius: 0.35rem;
-    background: #e8f5eb;
+    background: var(--positive-surface);
 }
 .summary-liabilities .summary-icon {
-    background: #f9ece8;
+    background: var(--negative-surface);
 }
 .summary-card strong {
     display: block;
@@ -122,7 +122,7 @@ button {
     font-size: 1.5rem;
 }
 .summary-foot {
-    color: #8b9891;
+    color: var(--text-muted);
     font-size: 0.75rem;
 }
 
@@ -137,20 +137,20 @@ button {
     border: 0;
     border-radius: 0.4rem;
     padding: 0.55rem 0.75rem;
-    color: #718079;
+    color: var(--text-muted);
     background: transparent;
 }
 .record-tab.selected {
-    color: #295c48;
-    background: #e2f2e6;
+    color: var(--brand);
+    background: var(--brand-surface);
 }
 .record-tab span {
     margin-left: 0.25rem;
-    color: #7d9285;
+    color: var(--text-muted);
     font-size: 0.75rem;
 }
 .view-note {
-    color: #87968d;
+    color: var(--text-muted);
     font-size: 0.75rem;
 }
 .status-dot {
@@ -159,18 +159,18 @@ button {
     height: 0.4rem;
     margin-right: 0.25rem;
     border-radius: 50%;
-    background: #78b68d;
+    background: var(--positive);
 }
 
 .records-card {
     overflow: hidden;
-    border: 1px solid #e0e8e1;
+    border: 1px solid var(--border);
     border-radius: 0.7rem;
-    background: white;
+    background: var(--surface);
 }
 .records-heading {
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #edf1ed;
+    border-bottom: 1px solid var(--border-subtle);
 }
 .records-heading h2 {
     font-size: 1.35rem;
@@ -180,7 +180,7 @@ button {
     font-size: 0.8rem;
 }
 .record-count {
-    color: #87968d;
+    color: var(--text-muted);
     font-size: 0.75rem;
 }
 .records-table-wrap {
@@ -193,15 +193,15 @@ button {
 }
 .records-table th {
     padding: 0.75rem 1.5rem;
-    color: #87968d;
-    background: #fafcfb;
+    color: var(--text-muted);
+    background: var(--surface-muted);
     font-size: 0.7rem;
     text-align: left;
     text-transform: uppercase;
 }
 .records-table td {
     padding: 1rem 1.5rem;
-    border-top: 1px solid #edf1ed;
+    border-top: 1px solid var(--border-subtle);
     font-size: 0.85rem;
 }
 .record-name {
@@ -215,17 +215,17 @@ button {
     height: 2rem;
     place-items: center;
     border-radius: 0.4rem;
-    color: #2f6c4d;
-    background: #e5f3e9;
+    color: var(--positive-text);
+    background: var(--positive-surface);
     font-size: 0.65rem;
     font-weight: 700;
 }
 .liability-avatar {
-    color: #9b604f;
-    background: #faece9;
+    color: var(--negative-text);
+    background: var(--negative-surface);
 }
 .type-pill {
-    color: #527764;
+    color: var(--positive-text);
     font-size: 0.75rem;
 }
 .type-pill > span {
@@ -234,19 +234,19 @@ button {
     height: 0.45rem;
     margin-right: 0.35rem;
     border-radius: 50%;
-    background: #83c197;
+    background: var(--positive);
 }
 .liability-pill {
-    color: #9b604f;
+    color: var(--negative-text);
 }
 .liability-pill > span {
-    background: #d69a87;
+    background: var(--negative);
 }
 .record-amount {
     font-weight: 600;
 }
 .record-date {
-    color: #7d8d83;
+    color: var(--text-muted);
     white-space: nowrap;
 }
 .record-actions {
@@ -256,12 +256,12 @@ button {
 .record-actions button {
     border: 0;
     padding: 0.25rem;
-    color: #376f57;
+    color: var(--brand);
     background: transparent;
 }
 .record-actions .delete-action {
     margin-left: 0.35rem;
-    color: #a66858;
+    color: var(--negative-text);
 }
 .empty-records {
     padding: 3rem 1rem;
@@ -279,11 +279,11 @@ button {
     font-weight: 400;
 }
 .empty-records p {
-    color: #74837a;
+    color: var(--text-muted);
     font-size: 0.85rem;
 }
 .data-disclaimer {
-    color: #8c9991;
+    color: var(--text-muted);
     font-size: 0.75rem;
     text-align: center;
 }
@@ -292,7 +292,7 @@ button {
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: rgb(18 40 31 / 35%);
+    background: var(--overlay);
 }
 .record-drawer {
     position: fixed;
@@ -302,8 +302,8 @@ button {
     padding: 2rem;
     overflow-y: auto;
     box-sizing: border-box;
-    background: white;
-    box-shadow: -0.5rem 0 1.5rem rgb(0 0 0 / 15%);
+    background: var(--surface);
+    box-shadow: var(--shadow-drawer);
 }
 .drawer-header h2 {
     margin-top: 0.4rem;
@@ -311,7 +311,7 @@ button {
 }
 .close-drawer {
     border: 0;
-    color: #6f7d76;
+    color: var(--text-muted);
     background: transparent;
     font-size: 1.75rem;
 }
@@ -326,7 +326,7 @@ button {
 .form-field label {
     display: block;
     margin-bottom: 0.35rem;
-    color: #52635a;
+    color: var(--text);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -336,10 +336,10 @@ button {
     min-height: 2.5rem;
     padding: 0.5rem 0.65rem;
     box-sizing: border-box;
-    border: 1px solid #ccdcd0;
+    border: 1px solid var(--border);
     border-radius: 0.4rem;
-    color: #18332a;
-    background: #fbfdfb;
+    color: var(--text);
+    background: var(--surface-muted);
 }
 .currency-field {
     position: relative;
@@ -348,7 +348,7 @@ button {
     position: absolute;
     top: 0.6rem;
     left: 0.7rem;
-    color: #7d8d83;
+    color: var(--text-muted);
 }
 .currency-field input {
     padding-left: 1.5rem;
@@ -356,18 +356,18 @@ button {
 .validation-message {
     display: block;
     margin-top: 0.3rem;
-    color: #b35e4c;
+    color: var(--negative-text);
     font-size: 0.75rem;
 }
 .form-summary {
-    color: #b35e4c;
+    color: var(--negative-text);
     font-size: 0.8rem;
 }
 .drawer-actions {
     justify-content: flex-end;
     margin-top: 0.5rem;
     padding-top: 1rem;
-    border-top: 1px solid #edf1ed;
+    border-top: 1px solid var(--border-subtle);
 }
 .sr-only {
     position: absolute;

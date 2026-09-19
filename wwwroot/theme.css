@@ -1,0 +1,138 @@
+/*
+ * Pitt Money theme - University of Pittsburgh brand palette.
+ * Source: brand.pitt.edu, Brand Elements > Color Palettes.
+ *
+ * The palette below is the official one, verbatim, in Pitt's own three tiers.
+ * Do not add colors to it and do not invent in-between shades: every variation
+ * the app needs is derived with color-mix() in the Roles section.
+ *
+ * Pitt's usage rules, which the Roles section follows:
+ *   - Royal and Gold are primary and should dominate (backgrounds, banners,
+ *     major sections, primary actions).
+ *   - Secondary colors support them - subheadings and complementary elements.
+ *   - Accent colors are used SPARINGLY, for emphasis and informational needs
+ *     (icons, graphs, data viz). No more than four at once. We use three:
+ *     Light Green, Infrared and Merlot. Light Blue is reserved for charts.
+ *
+ * Components must use ROLE tokens (--text, --brand, --positive), never the raw
+ * palette and never a literal hex.
+ *
+ * Scoped .razor.css files inherit these from :root and can use them freely, but
+ * must never declare their own :root block - Blazor rewrites scoped selectors
+ * with a per-component attribute, so the declarations are silently dropped.
+ */
+
+:root {
+    /* ===============================================================
+     * Primary
+     * =============================================================== */
+
+    --pitt-royal: #003594; /* Pantone 661C */
+    --pitt-gold: #ffb81c; /* Pantone 1235C */
+
+    /* ===============================================================
+     * Secondary
+     * =============================================================== */
+
+    --pitt-new-sky: #dbeeff;
+    --pitt-gray: #c8c9c7;
+    --pitt-white: #ffffff;
+    --pitt-medium-blue: #00205b;
+    --pitt-bronze: #b87333;
+    --pitt-black: #000000;
+
+    /* ===============================================================
+     * Accent - sparingly
+     * =============================================================== */
+
+    --pitt-light-green: #00ad6e;
+    --pitt-infrared: #ff5b45;
+    --pitt-merlot: #770538;
+    --pitt-light-blue: #66b2e3; /* charts / data viz */
+
+    /* ===============================================================
+     * Roles
+     * ===============================================================
+     * Contrast ratios against white are noted where they matter. Gold is
+     * 1.7:1 on white and must never carry small text - it is a fill, rule
+     * and highlight color only. Bronze is Pitt's warm tone for type.
+     */
+
+    /* Text */
+    --text: var(--pitt-medium-blue); /* 15.5:1 */
+    --text-muted: color-mix(in srgb, var(--pitt-royal) 70%, var(--pitt-white)); /* 4.8:1 */
+    --text-inverse: var(--pitt-white);
+
+    /* Surfaces */
+    --surface: var(--pitt-white);
+    --surface-muted: color-mix(in srgb, var(--pitt-new-sky) 45%, var(--pitt-white));
+
+    /* Borders */
+    --border: color-mix(in srgb, var(--pitt-royal) 16%, var(--pitt-white));
+    --border-subtle: color-mix(in srgb, var(--pitt-royal) 9%, var(--pitt-white));
+
+    /* Brand - primary actions, dominant surfaces */
+    --brand: var(--pitt-royal);
+    --brand-strong: var(--pitt-medium-blue);
+    --brand-surface: var(--pitt-new-sky);
+
+    /* Accent - emphasis, highlights, active state */
+    --accent: var(--pitt-gold);
+    /* Gold is illegible as type (1.7:1); Bronze is Pitt's warm tone for it,
+     * nudged toward Medium Blue to clear 4.5:1 on white. */
+    --accent-text: color-mix(in srgb, var(--pitt-bronze) 85%, var(--pitt-medium-blue));
+    --accent-surface: color-mix(in srgb, var(--pitt-gold) 22%, var(--pitt-white));
+
+    /* Positive - assets, gains */
+    --positive: var(--pitt-light-green);
+    --positive-text: color-mix(
+        in srgb,
+        var(--pitt-light-green) 60%,
+        var(--pitt-medium-blue)
+    ); /* 5.7:1 */
+    --positive-surface: color-mix(in srgb, var(--pitt-light-green) 14%, var(--pitt-white));
+
+    /* Negative - liabilities, validation, destructive */
+    --negative: var(--pitt-infrared);
+    --negative-text: var(--pitt-merlot); /* 11.3:1 */
+    --negative-surface: color-mix(in srgb, var(--pitt-infrared) 12%, var(--pitt-white));
+
+    /* Depth */
+    --overlay: color-mix(in srgb, var(--pitt-medium-blue) 55%, transparent);
+    --shadow-drawer: -0.5rem 0 1.5rem color-mix(in srgb, var(--pitt-black) 18%, transparent);
+    --shadow-toast: 0 -1px 2px color-mix(in srgb, var(--pitt-black) 20%, transparent);
+
+    /* ===============================================================
+     * Chrome - app shell and Blazor/Bootstrap defaults
+     * =============================================================== */
+
+    /* Sidebar: Royal into Medium Blue - primary colors dominating a major section */
+    --sidebar-from: var(--pitt-royal);
+    --sidebar-to: var(--pitt-medium-blue);
+    --nav-scrim: color-mix(in srgb, var(--pitt-medium-blue) 45%, transparent);
+    --nav-link: color-mix(in srgb, var(--pitt-white) 80%, var(--pitt-royal));
+    --nav-link-hover: var(--pitt-white); /* on the dark sidebar */
+    --nav-link-active: var(--pitt-medium-blue); /* on the gold active fill */
+    --nav-surface-hover: color-mix(in srgb, var(--pitt-white) 12%, transparent);
+    --nav-surface-active: var(--pitt-gold); /* gold on royal - the Pitt pairing */
+    --nav-surface-pressed: color-mix(in srgb, var(--pitt-white) 25%, transparent);
+
+    /* Top row */
+    --topbar-bg: var(--surface-muted);
+    --topbar-border: var(--border);
+
+    /* Bootstrap overrides in app.css */
+    --link: var(--brand);
+    --button-primary-bg: var(--brand);
+    --button-primary-border: var(--brand);
+    --focus-ring-inner: var(--pitt-white);
+    --focus-ring-outer: var(--accent);
+    --input-valid: var(--positive);
+    --input-invalid: var(--negative);
+    --checkbox-border: var(--border);
+
+    /* Blazor's built-in error UI */
+    --error-boundary-bg: var(--negative-text);
+    --error-boundary-text: var(--pitt-white);
+    --error-toast-bg: var(--accent-surface);
+}

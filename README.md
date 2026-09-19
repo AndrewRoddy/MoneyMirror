@@ -78,6 +78,37 @@ npm run format    # format C# and CSS
 npm run check     # verify formatting without writing
 ```
 
+### Styling
+
+Colors follow the [University of Pittsburgh brand palette](https://brand.pitt.edu),
+defined once in `wwwroot/theme.css` in Pitt's own three tiers:
+
+| Tier | Colors |
+| --- | --- |
+| **Primary** | Royal Blue `#003594`, Gold `#FFB81C` |
+| **Secondary** | New Sky `#DBEEFF`, Gray `#C8C9C7`, White `#FFFFFF`, Medium Blue `#00205B`, Bronze `#B87333`, Black `#000000` |
+| **Accent** | Light Green `#00AD6E`, Infrared `#FF5B45`, Merlot `#770538`, Light Blue `#66B2E3` |
+
+Per Pitt's guidelines: Royal and Gold dominate; secondary colors support them; accent
+colors are used sparingly and **no more than four at once** (we use three, reserving
+Light Blue for charts).
+
+No color outside that palette appears anywhere, and there are no hand-picked in-between
+shades — every tint is derived with `color-mix()` from an official value.
+
+Components use the **role** tokens, never the raw palette and never a literal hex:
+`--text`, `--text-muted`, `--surface`, `--border`, `--brand`, `--accent`, `--positive`,
+`--negative`, and their `-text` / `-surface` variants. If no role fits, add one to
+`theme.css`.
+
+Two accessibility constraints are baked in: Gold is 1.7:1 on white and must never carry
+small text (it's a fill, rule and highlight color — Bronze is the warm tone for type),
+and every text role clears WCAG AA 4.5:1 against the background it actually sits on.
+
+Scoped `.razor.css` files inherit the tokens from `:root` and can use them freely, but
+must never declare their own `:root` block: Blazor rewrites scoped selectors with a
+per-component attribute, so the declarations are silently dropped.
+
 ## Status
 
 Actively being built. See the [project board](https://github.com/users/AndrewRoddy/projects/8)
