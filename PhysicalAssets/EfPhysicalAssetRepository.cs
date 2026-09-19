@@ -174,6 +174,21 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
         return true;
     }
 
+    public async Task<IReadOnlyList<PhysicalAssetSummary>> FindPossibleDuplicatesAsync(
+        string name,
+        string? identifiedProductModel,
+        CancellationToken cancellationToken = default)
+    {
+        var all = await GetAllAsync(cancellationToken);
+
+        return all.Where(existing =>
+                (!string.IsNullOrWhiteSpace(identifiedProductModel)
+                    && !string.IsNullOrWhiteSpace(existing.IdentifiedProductModel)
+                    && string.Equals(existing.IdentifiedProductModel, identifiedProductModel, StringComparison.OrdinalIgnoreCase))
+                || string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
     private static PhysicalAssetSummary ToSummary(DataEntities.PhysicalAsset asset)
     {
         var latest = asset.ValuationRecords.OrderByDescending(r => r.ValuedAt).FirstOrDefault();
