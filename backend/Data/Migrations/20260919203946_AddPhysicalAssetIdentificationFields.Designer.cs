@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MoneyMirror.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MoneyMirror.backend.Data.Migrations
 {
     [DbContext(typeof(MoneyMirrorDbContext))]
-    partial class MoneyMirrorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260919203946_AddPhysicalAssetIdentificationFields")]
+    partial class AddPhysicalAssetIdentificationFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -158,9 +161,6 @@ namespace MoneyMirror.backend.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTimeOffset>("AsOfDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<decimal>("CurrentBalance")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -185,9 +185,6 @@ namespace MoneyMirror.backend.Data.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("AsOfDate")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("InstitutionName")
                         .HasColumnType("text");
