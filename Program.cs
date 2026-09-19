@@ -1,6 +1,7 @@
 using PittMoney.Ai;
 using PittMoney.Ai.Configuration;
 using PittMoney.Components;
+using PittMoney.HumanCapital;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.Configure<VisionModelOptions>(
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
+builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 
 var app = builder.Build();
 
