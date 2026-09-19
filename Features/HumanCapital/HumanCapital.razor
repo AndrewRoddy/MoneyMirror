@@ -1,7 +1,156 @@
 @page "/human-capital"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Options
+@using PittMoney.HumanCapital
+@inject IResumeUploadValidator UploadValidator
+@inject IResumeTextExtractionService TextExtractionService
+@inject IProfessionalProfileExtractionService ProfileExtractionService
+@inject IOptions<ResumeUploadOptions> UploadOptions
 
 <PageTitle>Human Capital</PageTitle>
 
 <h1>Human Capital</h1>
 
 <p>Upload a resume to estimate your Market Potential here.</p>
+
+<InputFile OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />
+
+@if (_isProcessing)
+{
+    <p><em>Processing @_fileName...</em></p>
+}
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_profile is not null)
+{
+    <h2>Extracted Profile</h2>
+
+    <ProfileSection Title="Education" IsEmpty="@(_profile.Education.Count == 0)">
+        <ul>
+            @foreach (var item in _profile.Education)
+            {
+                <li>
+                    <strong>@item.Institution</strong>
+                    @(item.Degree is not null ? $" — {item.Degree}" : "")
+                    @(item.FieldOfStudy is not null ? $" in {item.FieldOfStudy}" : "")
+                    @(FormatDateRange(item.StartDate, item.EndDate))
+                </li>
+            }
+        </ul>
+    </ProfileSection>
+
+    <ProfileSection Title="Experience" IsEmpty="@(_profile.Experience.Count == 0)">
+        <ul>
+            @foreach (var item in _profile.Experience)
+            {
+                <li>
+                    <strong>@(item.Title ?? "Role")</strong> at @item.Organization
+                    @FormatDateRange(item.StartDate, item.EndDate)
+                    @if (item.Description is not null)
+                    {
+                        <div>@item.Description</div>
+                    }
+                </li>
+            }
+        </ul>
+    </ProfileSection>
+
+    <ProfileSection Title="Skills" IsEmpty="@(_profile.Skills.Count == 0)">
+        <p>@string.Join(", ", _profile.Skills.Select(s => s.Name))</p>
+    </ProfileSection>
+
+    <ProfileSection Title="Certifications" IsEmpty="@(_profile.Certifications.Count == 0)">
+        <ul>
+            @foreach (var item in _profile.Certifications)
+            {
+                <li>@item.Name @(item.IssuingOrganization is not null ? $" — {item.IssuingOrganization}" : "")</li>
+            }
+        </ul>
+    </ProfileSection>
+
+    <ProfileSection Title="Projects" IsEmpty="@(_profile.Projects.Count == 0)">
+        <ul>
+            @foreach (var item in _profile.Projects)
+            {
+                <li><strong>@item.Name</strong>@(item.Description is not null ? $": {item.Description}" : "")</li>
+            }
+        </ul>
+    </ProfileSection>
+
+    <ProfileSection Title="Publications" IsEmpty="@(_profile.Publications.Count == 0)">
+        <ul>
+            @foreach (var item in _profile.Publications)
+            {
+                <li>@item.Title @(item.Venue is not null ? $" — {item.Venue}" : "")</li>
+            }
+        </ul>
+    </ProfileSection>
+
+    <ProfileSection Title="Awards" IsEmpty="@(_profile.Awards.Count == 0)">
+        <ul>
+            @foreach (var item in _profile.Awards)
+            {
+                <li>@item.Name @(item.IssuingOrganization is not null ? $" — {item.IssuingOrganization}" : "")</li>
+            }
+        </ul>
+    </ProfileSection>
+}
+
+@code {
+    private bool _isProcessing;
+    private string? _errorMessage;
+    private string? _fileName;
+    private ProfessionalProfile? _profile;
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _profile = null;
+
+        var file = e.File;
+        _fileName = file.Name;
+
+        var validation = UploadValidator.Validate(file.Name, file.Size);
+        if (!validation.IsValid)
+        {
+            _errorMessage = validation.Error;
+            return;
+        }
+
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            await using var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes);
+            var text = await TextExtractionService.ExtractTextAsync(stream, file.Name);
+            _profile = await ProfileExtractionService.ExtractAsync(text);
+        }
+        catch (ResumeTextExtractionException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (ProfileExtractionException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private static string FormatDateRange(string? start, string? end)
+    {
+        if (start is null && end is null)
+        {
+            return string.Empty;
+        }
+
+        return $" ({start ?? "?"} – {end ?? "present"})";
+    }
+}

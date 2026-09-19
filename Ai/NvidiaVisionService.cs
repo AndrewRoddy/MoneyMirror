@@ -26,7 +26,8 @@ public class NvidiaVisionService : IVisionService
         byte[] imageBytes,
         string mediaType,
         string prompt,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var dataUri = $"data:{mediaType};base64,{Convert.ToBase64String(imageBytes)}";
 
@@ -41,7 +42,11 @@ public class NvidiaVisionService : IVisionService
                     Content =
                     [
                         new ContentPart { Type = "text", Text = prompt },
-                        new ContentPart { Type = "image_url", ImageUrl = new ImageUrl { Url = dataUri } },
+                        new ContentPart
+                        {
+                            Type = "image_url",
+                            ImageUrl = new ImageUrl { Url = dataUri },
+                        },
                     ],
                 },
             ],
@@ -51,11 +56,16 @@ public class NvidiaVisionService : IVisionService
         try
         {
             using var httpRequest = new HttpRequestMessage(
-                HttpMethod.Post, $"{_options.BaseUrl.TrimEnd('/')}/chat/completions")
+                HttpMethod.Post,
+                $"{_options.BaseUrl.TrimEnd('/')}/chat/completions"
+            )
             {
                 Content = JsonContent.Create(requestBody),
             };
-            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                _options.ApiKey
+            );
 
             response = await _httpClient.SendAsync(httpRequest, cancellationToken);
         }
@@ -74,13 +84,16 @@ public class NvidiaVisionService : IVisionService
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 throw new VisionServiceException(
-                    $"Vision model provider returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}");
+                    $"Vision model provider returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}"
+                );
             }
 
             ChatCompletionResponse? completion;
             try
             {
-                completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(cancellationToken);
+                completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(
+                    cancellationToken
+                );
             }
             catch (Exception ex)
             {
