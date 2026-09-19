@@ -1,0 +1,16 @@
+.git
+.github
+.vs
+.vscode
+.idea
+bin
+obj
+node_modules
+App_Data
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+README.md
+backend/postgresql_setup.md

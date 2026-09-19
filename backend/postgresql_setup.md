@@ -1,31 +1,47 @@
 # PostgreSQL setup
 
-## Start PostgreSQL with Docker
+## Run the full application with Docker
 
-From the repository root, start the development database:
+From the repository root, copy the example environment file, set a local
+database password, and start both services:
 
 ```powershell
-docker compose up -d postgres
+Copy-Item .env.example .env
+# Edit .env before starting the stack.
+docker compose up --build
 ```
 
-The Compose service uses these defaults:
+The web app is available at `http://localhost:8000` by default. Compose passes
+the Postgres variables into the ASP.NET Core container as its
+`ConnectionStrings:DefaultConnection` configuration value. The container uses
+`Host=postgres`, which is the Compose service name.
 
-- Host: `localhost`
+PostgreSQL has no host port mapping. It is attached only to Compose's internal
+`database` network, so it is reachable by the app container but not directly
+from the host. The app applies the existing EF Core migrations when it starts.
+
+The Compose defaults are:
+
+- Host from the app container: `postgres`
 - Port: `5432`
 - Database: `MoneyMirror`
 - Username: `postgres`
-- Password: `postgres`
+- Password: the value of `POSTGRES_PASSWORD` in `.env`
 
-The data is stored in the `pitt-money_postgres_data` Docker volume, so restarting
-the container does not remove the database.
+The data is stored in the `pitt-money_postgres_data` Docker volume, and uploaded
+possession images are stored in the `pitt-money-app_data` volume.
 
 To use different credentials, set `POSTGRES_DB`, `POSTGRES_USER`, and
-`POSTGRES_PASSWORD` in a local `.env` file before starting the service.
+`POSTGRES_PASSWORD` in `.env`. Set `NEMOTRON_API_KEY` and `VISION_API_KEY` there
+when using the AI-backed features. These values become environment-backed .NET
+configuration; they are not copied into the image.
 
-## Configure the application
+## Run the app locally with a Docker Postgres
 
-The application reads its connection string from user secrets. With the Compose
-defaults, configure it once from the repository root:
+If you prefer to run `dotnet run` on the host, the database must be published
+for host access. The normal full-stack Compose setup deliberately does not do
+this. Start the database with a temporary override or set the same connection
+string in .NET user-secrets after starting a separately published Postgres:
 
 ```powershell
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=MoneyMirror;Username=postgres;Password=postgres"
@@ -37,13 +53,10 @@ Then run the app normally:
 dotnet run
 ```
 
-When the app starts in Development, it applies the existing EF Core migrations
-automatically.
-
-## Stop PostgreSQL
+## Stop the stack
 
 ```powershell
-docker compose stop postgres
+docker compose down
 ```
 
 To remove the container and its persisted data, use `docker compose down -v`.
