@@ -1,4 +1,4 @@
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// A specific product/model inferred for a <see cref="DetectedAsset"/>.
@@ -7,3 +7,4 @@ namespace PittMoney.PhysicalAssets;
 /// callers should treat that as "unknown", never fabricate one.
 /// </summary>
 public record AssetIdentification(string? Brand, string? Model, double Confidence);
+

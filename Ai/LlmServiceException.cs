@@ -1,4 +1,4 @@
-namespace PittMoney.Ai;
+namespace MoneyMirror.Ai;
 
 /// <summary>
 /// Thrown when the LLM provider is unreachable, returns an error, or returns a

@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// Outcome of validating an uploaded resume before it's handed to
@@ -10,3 +10,4 @@ public record ResumeUploadValidationResult(bool IsValid, string? Error)
 
     public static ResumeUploadValidationResult Failure(string error) => new(false, error);
 }
+

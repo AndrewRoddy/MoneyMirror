@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// Converts raw resume text into a structured <see cref="ProfessionalProfile"/>

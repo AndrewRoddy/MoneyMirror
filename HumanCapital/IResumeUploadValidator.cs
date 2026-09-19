@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// Basic file-type/size validation for an uploaded resume, applied before

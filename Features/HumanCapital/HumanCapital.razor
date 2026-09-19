@@ -1,7 +1,7 @@
 @page "/human-capital"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
-@using PittMoney.HumanCapital
+@using MoneyMirror.HumanCapital
 @inject IResumeUploadValidator UploadValidator
 @inject IResumeTextExtractionService TextExtractionService
 @inject IProfessionalProfileExtractionService ProfileExtractionService
@@ -277,3 +277,4 @@
 
     private static string? NullIfBlank(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }
+

@@ -2,7 +2,7 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using UglyToad.PdfPig;
 
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>
 /// <see cref="IResumeTextExtractionService"/> implementation supporting PDF
@@ -78,3 +78,4 @@ public class ResumeTextExtractionService : IResumeTextExtractionService
         }
     }
 }
+
