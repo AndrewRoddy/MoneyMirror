@@ -71,7 +71,7 @@ else
                         }
                         else
                         {
-                            <td>@asset.Name</td>
+                            <td><a href="@($"/inventory/{asset.Id}")">@asset.Name</a></td>
                             <td>@asset.Category</td>
                             <td>@asset.IdentifiedProductModel</td>
                             <td>@(asset.IsManuallyAdded ? "Manual" : "Scanned")</td>
