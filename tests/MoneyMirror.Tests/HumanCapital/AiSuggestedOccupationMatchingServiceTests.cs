@@ -26,7 +26,7 @@ public class AiSuggestedOccupationMatchingServiceTests
     private const string ValidJson = """
         {
           "occupations": [
-            {"title": "Software Engineer", "explanation": "Strong C# and SQL background from backend engineering experience.", "keySkills": ["C#", "SQL", "Git"]},
+            {"title": "Software Engineer", "explanation": "Strong C# and SQL background from backend engineering experience.", "keySkills": ["C#", "SQL", "Git"], "typicalMinUsd": 85000, "typicalMaxUsd": 130000},
             {"title": "Database Administrator", "explanation": "SQL skills and hands-on backend experience.", "keySkills": ["SQL", "Backup and recovery"]}
           ]
         }
@@ -43,6 +43,19 @@ public class AiSuggestedOccupationMatchingServiceTests
         Assert.Equal("Software Engineer", matches[0].Title);
         Assert.All(matches, m => Assert.True(m.IsAiEstimated));
         Assert.Equal(["C#", "SQL", "Git"], matches[0].KeySkills);
+        Assert.Equal(85000, matches[0].TypicalMinUsd);
+        Assert.Equal(130000, matches[0].TypicalMaxUsd);
+    }
+
+    [Fact]
+    public async Task MatchAsync_JsonWithoutTypicalCompensation_DefaultsToNull()
+    {
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(ValidJson));
+
+        var matches = await service.MatchAsync(SampleProfile);
+
+        Assert.Null(matches[1].TypicalMinUsd);
+        Assert.Null(matches[1].TypicalMaxUsd);
     }
 
     [Fact]
