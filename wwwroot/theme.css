@@ -114,8 +114,13 @@
     --nav-link-hover: var(--pitt-white); /* on the dark sidebar */
     --nav-link-active: var(--pitt-medium-blue); /* on the gold active fill */
     --nav-surface-hover: color-mix(in srgb, var(--pitt-white) 12%, transparent);
-    --nav-surface-active: var(--pitt-gold); /* gold on royal - the Pitt pairing */
-    --nav-surface-pressed: color-mix(in srgb, var(--pitt-white) 25%, transparent);
+    --nav-surface-pressed: color-mix(in srgb, var(--pitt-white) 22%, transparent);
+    /* Selected page: Gold on Royal, the Pitt pairing. Hover lifts it toward
+     * white, pressed sinks it toward Medium Blue, so the selected item still
+     * responds to the cursor without losing its Gold identity. */
+    --nav-surface-active: var(--pitt-gold);
+    --nav-surface-active-hover: color-mix(in srgb, var(--pitt-gold) 84%, var(--pitt-white));
+    --nav-surface-active-pressed: color-mix(in srgb, var(--pitt-gold) 88%, var(--pitt-medium-blue));
 
     /* Top row */
     --topbar-bg: var(--surface-muted);

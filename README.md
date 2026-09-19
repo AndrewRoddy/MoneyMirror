@@ -1,4 +1,4 @@
-# Pitt Money
+# Money Mirror
 
 Pitt Money is a personal net-worth and "personal capital" application. It goes beyond a
 conventional net-worth tracker by also inventorying the things you own and the market value
