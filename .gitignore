@@ -170,3 +170,4 @@ ehthumbs.db
 [Tt]humbs.db
 Desktop.ini
 $RECYCLE.BIN/
+!wwwroot/lib/bootstrap/dist
