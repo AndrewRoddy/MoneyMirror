@@ -33,6 +33,7 @@ builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>(
 builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 builder.Services.AddScoped<ICompensationEstimationService, AiEstimatedCompensationService>();
 builder.Services.AddScoped<IProfessionalProfileRepository, EfProfessionalProfileRepository>();
+builder.Services.AddScoped<IPhysicalAssetRepository, EfPhysicalAssetRepository>();
 
 // setup connection to postgresql database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
