@@ -14,6 +14,7 @@ builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
+builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
 
 var app = builder.Build();
 
