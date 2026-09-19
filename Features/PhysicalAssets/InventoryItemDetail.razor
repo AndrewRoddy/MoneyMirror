@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using MoneyMirror.PhysicalAssets
 @inject IPhysicalAssetRepository AssetRepository
+@inject IAssetValuationService ValuationService
 
 <PageTitle>@(_asset?.Name ?? "Inventory Item")</PageTitle>
 
@@ -41,6 +42,17 @@ else
         <dd class="col-sm-9">@(_asset.IsManuallyAdded ? "Manually added" : "Scanned")</dd>
     </dl>
 
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <button class="btn btn-outline-primary btn-sm" disabled="@_isRevaluing" @onclick="RevalueAsync">
+            @(_isRevaluing ? "Revaluing..." : "Revalue")
+        </button>
+    </div>
+
+    @if (_revalueError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@_revalueError</div>
+    }
+
     <h2>Valuation History</h2>
     @if (_asset.ValuationHistory.Count == 0)
     {
@@ -76,6 +88,8 @@ else
 
     private PhysicalAssetDetail? _asset;
     private string? _errorMessage;
+    private bool _isRevaluing;
+    private string? _revalueError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -90,6 +104,48 @@ else
         catch (Exception ex)
         {
             _errorMessage = $"Failed to load item: {ex.Message}";
+        }
+    }
+
+    // PA10.1/PA10.2: re-runs the (currently AI-estimated, see #138) valuation
+    // pipeline for this item's existing identification and appends the
+    // result as a new history entry - it never overwrites prior valuations.
+    private async Task RevalueAsync()
+    {
+        if (_asset is null)
+        {
+            return;
+        }
+
+        _revalueError = null;
+        _isRevaluing = true;
+        StateHasChanged();
+
+        try
+        {
+            var valuation = await ValuationService.EstimateAsync(_asset.Name, brand: null, _asset.IdentifiedProductModel);
+
+            var updated = await AssetRepository.AddValuationAsync(
+                Id,
+                valuation.EstimatedValueUsd,
+                "AI estimate (not evidence-based - see #148)",
+                valuation.Reasoning);
+
+            if (!updated)
+            {
+                _revalueError = "This item could not be found.";
+                return;
+            }
+
+            _asset = await AssetRepository.GetByIdAsync(Id);
+        }
+        catch (AssetValuationException ex)
+        {
+            _revalueError = ex.Message;
+        }
+        finally
+        {
+            _isRevaluing = false;
         }
     }
 }

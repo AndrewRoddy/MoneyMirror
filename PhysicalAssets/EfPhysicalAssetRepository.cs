@@ -133,6 +133,34 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
         return true;
     }
 
+    public async Task<bool> AddValuationAsync(
+        Guid id,
+        decimal value,
+        string source,
+        string? notes,
+        CancellationToken cancellationToken = default)
+    {
+        var asset = await _db.PhysicalAssets.FindAsync([id], cancellationToken);
+        if (asset is null)
+        {
+            return false;
+        }
+
+        _db.AssetValuationRecords.Add(
+            new DataEntities.AssetValuationRecord
+            {
+                PhysicalAssetId = asset.Id,
+                EstimatedValue = value,
+                Source = source,
+                Notes = notes,
+            }
+        );
+        asset.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var asset = await _db.PhysicalAssets.FindAsync([id], cancellationToken);

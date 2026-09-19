@@ -166,4 +166,31 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         Assert.Equal(150m, detail.ValuationHistory[0].EstimatedValue);
         Assert.Equal(100m, detail.ValuationHistory[1].EstimatedValue);
     }
+
+    [Fact]
+    public async Task AddValuationAsync_ExistingItem_AppendsToHistoryWithoutRemovingPriorEntries()
+    {
+        var id = await _repository.AddAsync(new PhysicalAssetInput("Guitar", null, null, 100m));
+
+        var updated = await _repository.AddValuationAsync(id, 175m, "AI estimate (revalue)", "Prices went up.");
+
+        Assert.True(updated);
+        var detail = await _repository.GetByIdAsync(id);
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail!.ValuationHistory.Count);
+        Assert.Equal(175m, detail.ValuationHistory[0].EstimatedValue);
+        Assert.Equal("Prices went up.", detail.ValuationHistory[0].Notes);
+        Assert.Equal(100m, detail.ValuationHistory[1].EstimatedValue);
+
+        var summary = Assert.Single(await _repository.GetAllAsync());
+        Assert.Equal(175m, summary.CurrentValuation);
+    }
+
+    [Fact]
+    public async Task AddValuationAsync_UnknownId_ReturnsFalse()
+    {
+        var updated = await _repository.AddValuationAsync(Guid.NewGuid(), 100m, "AI estimate", null);
+
+        Assert.False(updated);
+    }
 }
