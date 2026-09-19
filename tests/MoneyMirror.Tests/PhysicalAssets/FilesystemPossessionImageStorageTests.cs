@@ -1,16 +1,16 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using PittMoney.PhysicalAssets;
+using MoneyMirror.PhysicalAssets;
 
-namespace PittMoney.Tests.PhysicalAssets;
+namespace MoneyMirror.Tests.PhysicalAssets;
 
 /// <summary>Integration tests: reads/writes real files on disk under a temp directory.</summary>
 public class FilesystemPossessionImageStorageTests : IDisposable
 {
     private class FakeHostEnvironment : IHostEnvironment
     {
-        public string ApplicationName { get; set; } = "PittMoney.Tests";
+        public string ApplicationName { get; set; } = "MoneyMirror.Tests";
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
         public string ContentRootPath { get; set; } = string.Empty;
         public string EnvironmentName { get; set; } = "Test";

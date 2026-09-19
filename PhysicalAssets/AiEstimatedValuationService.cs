@@ -1,7 +1,7 @@
 using System.Text.Json;
-using PittMoney.Ai;
+using MoneyMirror.Ai;
 
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// <see cref="IAssetValuationService"/> implementation that asks the LLM to

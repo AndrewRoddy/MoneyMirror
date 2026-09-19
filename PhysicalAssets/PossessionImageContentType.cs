@@ -1,4 +1,4 @@
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>Maps a stored possession image's file extension to its media type.</summary>
 public static class PossessionImageContentType
