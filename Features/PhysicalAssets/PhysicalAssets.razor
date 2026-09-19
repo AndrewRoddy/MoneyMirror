@@ -6,6 +6,7 @@
 @inject IPossessionImageStorage ImageStorage
 @inject IPhysicalAssetDetectionService DetectionService
 @inject IAssetValuationService ValuationService
+@inject IPhysicalAssetRepository AssetRepository
 @inject IOptions<ImageUploadOptions> UploadOptions
 
 <PageTitle>Physical Assets</PageTitle>
@@ -132,6 +133,27 @@
                             <span class="badge bg-secondary">AI estimate - not based on live market data</span>
                             <p class="text-muted mb-0">@detection.Valuation.Reasoning</p>
                         </div>
+
+                        @if (detection.SavedItemId is { } savedId)
+                        {
+                            <div class="alert alert-success mt-2 mb-0 py-1" role="alert">
+                                Saved to inventory. <a href="@($"/inventory/{savedId}")">View item</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <button
+                                class="btn btn-success btn-sm mt-2"
+                                @onclick="() => SaveToInventoryAsync(detection)"
+                                disabled="@detection.IsSaving">
+                                @(detection.IsSaving ? "Saving..." : "Save to Inventory")
+                            </button>
+
+                            @if (detection.SaveError is not null)
+                            {
+                                <div class="alert alert-danger mt-2 mb-0 py-1" role="alert">@detection.SaveError</div>
+                            }
+                        }
                     }
                 }
                 else
@@ -307,12 +329,48 @@
         }
     }
 
+    private async Task SaveToInventoryAsync(ReviewableDetection detection)
+    {
+        if (detection.Valuation is null)
+        {
+            return;
+        }
+
+        detection.SaveError = null;
+        detection.IsSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var brand = string.IsNullOrWhiteSpace(detection.Brand) ? null : detection.Brand;
+            var model = string.IsNullOrWhiteSpace(detection.Model) ? null : detection.Model;
+            var identifiedProductModel = brand is not null || model is not null ? $"{brand} {model}".Trim() : null;
+
+            detection.SavedItemId = await AssetRepository.AddFromScanAsync(
+                new ScannedAssetInput(
+                    detection.Original.Label,
+                    Category: null,
+                    identifiedProductModel,
+                    _imageReference,
+                    detection.Valuation.EstimatedValueUsd,
+                    detection.Valuation.Reasoning));
+        }
+        catch (Exception ex)
+        {
+            detection.SaveError = $"Failed to save to inventory: {ex.Message}";
+        }
+        finally
+        {
+            detection.IsSaving = false;
+        }
+    }
+
     /// <summary>
     /// In-memory review state for one DetectedAsset: whether the user is
-    /// keeping it, any brand/model correction, and (#138) an optional
-    /// AI-estimated valuation. This is the seam between PA3's detection
-    /// output and PA7's eventual save step - it holds no persisted state
-    /// of its own.
+    /// keeping it, any brand/model correction, an optional AI-estimated
+    /// valuation (#138), and (#72-74) whether/where it's been saved to the
+    /// inventory. This is the seam between PA3's detection output and
+    /// PA7's save step.
     /// </summary>
     private class ReviewableDetection(DetectedAsset original)
     {
@@ -323,6 +381,9 @@
         public bool IsEstimating { get; set; }
         public AssetValuation? Valuation { get; set; }
         public string? ValuationError { get; set; }
+        public bool IsSaving { get; set; }
+        public string? SaveError { get; set; }
+        public Guid? SavedItemId { get; set; }
 
         public bool IsHighConfidence =>
             Original.Confidence >= HighConfidenceThreshold

@@ -24,6 +24,31 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
         return assets.Select(ToSummary).OrderBy(a => a.Name).ToList();
     }
 
+    public async Task<PhysicalAssetDetail?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var asset = await _db
+            .PhysicalAssets.Include(a => a.ValuationRecords)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+        if (asset is null)
+        {
+            return null;
+        }
+
+        return new PhysicalAssetDetail(
+            asset.Id,
+            asset.Name,
+            asset.Category,
+            asset.IdentifiedProductModel,
+            asset.ImageReference,
+            asset.Source == DataEntities.PhysicalAssetSource.Manual,
+            asset
+                .ValuationRecords.OrderByDescending(r => r.ValuedAt)
+                .Select(r => new ValuationHistoryEntry(r.EstimatedValue, r.ValuedAt, r.Source, r.Notes))
+                .ToList()
+        );
+    }
+
     public async Task<Guid> AddAsync(PhysicalAssetInput input, CancellationToken cancellationToken = default)
     {
         var asset = new DataEntities.PhysicalAsset
@@ -45,6 +70,32 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
             };
             _db.AssetValuationRecords.Add(record);
         }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return asset.Id;
+    }
+
+    public async Task<Guid> AddFromScanAsync(ScannedAssetInput input, CancellationToken cancellationToken = default)
+    {
+        var asset = new DataEntities.PhysicalAsset
+        {
+            Name = input.Name,
+            Category = input.Category,
+            IdentifiedProductModel = input.IdentifiedProductModel,
+            ImageReference = input.ImageReference,
+            Source = DataEntities.PhysicalAssetSource.Scanned,
+        };
+        _db.PhysicalAssets.Add(asset);
+
+        _db.AssetValuationRecords.Add(
+            new DataEntities.AssetValuationRecord
+            {
+                PhysicalAssetId = asset.Id,
+                EstimatedValue = input.EstimatedValue,
+                Source = "AI estimate (not evidence-based - see #148)",
+                Notes = input.ValuationEvidence,
+            }
+        );
 
         await _db.SaveChangesAsync(cancellationToken);
         return asset.Id;
