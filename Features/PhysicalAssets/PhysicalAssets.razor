@@ -1,7 +1,71 @@
 @page "/physical-assets"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Options
+@using PittMoney.PhysicalAssets
+@inject IImageUploadValidator UploadValidator
+@inject IPossessionImageStorage ImageStorage
+@inject IOptions<ImageUploadOptions> UploadOptions
 
 <PageTitle>Physical Assets</PageTitle>
 
 <h1>Physical Assets</h1>
 
 <p>Photograph and value your possessions here.</p>
+
+<InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@_isProcessing" />
+
+@if (_isProcessing)
+{
+    <p><em>Uploading @_fileName...</em></p>
+}
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+
+@if (_imageReference is not null)
+{
+    <p>Uploaded:</p>
+    <img src="@($"/api/possession-images/{_imageReference}")" alt="Uploaded possession photo" style="max-width: 400px;" />
+}
+
+@code {
+    private bool _isProcessing;
+    private string? _errorMessage;
+    private string? _fileName;
+    private string? _imageReference;
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        _imageReference = null;
+
+        var file = e.File;
+        _fileName = file.Name;
+
+        var validation = UploadValidator.Validate(file.Name, file.Size);
+        if (!validation.IsValid)
+        {
+            _errorMessage = validation.Error;
+            return;
+        }
+
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            await using var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes);
+            _imageReference = await ImageStorage.SaveAsync(stream, file.Name);
+        }
+        catch (PossessionImageStorageException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}
