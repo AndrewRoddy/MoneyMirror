@@ -124,4 +124,46 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         Assert.Equal(3, all.Count);
         Assert.Equal(150m, all.Sum(a => a.CurrentValuation ?? 0));
     }
+
+    [Fact]
+    public async Task AddFromScanAsync_CreatesScannedItemWithValuationAndEvidence()
+    {
+        var id = await _repository.AddFromScanAsync(
+            new ScannedAssetInput("Guitar", "Music", "Fender CD-60S", "abc123.jpg", 120m, "Typical used price."));
+
+        var summary = Assert.Single(await _repository.GetAllAsync());
+        Assert.Equal(id, summary.Id);
+        Assert.False(summary.IsManuallyAdded);
+        Assert.Equal("abc123.jpg", summary.ImageReference);
+        Assert.Equal(120m, summary.CurrentValuation);
+
+        var detail = await _repository.GetByIdAsync(id);
+        Assert.NotNull(detail);
+        var entry = Assert.Single(detail!.ValuationHistory);
+        Assert.Equal(120m, entry.EstimatedValue);
+        Assert.Equal("Typical used price.", entry.Notes);
+        Assert.Contains("AI estimate", entry.Source);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_UnknownId_ReturnsNull()
+    {
+        var detail = await _repository.GetByIdAsync(Guid.NewGuid());
+
+        Assert.Null(detail);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_MultipleValuations_ReturnsFullHistoryNewestFirst()
+    {
+        var id = await _repository.AddAsync(new PhysicalAssetInput("Guitar", null, null, 100m));
+        await _repository.UpdateAsync(id, new PhysicalAssetInput("Guitar", null, null, 150m));
+
+        var detail = await _repository.GetByIdAsync(id);
+
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail!.ValuationHistory.Count);
+        Assert.Equal(150m, detail.ValuationHistory[0].EstimatedValue);
+        Assert.Equal(100m, detail.ValuationHistory[1].EstimatedValue);
+    }
 }
