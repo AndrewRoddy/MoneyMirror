@@ -5,6 +5,7 @@
 @using Microsoft.EntityFrameworkCore
 @using MoneyMirror.Data
 @using MoneyMirror.Data.Entities
+@using MoneyMirror.Financial
 @inject MoneyMirrorDbContext DbContext
 
 <PageTitle>Net Worth</PageTitle>
@@ -134,7 +135,9 @@
     private string? ErrorMessage { get; set; }
     private FinancialRecord Draft { get; set; } = NewDraft(RecordKind.Asset);
     private FinancialRecord? EditingRecord { get; set; }
-    private decimal NetWorth => (AssetRecords.Sum(record => record.Amount)) - (LiabilityRecords.Sum(record => record.Amount));
+    private decimal NetWorth => FinancialNetWorthCalculator.Calculate(
+        AssetRecords.Select(record => record.Amount),
+        LiabilityRecords.Select(record => record.Amount));
     private decimal TotalAssets => AssetRecords.Sum(record => record.Amount);
     private decimal TotalLiabilities => LiabilityRecords.Sum(record => record.Amount);
     private List<FinancialRecord> VisibleRecords => ActiveTab switch
