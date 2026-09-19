@@ -1,4 +1,4 @@
-namespace PittMoney.PhysicalAssets;
+namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>
 /// Tunables for possession image uploads, bound from the

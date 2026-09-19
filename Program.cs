@@ -3,6 +3,8 @@ using MoneyMirror.Ai.Configuration;
 using MoneyMirror.Components;
 using MoneyMirror.HumanCapital;
 using MoneyMirror.PhysicalAssets;
+using Microsoft.EntityFrameworkCore;
+using MoneyMirror.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,20 @@ builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionS
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
+
+// setup connection to postgresql database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+}
+else
+{
+    Console.WriteLine("Default Connection Configured.");
+}
+
+builder.Services.AddDbContext<MoneyMirrorDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
@@ -56,6 +72,13 @@ app.MapGet("/api/possession-images/{reference}", async (string reference, IPosse
 
 if (app.Environment.IsDevelopment())
 {
+    // automatically apply migrations
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider
+        .GetRequiredService<MoneyMirrorDbContext>();
+
+    await db.Database.MigrateAsync();
+
     // Dev-only smoke test for the F3 AI seam (#44) - proves ILlmService and
     // IVisionService round-trip against real providers. No feature logic.
     app.MapGet("/dev/ai-smoke-test", async (ILlmService llm, IVisionService vision) =>
