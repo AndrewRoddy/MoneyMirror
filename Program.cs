@@ -2,6 +2,7 @@ using PittMoney.Ai;
 using PittMoney.Ai.Configuration;
 using PittMoney.Components;
 using PittMoney.HumanCapital;
+using PittMoney.PhysicalAssets;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
+builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
 
 var app = builder.Build();
 
