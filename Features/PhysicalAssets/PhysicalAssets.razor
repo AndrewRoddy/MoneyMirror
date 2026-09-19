@@ -5,6 +5,7 @@
 @inject IImageUploadValidator UploadValidator
 @inject IPossessionImageStorage ImageStorage
 @inject IPhysicalAssetDetectionService DetectionService
+@inject IAssetValuationService ValuationService
 @inject IOptions<ImageUploadOptions> UploadOptions
 
 <PageTitle>Physical Assets</PageTitle>
@@ -70,6 +71,24 @@
                             <input id="model-@i" class="form-control" placeholder="Unknown" @bind="detection.Model" />
                         </div>
                     </div>
+
+                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@detection.IsEstimating">
+                        @(detection.IsEstimating ? "Estimating..." : "Estimate value")
+                    </button>
+
+                    @if (detection.ValuationError is not null)
+                    {
+                        <div class="alert alert-danger mt-2 mb-0 py-1" role="alert">@detection.ValuationError</div>
+                    }
+
+                    @if (detection.Valuation is not null)
+                    {
+                        <div class="mt-2">
+                            <span class="fw-bold">$@detection.Valuation.EstimatedValueUsd.ToString("N2")</span>
+                            <span class="badge bg-secondary">AI estimate - not based on live market data</span>
+                            <p class="text-muted mb-0">@detection.Valuation.Reasoning</p>
+                        </div>
+                    }
                 }
                 else
                 {
@@ -141,11 +160,35 @@
         }
     }
 
+    private async Task EstimateValueAsync(ReviewableDetection detection)
+    {
+        detection.ValuationError = null;
+        detection.IsEstimating = true;
+        StateHasChanged();
+
+        try
+        {
+            detection.Valuation = await ValuationService.EstimateAsync(
+                detection.Original.Label,
+                string.IsNullOrWhiteSpace(detection.Brand) ? null : detection.Brand,
+                string.IsNullOrWhiteSpace(detection.Model) ? null : detection.Model);
+        }
+        catch (AssetValuationException ex)
+        {
+            detection.ValuationError = ex.Message;
+        }
+        finally
+        {
+            detection.IsEstimating = false;
+        }
+    }
+
     /// <summary>
     /// In-memory review state for one DetectedAsset: whether the user is
-    /// keeping it, and any brand/model correction. This is the seam between
-    /// PA3's detection output and PA7's eventual save step - it holds no
-    /// persisted state of its own.
+    /// keeping it, any brand/model correction, and (#138) an optional
+    /// AI-estimated valuation. This is the seam between PA3's detection
+    /// output and PA7's eventual save step - it holds no persisted state
+    /// of its own.
     /// </summary>
     private class ReviewableDetection(DetectedAsset original)
     {
@@ -153,6 +196,9 @@
         public bool Included { get; set; } = true;
         public string Brand { get; set; } = original.Identification?.Brand ?? string.Empty;
         public string Model { get; set; } = original.Identification?.Model ?? string.Empty;
+        public bool IsEstimating { get; set; }
+        public AssetValuation? Valuation { get; set; }
+        public string? ValuationError { get; set; }
 
         public bool IsLowConfidence =>
             Original.Confidence < LowConfidenceThreshold

@@ -27,6 +27,7 @@ builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfil
 builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
+builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
 
 var app = builder.Build();
 
