@@ -58,6 +58,13 @@ app.MapRazorComponents<App>()
 
 if (app.Environment.IsDevelopment())
 {
+    // automatically apply migrations
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider
+        .GetRequiredService<PittMoneyDbContext>();
+
+    await db.Database.MigrateAsync();
+
     // Dev-only smoke test for the F3 AI seam (#44) - proves ILlmService and
     // IVisionService round-trip against real providers. No feature logic.
     app.MapGet("/dev/ai-smoke-test", async (ILlmService llm, IVisionService vision) =>
