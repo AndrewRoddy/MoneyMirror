@@ -10,5 +10,5 @@ public class VisionModelOptions
 
     public string ApiKey { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = "https://integrate.api.nvidia.com/v1";
-    public string Model { get; set; } = "nvidia/vila";
+    public string Model { get; set; } = "meta/llama-3.2-11b-vision-instruct";
 }
