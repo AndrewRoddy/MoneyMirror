@@ -1,4 +1,4 @@
-namespace PittMoney.HumanCapital;
+namespace MoneyMirror.HumanCapital;
 
 /// <summary>One employment history entry from a resume.</summary>
 public record Experience(

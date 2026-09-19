@@ -1,8 +1,8 @@
-using PittMoney.Ai;
-using PittMoney.Ai.Configuration;
-using PittMoney.Components;
-using PittMoney.HumanCapital;
-using PittMoney.PhysicalAssets;
+using MoneyMirror.Ai;
+using MoneyMirror.Ai.Configuration;
+using MoneyMirror.Components;
+using MoneyMirror.HumanCapital;
+using MoneyMirror.PhysicalAssets;
 
 var builder = WebApplication.CreateBuilder(args);
 
