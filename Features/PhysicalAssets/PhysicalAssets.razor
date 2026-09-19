@@ -18,7 +18,10 @@
 
 @if (_isProcessing)
 {
-    <p><em>Analyzing @_fileName...</em></p>
+    <div class="alert alert-info" role="status" aria-live="polite">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <em>@_processingMessage</em>
+    </div>
 }
 
 @if (_errorMessage is not null)
@@ -117,7 +120,7 @@
                     </div>
 
                     <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@detection.IsEstimating">
-                        @(detection.IsEstimating ? "Estimating..." : "Estimate value")
+                        @(detection.IsEstimating ? "Estimating value with AI..." : "Estimate value")
                     </button>
 
                     @if (detection.ValuationError is not null)
@@ -148,6 +151,7 @@
     private const double HighConfidenceThreshold = 0.8;
 
     private bool _isProcessing;
+    private string? _processingMessage;
     private string? _errorMessage;
     private string? _fileName;
     private string? _imageReference;
@@ -234,6 +238,7 @@
         _errorMessage = null;
         _imageReference = null;
         _detections = null;
+        _processingMessage = null;
         _categoryFilter = "all";
         _confidenceFilter = "all";
         _sortOrder = "confidence-desc";
@@ -249,6 +254,7 @@
         }
 
         _isProcessing = true;
+        _processingMessage = $"Reading {_fileName}...";
         StateHasChanged();
 
         try
@@ -261,11 +267,15 @@
                 bytes = buffer.ToArray();
             }
 
+            _processingMessage = "Saving the uploaded photo...";
+            StateHasChanged();
             using (var saveStream = new MemoryStream(bytes))
             {
                 _imageReference = await ImageStorage.SaveAsync(saveStream, file.Name);
             }
 
+            _processingMessage = "Detecting objects with AI...";
+            StateHasChanged();
             var mediaType = PossessionImageContentType.FromFileName(file.Name);
             var detected = await DetectionService.DetectAsync(bytes, mediaType);
             _detections = detected.Select(d => new ReviewableDetection(d)).ToList();
@@ -281,6 +291,7 @@
         finally
         {
             _isProcessing = false;
+            _processingMessage = null;
         }
     }
 

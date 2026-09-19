@@ -17,7 +17,10 @@
 
 @if (_isProcessing)
 {
-    <p><em>Processing @_fileName...</em></p>
+    <div class="alert alert-info" role="status" aria-live="polite">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        <em>@_processingMessage</em>
+    </div>
 }
 
 @if (_errorMessage is not null)
@@ -110,6 +113,7 @@
 
 @code {
     private bool _isProcessing;
+    private string? _processingMessage;
     private string? _errorMessage;
     private string? _savedMessage;
     private string? _fileName;
@@ -126,6 +130,7 @@
         _errorMessage = null;
         _savedMessage = null;
         _profile = null;
+        _processingMessage = null;
 
         var file = e.File;
         _fileName = file.Name;
@@ -138,12 +143,15 @@
         }
 
         _isProcessing = true;
+        _processingMessage = "Reading the uploaded resume...";
         StateHasChanged();
 
         try
         {
             await using var stream = file.OpenReadStream(UploadOptions.Value.MaxFileSizeBytes);
             var text = await TextExtractionService.ExtractTextAsync(stream, file.Name);
+            _processingMessage = "Extracting your professional profile with AI...";
+            StateHasChanged();
             _profile = await ProfileExtractionService.ExtractAsync(text);
             LoadEditableLists(_profile);
         }
@@ -158,6 +166,7 @@
         finally
         {
             _isProcessing = false;
+            _processingMessage = null;
         }
     }
 
