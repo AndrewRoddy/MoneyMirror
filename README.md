@@ -67,3 +67,15 @@ Actively being built. See the [project board](https://github.com/users/AndrewRod
 for current progress and `docs/backlog-proposal.md` for the full issue backlog and scope
 rationale.
 
+## Pull-request checks
+
+Every pull request runs the **Format** and **Test** GitHub Actions checks. Repository
+branch protection must require both checks before a pull request can merge. To run the
+same checks locally:
+
+```
+dotnet restore tests/PittMoney.Tests/PittMoney.Tests.csproj
+dotnet format PittMoney.csproj --no-restore --verify-no-changes
+dotnet format tests/PittMoney.Tests/PittMoney.Tests.csproj --no-restore --verify-no-changes
+dotnet test tests/PittMoney.Tests/PittMoney.Tests.csproj --no-restore --configuration Release
+```

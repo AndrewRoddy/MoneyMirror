@@ -1,0 +1,40 @@
+name: Quality checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore dependencies
+        run: dotnet restore tests/PittMoney.Tests/PittMoney.Tests.csproj
+      - name: Verify application formatting
+        run: dotnet format PittMoney.csproj --no-restore --verify-no-changes
+      - name: Verify test formatting
+        run: dotnet format tests/PittMoney.Tests/PittMoney.Tests.csproj --no-restore --verify-no-changes
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore dependencies
+        run: dotnet restore tests/PittMoney.Tests/PittMoney.Tests.csproj
+      - name: Run tests
+        run: dotnet test tests/PittMoney.Tests/PittMoney.Tests.csproj --no-restore --configuration Release --logger "console;verbosity=normal"
