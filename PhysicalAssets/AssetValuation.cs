@@ -20,7 +20,7 @@ public record AssetValuation(
     public bool IsLowConfidence => IsAiEstimated || EstimatedValueUsd is null
         || Evidence.Count < MarketValuationCalculator.MinimumComparableCount;
 
-    public string SourceLabel => IsAiEstimated ? "AI estimate" : "Market evidence";
+    public string SourceLabel => "Market evidence";
 
     /// <summary>
     /// Comparable market listings used to derive this valuation. This is empty

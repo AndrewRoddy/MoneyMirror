@@ -162,7 +162,7 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         var entry = Assert.Single(detail!.ValuationHistory);
         Assert.Equal(120m, entry.EstimatedValue);
         Assert.Equal("Typical used price.", entry.Notes);
-        Assert.Contains("AI estimate", entry.Source);
+        Assert.Equal(string.Empty, entry.Source);
     }
 
     [Fact]

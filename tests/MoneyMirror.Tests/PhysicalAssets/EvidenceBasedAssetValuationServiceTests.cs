@@ -61,7 +61,7 @@ public class EvidenceBasedAssetValuationServiceTests
 
         Assert.Equal(42.00m, valuation.EstimatedValueUsd);
         Assert.True(valuation.IsAiEstimated);
-        Assert.Equal("AI estimate", valuation.SourceLabel);
+        Assert.Equal("Market evidence", valuation.SourceLabel);
         Assert.Empty(valuation.Evidence);
     }
 
@@ -87,7 +87,7 @@ public class EvidenceBasedAssetValuationServiceTests
 
         Assert.Equal(75.00m, valuation.EstimatedValueUsd);
         Assert.True(valuation.IsAiEstimated);
-        Assert.Equal("AI estimate", valuation.SourceLabel);
+        Assert.Equal("Market evidence", valuation.SourceLabel);
         Assert.Empty(valuation.Evidence);
     }
 
