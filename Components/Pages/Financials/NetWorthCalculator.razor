@@ -160,29 +160,6 @@
             </div>
         }
     </section>
-
-    @*
-        The Dashboard's inventory panel, moved here: physical capital is a
-        line in the breakdown above, and this is where you look when you
-        want to know what is behind that line. Closed by default - the
-        financial records are what this page is for.
-    *@
-    <section class="inventory-panel">
-        @* Rendered as a string, not a bool: Blazor omits an attribute whose
-           value is false, which would drop aria-expanded exactly when the
-           panel is collapsed and leave the control unannounced. *@
-        <button type="button" class="inventory-toggle" aria-expanded="@(ShowInventory ? "true" : "false")"
-                aria-controls="financial-inventory" @onclick="() => ShowInventory = !ShowInventory">
-            <span aria-hidden="true">@(ShowInventory ? "▾" : "▸")</span> Your inventory
-        </button>
-        @if (ShowInventory)
-        {
-            <div id="financial-inventory" class="inventory-body">
-                <InventoryList ShowAddForm="false" />
-                <a href="/inventory">Manage inventory &rarr;</a>
-            </div>
-        }
-    </section>
 </div>
 
 @if (IsFormOpen)
@@ -221,7 +198,6 @@
     private bool HasProfile { get; set; }
     private CompensationEstimate? Compensation { get; set; }
     private int OccupationCount { get; set; }
-    private bool ShowInventory { get; set; }
     private FinancialRecord Draft { get; set; } = NewDraft(RecordKind.Asset);
     private FinancialRecord? EditingRecord { get; set; }
 
