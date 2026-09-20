@@ -6,7 +6,9 @@
     NavMenu.razor.css at the 48rem breakpoint - this markup is identical
     either way, so there is no second copy of the links to keep in step.
 
-    Each link is an icon plus a label. The icon spans are written here
+    Each link is an icon plus a label; the tail of the two longest labels
+    is wrapped so the tab bar can drop it and the rail can keep it. The
+    aria-label holds the full name at either width. The icon spans are written here
     rather than inside NavLink so they pick up this component's scope
     attribute; the <a> that NavLink renders does not, which is why the
     stylesheet reaches it through ::deep.
@@ -32,9 +34,9 @@
             <span class="nav-label">Financial</span>
         </NavLink>
 
-        <NavLink class="nav-link" href="physical-assets">
+        <NavLink class="nav-link" href="physical-assets" aria-label="Physical Assets">
             <span class="nav-icon bi-plus-square-fill-nav-menu" aria-hidden="true"></span>
-            <span class="nav-label">Physical Assets</span>
+            <span class="nav-label">Physical<span class="nav-label-rest"> Assets</span></span>
         </NavLink>
 
         <NavLink class="nav-link" href="inventory">
@@ -42,14 +44,9 @@
             <span class="nav-label">Inventory</span>
         </NavLink>
 
-        <NavLink class="nav-link" href="human-capital">
+        <NavLink class="nav-link" href="human-capital" aria-label="Human Capital">
             <span class="nav-icon bi-mortarboard-fill-nav-menu" aria-hidden="true"></span>
-            <span class="nav-label">Human Capital</span>
-        </NavLink>
-
-        <NavLink class="nav-link" href="/market-potential" Match="NavLinkMatch.All">
-            <span class="nav-icon bi-bar-chart-line-fill-nav-menu" aria-hidden="true"></span>
-            <span class="nav-label">Market Potential</span>
+            <span class="nav-label">Human<span class="nav-label-rest"> Capital</span></span>
         </NavLink>
 
     </nav>

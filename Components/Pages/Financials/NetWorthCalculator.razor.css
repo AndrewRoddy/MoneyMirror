@@ -159,14 +159,6 @@ button {
     color: var(--negative-text);
 }
 
-.breakdown-item a {
-    display: block;
-    margin: 0.15rem 0 0;
-    color: var(--brand);
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
 /* ===================================================================
  * Segmented control
  * =================================================================== */

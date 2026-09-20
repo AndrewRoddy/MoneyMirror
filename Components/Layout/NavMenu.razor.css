@@ -181,6 +181,13 @@
     text-align: center;
 }
 
+/* A five-tab row has no width for "Physical Assets" or "Human Capital", so
+   the tab bar shows only the first word. The rail below restores the rest;
+   the aria-label on the link carries the full name at either width. */
+.nav-label-rest {
+    display: none;
+}
+
 /* ===================================================================
  * Side rail
  * =================================================================== */
@@ -254,6 +261,10 @@
         font-weight: inherit;
         line-height: 1.3;
         text-align: left;
+    }
+
+    .nav-label-rest {
+        display: inline;
     }
 }
 

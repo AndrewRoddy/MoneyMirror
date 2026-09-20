@@ -45,6 +45,16 @@ public sealed class HumanCapitalPageTests : IDisposable
         ) => throw new InvalidOperationException("Not exercised by these tests.");
     }
 
+    private class NoProfileMarketPotentialSummaryService : IMarketPotentialSummaryService
+    {
+        public Task<MarketPotentialSummary> GetSummaryAsync(
+            CancellationToken cancellationToken = default
+        ) =>
+            Task.FromResult(
+                new MarketPotentialSummary(ProfessionalProfile.Empty, HasProfile: false, [], null)
+            );
+    }
+
     public HumanCapitalPageTests()
     {
         _connection.Open();
@@ -64,6 +74,9 @@ public sealed class HumanCapitalPageTests : IDisposable
         );
         _context.Services.AddSingleton<IOptions<ResumeUploadOptions>>(
             Options.Create(new ResumeUploadOptions())
+        );
+        _context.Services.AddSingleton<IMarketPotentialSummaryService>(
+            new NoProfileMarketPotentialSummaryService()
         );
     }
 
@@ -110,6 +123,9 @@ public sealed class HumanCapitalPageTests : IDisposable
         );
 
         var page = _context.Render<HumanCapitalPage>();
+
+        Assert.Empty(page.FindAll("h2:contains('Your Professional Profile')"));
+        page.Find("button:contains('Your Professional Profile')").Click();
 
         Assert.NotEmpty(page.FindAll("h2:contains('Your Professional Profile')"));
         Assert.Equal("C#", page.Find("input[placeholder='Skill']").GetAttribute("value"));
