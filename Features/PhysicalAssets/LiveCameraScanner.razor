@@ -12,7 +12,15 @@
         <h2 id="live-scanner-title" class="page-section-title mb-0">Live camera scanner</h2>
         @if (_isStreaming)
         {
-            <span class="badge bg-success">Camera active</span>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-success">Camera active</span>
+                @if (_isModelReady)
+                {
+                    <span class="badge @(_engineDevice == "webgpu" ? "bg-info" : "bg-warning text-dark")">
+                        @(_engineDevice == "webgpu" ? "WebGPU" : "WASM fallback")
+                    </span>
+                }
+            </div>
         }
     </div>
 
@@ -105,6 +113,13 @@
             </button>
         }
     </div>
+
+    @if (_engineDevice == "wasm")
+    {
+        <p class="text-muted small mt-2 mb-0">
+            Note: Running on CPU WASM. WebGPU requires HTTPS or localhost (127.0.0.1).
+        </p>
+    }
 </section>
 
 @code {
@@ -125,13 +140,14 @@
     private bool _isFrozen;
     private bool _isSegmenting;
     private bool _isWorking;
+    private bool _isModelReady;
+    private string? _engineDevice;
     private string? _errorMessage;
     private string? _statusHint;
     private SamSegmentationResult? _lastResult;
     private string _cameraFacing = FacingEnvironment;
     private SamPromptType _currentPromptMode = SamPromptType.Positive;
     private readonly List<SamPointPrompt> _prompts = new();
-
     public async Task StartCameraAsync()
     {
         _errorMessage = null;
@@ -143,11 +159,18 @@
             _isStreaming = true;
             _isFrozen = false;
 
-            _ = SamEngine.InitializeAsync();
+            _statusHint = "Downloading MobileSAM model (~40 MB)...";
+            StateHasChanged();
+
+            var status = await SamEngine.InitializeAsync();
+            _engineDevice = status.Device;
+            _isModelReady = true;
+            _statusHint = null;
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
+            _statusHint = null;
             Logger.LogError(ex, "Failed to start camera stream.");
         }
     }
@@ -190,12 +213,16 @@
         {
             return;
         }
-
         if (_isWorking || _isSegmenting || _cameraModule is null)
         {
             return;
         }
 
+        if (!_isModelReady)
+        {
+            _errorMessage = "MobileSAM model is downloading (~40 MB). Please wait a moment.";
+            return;
+        }
         var coords = await _cameraModule.InvokeAsync<NormalizedPoint>(
             "normalizePoint",
             e.ClientX,
@@ -210,7 +237,7 @@
 
         _isSegmenting = true;
         await BusyChanged.InvokeAsync(true);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
 
         try
         {
@@ -218,12 +245,13 @@
             {
                 await _cameraModule.InvokeVoidAsync("freezeFrame", _video, _canvas);
 
-                _statusHint = "Encoding frame...";
+                _statusHint = _engineDevice == "webgpu"
+                    ? "Encoding frame (WebGPU)..."
+                    : "Encoding frame (CPU WASM fallback)...";
                 StateHasChanged();
 
                 await SamEngine.EncodeFrameAsync(_canvas, cts.Token);
                 _isFrozen = true;
-
                 _prompts.Clear();
                 var prompt = new SamPointPrompt(coords.X, coords.Y, SamPromptType.Positive);
                 _prompts.Add(prompt);
