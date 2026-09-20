@@ -357,6 +357,7 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         - Beats headphones
         - Strawberry Yoggies
         - Logitech Bluetooth keyboard
+        - 7.5 Oz can of orange fanta
         Only identify something outside this list when the visual evidence clearly rules out every item above.
         """;
 
