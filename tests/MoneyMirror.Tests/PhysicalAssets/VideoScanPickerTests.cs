@@ -39,6 +39,12 @@ public sealed class VideoScanPickerTests : IDisposable
         _context.Services.AddSingleton<IAssetValuationService>(_valuation);
         _context.Services.AddSingleton<IPhysicalAssetRepository>(_repository);
         _context.Services.AddSingleton<ISamSegmentationEngine>(new FakeSamEngine());
+        // The page also hosts LiveCameraScanner, which asks the browser what it
+        // supports on first render.
+        _context.JSInterop.SetupModule("./js/camera-scanner.js")
+            .Setup<CameraSupport>("describeSupport", _ => true)
+            .SetResult(new CameraSupport(SecureContext: true, HasMediaDevices: true, IsIos: false));
+
         _module = _context.JSInterop.SetupModule("./js/video-scan.js");
         _module.Setup<double[]>("prepare", _ => true).SetResult([0.5, 1.5]);
         _module.Setup<string>("frameUrl", _ => true).SetResult("blob:test-frame");

@@ -30,10 +30,29 @@
         @if (!_isStreaming && !_isFrozen)
         {
             <div class="viewfinder-placeholder">
-                <p class="mb-3">Camera is inactive.</p>
+                @if (_support is { HasMediaDevices: false })
+                {
+                    @*
+                        Safari withholds the camera API entirely on a plain http://
+                        origin, so there is nothing here for a button to ask for.
+                        Say what would make it work instead of offering a dead tap.
+                    *@
+                    <p class="mb-2">This browser will not share a camera over an insecure connection.</p>
+                    <p class="permission-help mb-0">
+                        Open Money Mirror over <code>https://</code>, or on <code>localhost</code>,
+                        and the camera becomes available.
+                    </p>
+                }
+                else
+                {
+                <p class="mb-2">Camera is inactive.</p>
+                <p class="permission-help mb-3">
+                    Your browser will ask for permission &mdash; choose <strong>Allow</strong> to start scanning.
+                </p>
                 <button type="button" class="btn btn-primary" disabled="@Disabled" @onclick="StartCameraAsync" @onclick:stopPropagation="true">
                     Start live camera
                 </button>
+                }
             </div>
         }
 
@@ -82,7 +101,32 @@
 
     @if (_errorMessage is not null)
     {
-        <div class="alert alert-danger mt-2" role="alert">@_errorMessage</div>
+        <div class="alert alert-danger mt-2" role="alert">
+            <p class="mb-0">@_errorMessage</p>
+
+            @if (_errorCode is "NotAllowedError" or "PermissionDeniedError")
+            {
+                @*
+                    Safari remembers a refusal per site and then refuses again
+                    without prompting, so tapping the button a second time cannot
+                    help. The way back is through the browser's own settings.
+                *@
+                <ol class="permission-steps">
+                    @if (_support?.IsIos == true)
+                    {
+                        <li>Tap <strong>AA</strong> at the left of Safari's address bar.</li>
+                        <li>Choose <strong>Website Settings</strong>, then set <strong>Camera</strong> to <strong>Allow</strong>.</li>
+                        <li>Reload this page and tap <strong>Start live camera</strong> again.</li>
+                    }
+                    else
+                    {
+                        <li>Open this page's site permissions, usually the icon at the left of the address bar.</li>
+                        <li>Set <strong>Camera</strong> to <strong>Allow</strong>.</li>
+                        <li>Reload this page and tap <strong>Start live camera</strong> again.</li>
+                    }
+                </ol>
+            }
+        </div>
     }
 
     <div class="action-bar">
@@ -151,21 +195,66 @@
     private bool _isModelReady;
     private string? _engineDevice;
     private string? _errorMessage;
+    private string? _errorCode;
     private string? _statusHint;
+    private CameraSupport? _support;
     private SamSegmentationResult? _lastResult;
     private string _cameraFacing = FacingEnvironment;
     private SamPromptType _currentPromptMode = SamPromptType.Positive;
     private readonly List<SamPointPrompt> _prompts = new();
+    /// <summary>
+    /// Asks the browser what it is willing to do before the person taps anything,
+    /// so an origin with no camera API can say so rather than offer a button that
+    /// cannot work.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _cameraModule ??= await JS.InvokeAsync<IJSObjectReference>("import", CameraModulePath);
+        _support = await _cameraModule.InvokeAsync<CameraSupport>("describeSupport");
+        StateHasChanged();
+    }
+
     public async Task StartCameraAsync()
     {
         _errorMessage = null;
+        _errorCode = null;
 
         try
         {
             _cameraModule ??= await JS.InvokeAsync<IJSObjectReference>("import", CameraModulePath);
-            await _cameraModule.InvokeVoidAsync("startCamera", _video, _cameraFacing);
+            var result = await _cameraModule.InvokeAsync<CameraStartResult>(
+                "openCamera",
+                _video,
+                _cameraFacing
+            );
+
+            if (!result.Ok)
+            {
+                _errorCode = result.Code;
+                _errorMessage = result.Message;
+                Logger.LogWarning(
+                    "Camera could not be started ({Code}): {Message}",
+                    result.Code,
+                    result.Message
+                );
+                return;
+            }
+
+            _cameraFacing = result.Facing ?? _cameraFacing;
             _isStreaming = true;
             _isFrozen = false;
+
+            // The model is ~40 MB and has nothing to do with which camera is
+            // running, so a second start should not fetch it again.
+            if (_isModelReady)
+            {
+                return;
+            }
 
             _statusHint = "Downloading MobileSAM model (~40 MB)...";
             StateHasChanged();
@@ -197,6 +286,7 @@
     public async Task SwitchCameraAsync()
     {
         _errorMessage = null;
+        _errorCode = null;
 
         if (_cameraModule is null)
         {
@@ -206,8 +296,25 @@
         try
         {
             var nextFacing = _cameraFacing == FacingEnvironment ? FacingUser : FacingEnvironment;
-            await _cameraModule.InvokeVoidAsync("switchCamera", _video, _cameraFacing);
-            _cameraFacing = nextFacing;
+            var result = await _cameraModule.InvokeAsync<CameraStartResult>(
+                "flipCamera",
+                _video,
+                _cameraFacing
+            );
+
+            if (!result.Ok)
+            {
+                // Flipping tears the old stream down before asking for the new
+                // one, so a refusal here leaves no feed at all - worth explaining
+                // rather than leaving as a blank stage.
+                _errorCode = result.Code;
+                _errorMessage = result.Message;
+                _isStreaming = false;
+                _isFrozen = false;
+                return;
+            }
+
+            _cameraFacing = result.Facing ?? nextFacing;
         }
         catch (Exception ex)
         {
