@@ -186,8 +186,8 @@ test("ImageProcessor resizes input preserving aspect ratio and normalizes RGB ch
     assert.equal(result.origHeight, 1080);
     assert.equal(result.scaledWidth, 1024);
     assert.equal(result.scaledHeight, 576);
-    assert.deepEqual(result.tensor.dims, [1, 3, 1024, 1024]);
-    assert.equal(result.tensor.data.length, 3 * 1024 * 1024);
+    assert.deepEqual(result.tensor.dims, [576, 1024, 3]);
+    assert.equal(result.tensor.data.length, 576 * 1024 * 3);
 });
 
 test("ContourExtractor thresholds logits and extracts normalized polygon coordinates", () => {

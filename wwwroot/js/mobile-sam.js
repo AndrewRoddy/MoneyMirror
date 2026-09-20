@@ -229,30 +229,16 @@ export class ImageProcessor {
         const imageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight);
         const pixels = imageData.data;
 
-        const planeSize = TARGET_SIZE * TARGET_SIZE;
-        const tensorData = new Float32Array(CHANNELS * planeSize);
+        const totalPixels = scaledWidth * scaledHeight;
+        const tensorData = new Float32Array(totalPixels * CHANNELS);
 
-        for (let y = 0; y < scaledHeight; y++) {
-            const rowOffset = y * TARGET_SIZE;
-            const srcRowOffset = y * scaledWidth * 4;
-
-            for (let x = 0; x < scaledWidth; x++) {
-                const srcIdx = srcRowOffset + x * 4;
-                const dstIdx = rowOffset + x;
-
-                tensorData[dstIdx] = (pixels[srcIdx] - PIXEL_MEAN_R) / PIXEL_STD_R;
-                tensorData[planeSize + dstIdx] = (pixels[srcIdx + 1] - PIXEL_MEAN_G) / PIXEL_STD_G;
-                tensorData[2 * planeSize + dstIdx] =
-                    (pixels[srcIdx + 2] - PIXEL_MEAN_B) / PIXEL_STD_B;
-            }
+        for (let i = 0, j = 0; i < pixels.length; i += 4, j += 3) {
+            tensorData[j] = pixels[i];
+            tensorData[j + 1] = pixels[i + 1];
+            tensorData[j + 2] = pixels[i + 2];
         }
 
-        const tensor = new ort.Tensor("float32", tensorData, [
-            1,
-            CHANNELS,
-            TARGET_SIZE,
-            TARGET_SIZE,
-        ]);
+        const tensor = new ort.Tensor("float32", tensorData, [scaledHeight, scaledWidth, CHANNELS]);
         return {
             tensor,
             origWidth,

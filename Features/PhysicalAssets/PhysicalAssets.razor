@@ -26,6 +26,8 @@
 
     <VideoScanPicker Disabled="@IsWorking" OnSelected="ReviewVideoItems" BusyChanged="@(busy => _videoBusy = busy)" />
 
+    <LiveCameraScanner Disabled="@IsWorking" OnItemAccepted="ReviewLiveScannedItem" BusyChanged="@(busy => _cameraBusy = busy)" />
+
 @if (_isProcessing)
 {
     <div class="alert alert-info" role="status" aria-live="polite">
@@ -220,7 +222,8 @@
 
     private bool _isProcessing;
     private bool _videoBusy;
-    private bool IsWorking => _isProcessing || (_detections?.Any(d => d.IsSaving || d.IsEstimating) ?? false);
+    private bool _cameraBusy;
+    private bool IsWorking => _isProcessing || _videoBusy || _cameraBusy || (_detections?.Any(d => d.IsSaving || d.IsEstimating) ?? false);
     private string? _processingMessage;
     private string? _errorMessage;
     private string? _errorRawResponse;
@@ -238,6 +241,28 @@
         _categoryFilter = _confidenceFilter = "all";
         _sortOrder = "confidence-desc";
         _detections = items.Select(item => new ReviewableDetection(item.Detection) { ImageReference = item.ImageReference }).ToList();
+    }
+
+    private void ReviewLiveScannedItem(LiveScannedItem item)
+    {
+        ClearError();
+        _imageReference = null;
+        _categoryFilter = _confidenceFilter = "all";
+        _sortOrder = "confidence-desc";
+
+        var detection = new DetectedAsset(
+            "Scanned item",
+            item.Confidence,
+            item.Region,
+            null,
+            [],
+            item.Mask
+        );
+
+        _detections = new List<ReviewableDetection>
+        {
+            new(detection) { ImageReference = item.ImageReference, Included = true }
+        };
     }
 
     private IReadOnlyList<string> CategoryOptions => _detections is null
