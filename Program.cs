@@ -6,6 +6,7 @@ using MoneyMirror.PhysicalAssets;
 using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Data;
 using MoneyMirror.Features.Financial;
+using MoneyMirror.HumanCapital.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,10 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
 );
+builder.Services.Configure<BlsOptions>(
+    builder.Configuration.GetSection(BlsOptions.SectionName)
+);
+
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
 builder.Services.Configure<ResumeUploadOptions>(
@@ -24,6 +29,7 @@ builder.Services.Configure<ImageUploadOptions>(
 
 builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
 builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
+builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();

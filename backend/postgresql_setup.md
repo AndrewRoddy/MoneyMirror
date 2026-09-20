@@ -32,9 +32,10 @@ The data is stored in the `pitt-money_postgres_data` Docker volume, and uploaded
 possession images are stored in the `pitt-money-app_data` volume.
 
 To use different credentials, set `POSTGRES_DB`, `POSTGRES_USER`, and
-`POSTGRES_PASSWORD` in `.env`. Set `NEMOTRON_API_KEY` and `VISION_API_KEY` there
-when using the AI-backed features. These values become environment-backed .NET
-configuration; they are not copied into the image.
+`POSTGRES_PASSWORD` in `.env`. Set `NEMOTRON_API_KEY`, `VISION_API_KEY`, and
+`BLS_API_KEY` there when using the AI-backed and real-data-backed features.
+These values become environment-backed .NET configuration; they are not
+copied into the image.
 
 ## Run the app locally with a Docker Postgres
 
