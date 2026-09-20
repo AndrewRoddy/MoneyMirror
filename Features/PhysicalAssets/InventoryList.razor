@@ -256,11 +256,15 @@ else
             try
             {
                 var valuation = await ValuationService.EstimateAsync(_newName, brand: null, _newModel);
-                await AssetRepository.AddValuationAsync(
-                    id,
-                    valuation.EstimatedValueUsd,
-                    "AI estimate (not evidence-based - see #148)",
-                    valuation.Reasoning);
+
+                if (valuation.EstimatedValueUsd is { } value)
+                {
+                    await AssetRepository.AddValuationAsync(id, value, valuation.SourceLabel, valuation.Reasoning);
+                }
+                else
+                {
+                    _errorMessage = $"Item added, but its value could not be estimated: {valuation.Reasoning}";
+                }
             }
             catch (AssetValuationException ex)
             {

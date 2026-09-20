@@ -69,6 +69,27 @@ public sealed class InventoryListTests : IDisposable
         Assert.Null(saved.CurrentValuation);
     }
 
+    // #71: insufficient evidence must never become a fabricated/zero-dollar
+    // valuation - the item is still created, just left unvalued.
+    [Fact]
+    public async Task AddItem_WhenEstimateHasNoValue_StillCreatesTheItemUnvalued()
+    {
+        _valuation.HasNoValue = true;
+        var page = _context.Render<InventoryList>();
+
+        page.Find("input[placeholder='Name']").Change("Rare Item");
+        await page.Find("button.btn-primary").ClickAsync(new());
+
+        page.WaitForAssertion(() => Assert.Contains("could not be estimated", page.Markup));
+
+        var saved = Assert.Single(await _repository.GetAllAsync());
+        Assert.Equal("Rare Item", saved.Name);
+        Assert.Null(saved.CurrentValuation);
+
+        var detail = await _repository.GetByIdAsync(saved.Id);
+        Assert.Empty(detail!.ValuationHistory);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
@@ -80,6 +101,7 @@ public sealed class InventoryListTests : IDisposable
     {
         public decimal EstimatedValue { get; } = 250m;
         public bool ShouldFail { get; set; }
+        public bool HasNoValue { get; set; }
         public string? LastLabel { get; private set; }
 
         public Task<AssetValuation> EstimateAsync(string label, string? brand, string? model, CancellationToken cancellationToken = default)
@@ -90,7 +112,8 @@ public sealed class InventoryListTests : IDisposable
                 throw new AssetValuationException("The LLM provider call failed.");
             }
 
-            return Task.FromResult(new AssetValuation(EstimatedValue, "Test estimate", DateTimeOffset.UtcNow, true));
+            var value = HasNoValue ? (decimal?)null : EstimatedValue;
+            return Task.FromResult(new AssetValuation(value, "Test estimate", DateTimeOffset.UtcNow, true));
         }
     }
 }
