@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -28,11 +30,17 @@ public sealed class SerpApiMarketDataService : ISerpApiMarketDataService
 
     private readonly HttpClient _httpClient;
     private readonly SerpApiOptions _options;
+    private readonly SerpApiSearchCache _searchCache;
 
-    public SerpApiMarketDataService(HttpClient httpClient, IOptions<SerpApiOptions> options)
+    public SerpApiMarketDataService(
+        HttpClient httpClient,
+        IOptions<SerpApiOptions> options,
+        SerpApiSearchCache searchCache
+    )
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _searchCache = searchCache;
     }
 
     public async Task<IReadOnlyList<AssetValuationEvidence>> SearchUsedListingsAsync(
@@ -43,7 +51,6 @@ public sealed class SerpApiMarketDataService : ISerpApiMarketDataService
     )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
-        EnsureCredentials();
 
         var query =
             string.Join(
@@ -54,6 +61,24 @@ public sealed class SerpApiMarketDataService : ISerpApiMarketDataService
                     .Distinct(StringComparer.OrdinalIgnoreCase)
             ) + " used for sale price";
 
+        var key = BuildCacheKey(query);
+        var cacheLifetime = TimeSpan.FromHours(
+            Math.Clamp(_options.CacheDurationHours, 1, 24 * 365)
+        );
+        return await _searchCache.GetOrCreateAsync(
+            key,
+            cacheLifetime,
+            () => SearchProviderAsync(query, cancellationToken),
+            cancellationToken
+        );
+    }
+
+    private async Task<IReadOnlyList<AssetValuationEvidence>> SearchProviderAsync(
+        string query,
+        CancellationToken cancellationToken
+    )
+    {
+        EnsureCredentials();
         var uri = BuildSearchUri(query);
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         using var response = await SendAsync(request, cancellationToken);
@@ -65,6 +90,25 @@ public sealed class SerpApiMarketDataService : ISerpApiMarketDataService
         }
 
         return MapEvidence(result);
+    }
+
+    private string BuildCacheKey(string query)
+    {
+        var normalizedQuery = Regex
+            .Replace(query.Normalize(NormalizationForm.FormKC), @"\s+", " ")
+            .Trim()
+            .ToLowerInvariant();
+        var keyMaterial = string.Join(
+            "\n",
+            _options.BaseUrl.Trim(),
+            _options.CountryCode.Trim().ToLowerInvariant(),
+            _options.Language.Trim().ToLowerInvariant(),
+            _options.CacheDurationHours.ToString(CultureInfo.InvariantCulture),
+            normalizedQuery
+        );
+        return Convert
+            .ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyMaterial)))
+            .ToLowerInvariant();
     }
 
     private void EnsureCredentials()

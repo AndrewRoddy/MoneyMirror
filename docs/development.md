@@ -7,9 +7,9 @@ monolith, one database, one implicit user — no auth or multi-tenancy.
 ## Configuration
 
 AI, BLS, and SerpApi Google Search settings live under `Ai:Nemotron`,
-`Ai:VisionModel`, `Bls`, and `SerpApi` (`ApiKey`, `BaseUrl`, `CountryCode`, and
-`Language`). `appsettings.json` ships empty secret placeholders — never
-commit real keys. Set them locally:
+`Ai:VisionModel`, `Bls`, and `SerpApi` (`ApiKey`, `BaseUrl`, `CountryCode`,
+`Language`, and `CacheDurationHours`). `appsettings.json` ships empty secret
+placeholders — never commit real keys. Set them locally:
 
 ```sh
 dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
@@ -28,6 +28,9 @@ listings produce a null value and an
 explicit low-confidence explanation. The valuation returns each comparable's
 price, source, title, and condition in `AssetValuation.Evidence`; that evidence
 is persisted and displayed alongside each valuation in inventory history.
+Successful results, including empty results, are cached for 30 days in
+`App_Data/serpapi-search-cache`, which is on the persistent Docker app-data
+volume. Repeated or concurrent searches for the same item reuse that result.
 
 A free BLS v2 key from [data.bls.gov/registrationEngine](https://data.bls.gov/registrationEngine/)
 raises rate limits; the app works without one at the unregistered limit.

@@ -45,6 +45,15 @@ builder.Services.Configure<ImageUploadOptions>(
 
 builder.Services.AddTransient<TransientFaultRetryHandler>();
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton(sp =>
+{
+    var options =
+        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SerpApiOptions>>().Value;
+    var cacheDirectory = Path.IsPathRooted(options.CacheDirectory)
+        ? options.CacheDirectory
+        : Path.Combine(builder.Environment.ContentRootPath, options.CacheDirectory);
+    return new SerpApiSearchCache(cacheDirectory);
+});
 
 // Both AI clients share NVIDIA's endpoint, which sheds load with a 503 when its
 // workers are saturated - see TransientFaultRetryHandler. HttpClient.Timeout
