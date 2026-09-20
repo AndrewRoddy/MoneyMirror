@@ -16,7 +16,6 @@ services:
       Ai__Nemotron__ApiKey: ${NEMOTRON_API_KEY:-}
       Ai__VisionModel__ApiKey: ${VISION_API_KEY:-}
       Bls__ApiKey: ${BLS_API_KEY:-}
-      Onet__ApiKey: ${ONET_API_KEY:-}
     ports:
       - "${APP_PORT:-8000}:8080"
     volumes:

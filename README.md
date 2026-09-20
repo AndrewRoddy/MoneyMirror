@@ -100,9 +100,8 @@ overlong clip, an unsupported codec, cancellation, and replacing the clip.
 ## Configuration
 
 The app reads AI provider settings from the `Ai:Nemotron` and `Ai:VisionModel`
-configuration sections (`BaseUrl`, `Model`, `ApiKey`), BLS wage-data settings from
-the `Bls` section, and O*NET occupation-data settings from the `Onet` section
-(`BaseUrl`, `ApiKey`). `appsettings.json` ships with empty
+configuration sections (`BaseUrl`, `Model`, `ApiKey`), and BLS wage-data settings
+from the `Bls` section (`BaseUrl`, `ApiKey`). `appsettings.json` ships with empty
 `ApiKey` placeholders — never commit real keys there. Set them locally with .NET
 user-secrets instead:
 
@@ -110,11 +109,10 @@ user-secrets instead:
 dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
 dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
 dotnet user-secrets set "Bls:ApiKey" "<your-key>"
-dotnet user-secrets set "Onet:ApiKey" "<your-key>"
 ```
 
 or via environment variables (`Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`,
-`Bls__ApiKey`, `Onet__ApiKey`). A BLS v2 API key is free to register for at
+`Bls__ApiKey`). A BLS v2 API key is free to register for at
 [data.bls.gov/registrationEngine](https://data.bls.gov/registrationEngine/) and
 raises BLS's rate limit from 25 to 500 queries/day (and from 25 to 50 series
 per request, 10 to 20 years per query); the app works without a key at the
@@ -144,7 +142,6 @@ variables override the empty placeholders in `appsettings.json`:
 | `NEMOTRON_API_KEY` | `Ai:Nemotron:ApiKey` |
 | `VISION_API_KEY` | `Ai:VisionModel:ApiKey` |
 | `BLS_API_KEY` | `Bls:ApiKey` |
-| `ONET_API_KEY` | `Onet:ApiKey` |
 
 Stop the stack with `docker compose down`. Add `-v` only when you also want to
 delete the persisted database and uploaded-image volumes.

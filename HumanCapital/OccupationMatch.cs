@@ -6,9 +6,7 @@ namespace MoneyMirror.HumanCapital;
 /// <param name="IsAiEstimated">
 /// True for this MVP placeholder: the match came from the LLM's judgment,
 /// not from a real labor-market data source. Never present this to the
-/// user (or persist it) as if it were grounded - #142 is a deliberate,
-/// temporary stand-in for the real #23 (ILaborMarketService) pipeline,
-/// which sets this false.
+/// user (or persist it) as if it were grounded.
 /// </param>
 /// <param name="KeySkills">
 /// Skills typically in demand for this occupation, per the same AI
