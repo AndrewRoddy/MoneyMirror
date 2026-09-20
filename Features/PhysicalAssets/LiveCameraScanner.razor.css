@@ -46,27 +46,27 @@
 }
 
 .glowing-contour {
-    fill: rgba(0, 220, 255, 0.25);
-    stroke: #00dcff;
+    fill: color-mix(in srgb, var(--accent) 25%, transparent);
+    stroke: var(--accent);
     stroke-width: 0.8;
     stroke-linejoin: round;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 6px rgba(0, 220, 255, 0.85))
-        drop-shadow(0 0 12px rgba(0, 220, 255, 0.45));
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 85%, transparent))
+        drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 45%, transparent));
     animation: contour-pulse 2s ease-in-out infinite alternate;
 }
 
 @keyframes contour-pulse {
     0% {
-        fill: rgba(0, 220, 255, 0.2);
-        stroke: #00dcff;
-        filter: drop-shadow(0 0 4px rgba(0, 220, 255, 0.7));
+        fill: color-mix(in srgb, var(--accent) 20%, transparent);
+        stroke: var(--accent);
+        filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent));
     }
     100% {
-        fill: rgba(0, 220, 255, 0.35);
-        stroke: #33e6ff;
-        filter: drop-shadow(0 0 8px rgba(0, 220, 255, 1))
-            drop-shadow(0 0 16px rgba(0, 220, 255, 0.6));
+        fill: color-mix(in srgb, var(--accent) 35%, transparent);
+        stroke: color-mix(in srgb, var(--accent) 80%, white);
+        filter: drop-shadow(0 0 8px var(--accent))
+            drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 60%, transparent));
     }
 }
 
@@ -76,15 +76,15 @@
 }
 
 .prompt-marker.positive {
-    fill: #10b981;
+    fill: var(--positive);
     stroke: #ffffff;
-    filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.9));
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--positive) 90%, transparent));
 }
 
 .prompt-marker.negative {
-    fill: #ef4444;
+    fill: var(--negative);
     stroke: #ffffff;
-    filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.9));
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--negative) 90%, transparent));
 }
 
 .viewfinder-hint {
