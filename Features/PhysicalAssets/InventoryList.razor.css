@@ -8,7 +8,9 @@
 }
 
 .asset-row {
-    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--surface);
 }
@@ -19,9 +21,11 @@
 
 .asset-row-summary {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    min-width: 0;
     width: 100%;
-    padding: 0.9rem 5.5rem 0.9rem 1rem;
+    padding: 0.9rem 1rem;
     gap: 0.75rem;
     border: 0;
     background: none;
@@ -45,12 +49,16 @@
 
 .asset-row-meta {
     flex: 0 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: var(--text-muted);
     font-size: 0.8rem;
 }
 
 .asset-row-value {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-weight: 600;
 }
 
@@ -73,14 +81,14 @@
 }
 
 .asset-row-quick-actions {
-    position: absolute;
-    top: 0.6rem;
-    right: 0.75rem;
     display: flex;
     gap: 0.35rem;
+    padding: 0.6rem 0.75rem 0.6rem 0;
 }
 
 .asset-row-detail {
+    grid-column: 1 / -1;
+    min-width: 0;
     padding: 0 1.25rem 1.25rem;
     border-top: 1px solid var(--border-subtle);
 }
@@ -111,6 +119,8 @@
 }
 
 .asset-edit-form {
+    grid-column: 1 / -1;
+    min-width: 0;
     display: grid;
     gap: 0.5rem;
     padding: 0.9rem 1rem;
@@ -129,15 +139,12 @@
 }
 
 @media (max-width: 640px) {
-    .asset-row-summary {
-        flex-wrap: wrap;
-        padding-right: 1rem;
-        padding-bottom: 2.75rem;
+    .asset-row {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .asset-row-quick-actions {
-        top: auto;
-        right: 1rem;
-        bottom: 0.6rem;
+        justify-self: end;
+        padding: 0 1rem 0.6rem;
     }
 }
