@@ -341,10 +341,29 @@
 
         try
         {
-            await using var streamRef = await _cameraModule.InvokeAsync<IJSStreamReference>("getCanvasBlob", _canvas);
-            await using var stream = await streamRef.OpenReadStreamAsync(10 * 1024 * 1024);
+            var jsMask = polygon.Select(p => new { x = p.X, y = p.Y }).ToArray();
+            var jsBounds = new
+            {
+                x = _lastResult.Bounds.X,
+                y = _lastResult.Bounds.Y,
+                width = _lastResult.Bounds.Width,
+                height = _lastResult.Bounds.Height,
+            };
 
-            var imageReference = await ImageStorage.SaveAsync(stream, "live-scan.jpg");
+            await using var streamRef = await _cameraModule.InvokeAsync<IJSStreamReference>(
+                "getCutoutBlob",
+                _canvas,
+                jsMask,
+                jsBounds
+            );
+
+            using var ms = new MemoryStream();
+            await using var stream = await streamRef.OpenReadStreamAsync(10 * 1024 * 1024);
+            await stream.CopyToAsync(ms);
+            var cutoutBytes = ms.ToArray();
+
+            ms.Position = 0;
+            var imageReference = await ImageStorage.SaveAsync(ms, "live-scan-cutout.png");
 
             var item = new LiveScannedItem(
                 polygon,
@@ -352,7 +371,8 @@
                 _lastResult.Confidence,
                 _lastResult.MaskWidth,
                 _lastResult.MaskHeight,
-                imageReference
+                imageReference,
+                cutoutBytes
             );
 
             await OnItemAccepted.InvokeAsync(item);

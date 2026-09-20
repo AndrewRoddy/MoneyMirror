@@ -8,6 +8,7 @@
 @inject IAssetValuationService ValuationService
 @inject IPhysicalAssetRepository AssetRepository
 @inject IOptions<ImageUploadOptions> UploadOptions
+@inject ILogger<PhysicalAssets> Logger
 
 <PageTitle>Physical Assets</PageTitle>
 
@@ -249,26 +250,65 @@
         _sortOrder = "confidence-desc";
         _detections = items.Select(item => new ReviewableDetection(item.Detection) { ImageReference = item.ImageReference }).ToList();
     }
-    private void ReviewLiveScannedItem(LiveScannedItem item)
+    private async Task ReviewLiveScannedItem(LiveScannedItem item)
     {
         ClearError();
         _imageReference = null;
         _categoryFilter = _confidenceFilter = "all";
         _sortOrder = "confidence-desc";
 
-        var detection = new DetectedAsset(
-            "Scanned item",
-            item.Confidence,
-            item.Region,
-            null,
-            [],
-            item.Mask
-        );
+        DetectedAsset detection;
 
-        _detections = new List<ReviewableDetection>
+        if (item.CutoutBytes is { Length: > 0 } bytes)
         {
-            new(detection) { ImageReference = item.ImageReference, Included = true }
+            _isProcessing = true;
+            _processingMessage = "Identifying item with AI...";
+            StateHasChanged();
+
+            try
+            {
+                var identified = await DetectionService.IdentifyCutoutAsync(bytes, "image/png");
+                detection = identified with { Mask = item.Mask, Region = item.Region };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Single-item identification failed. Falling back to generic label.");
+                detection = new DetectedAsset(
+                    "Scanned item",
+                    item.Confidence,
+                    item.Region,
+                    null,
+                    [],
+                    item.Mask
+                );
+            }
+            finally
+            {
+                _isProcessing = false;
+                _processingMessage = null;
+            }
+        }
+        else
+        {
+            detection = new DetectedAsset(
+                "Scanned item",
+                item.Confidence,
+                item.Region,
+                null,
+                [],
+                item.Mask
+            );
+        }
+
+        var reviewable = new ReviewableDetection(detection)
+        {
+            ImageReference = item.ImageReference,
+            Included = true,
+            Brand = detection.Identification?.Brand ?? "",
+            Model = detection.Identification?.Model ?? ""
         };
+
+        _detections = new List<ReviewableDetection> { reviewable };
     }
 
     private IReadOnlyList<string> CategoryOptions => _detections is null

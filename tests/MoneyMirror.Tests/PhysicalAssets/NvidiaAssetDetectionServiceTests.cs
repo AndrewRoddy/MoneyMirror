@@ -507,4 +507,75 @@ public class NvidiaAssetDetectionServiceTests
         var asset = Assert.Single(results);
         Assert.Equal("keyboard", asset.Label);
     }
+
+    [Fact]
+    public async Task IdentifyCutoutAsync_ValidSingleItemJson_ReturnsIdentifiedAsset()
+    {
+        var response = """
+            {
+              "label": "Potato Chips",
+              "confidence": 0.98,
+              "identification": {
+                "brand": "Miss Vickie's",
+                "model": "Jalapeño",
+                "confidence": 0.95
+              },
+              "tags": ["green", "bag", "snack"]
+            }
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var asset = await service.IdentifyCutoutAsync(Image, "image/png");
+
+        Assert.Equal("Potato Chips", asset.Label);
+        Assert.Equal(0.98, asset.Confidence);
+        Assert.NotNull(asset.Identification);
+        Assert.Equal("Miss Vickie's", asset.Identification.Brand);
+        Assert.Equal("Jalapeño", asset.Identification.Model);
+        Assert.Equal(3, asset.Tags.Count);
+    }
+
+    [Fact]
+    public async Task IdentifyCutoutAsync_ArrayWrappedJson_FallsBackAndParsesFirstItem()
+    {
+        var response = """
+            {
+              "objects": [
+                {
+                  "label": "Monitor",
+                  "confidence": 0.99,
+                  "identification": {
+                    "brand": "Dell",
+                    "model": "UltraSharp",
+                    "confidence": 0.92
+                  },
+                  "tags": ["black", "screen"]
+                }
+              ]
+            }
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var asset = await service.IdentifyCutoutAsync(Image, "image/png");
+
+        Assert.Equal("Monitor", asset.Label);
+        Assert.Equal("Dell", asset.Identification?.Brand);
+        Assert.Equal("UltraSharp", asset.Identification?.Model);
+    }
+
+    [Fact]
+    public async Task IdentifyCutoutAsync_RetriesOnFirstParseFailure_AndRecovers()
+    {
+        var vision = new SequencedVisionService(
+            "This is a photo of a Miss Vickie's chips bag.",
+            """{"label": "Chips", "confidence": 0.9, "identification": {"brand": "Miss Vickie's", "model": null, "confidence": 0.9}, "tags": ["snack"]}"""
+        );
+        var service = new NvidiaAssetDetectionService(vision);
+
+        var asset = await service.IdentifyCutoutAsync(Image, "image/png");
+
+        Assert.Equal(2, vision.Prompts.Count);
+        Assert.Equal("Chips", asset.Label);
+        Assert.Equal("Miss Vickie's", asset.Identification?.Brand);
+    }
 }

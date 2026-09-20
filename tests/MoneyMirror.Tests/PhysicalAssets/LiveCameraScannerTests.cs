@@ -30,6 +30,7 @@ public sealed class LiveCameraScannerTests : IDisposable
         _module
             .Setup<NormalizedPoint>("normalizePoint", _ => true)
             .SetResult(new NormalizedPoint(0.5, 0.5));
+        _module.Setup<IJSStreamReference>("getCutoutBlob", _ => true).SetResult(new FakeStream());
         _module.Setup<IJSStreamReference>("getCanvasBlob", _ => true).SetResult(new FakeStream());
     }
 
@@ -147,6 +148,8 @@ public sealed class LiveCameraScannerTests : IDisposable
 
         Assert.NotNull(acceptedItem);
         Assert.True(acceptedItem.Mask.Count >= 3);
+        Assert.NotNull(acceptedItem.CutoutBytes);
+        Assert.NotEmpty(acceptedItem.CutoutBytes);
         Assert.Equal(1, _storage.Calls);
     }
 
