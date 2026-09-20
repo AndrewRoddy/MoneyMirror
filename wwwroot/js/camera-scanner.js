@@ -37,6 +37,10 @@ export class CameraDriver {
 
             await video.play();
 
+            if (video.parentElement && video.videoWidth > 0 && video.videoHeight > 0) {
+                video.parentElement.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+            }
+
             return {
                 facing,
                 width: video.videoWidth || DEFAULT_IDEAL_WIDTH,
@@ -141,7 +145,7 @@ export class FrameCapture {
     }
 }
 
-export function normalizePoint(clientX, clientY, containerElement) {
+export function normalizePoint(clientX, clientY, containerElement, videoElement) {
     if (!containerElement) {
         return { x: 0, y: 0 };
     }
@@ -149,6 +153,36 @@ export function normalizePoint(clientX, clientY, containerElement) {
     const rect = containerElement.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) {
         return { x: 0, y: 0 };
+    }
+
+    const video =
+        videoElement || containerElement.querySelector?.("video") || containerElement.querySelector?.("canvas");
+    const videoWidth = video?.videoWidth || video?.width || 0;
+    const videoHeight = video?.videoHeight || video?.height || 0;
+
+    if (videoWidth > 0 && videoHeight > 0) {
+        const containerAspect = rect.width / rect.height;
+        const videoAspect = videoWidth / videoHeight;
+
+        let visibleW = rect.width;
+        let visibleH = rect.height;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (videoAspect > containerAspect) {
+            visibleH = rect.width / videoAspect;
+            offsetY = (rect.height - visibleH) / 2;
+        } else {
+            visibleW = rect.height * videoAspect;
+            offsetX = (rect.width - visibleW) / 2;
+        }
+
+        const relX = clientX - rect.left - offsetX;
+        const relY = clientY - rect.top - offsetY;
+
+        const x = Math.max(0, Math.min(1, relX / visibleW));
+        const y = Math.max(0, Math.min(1, relY / visibleH));
+        return { x, y };
     }
 
     const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
