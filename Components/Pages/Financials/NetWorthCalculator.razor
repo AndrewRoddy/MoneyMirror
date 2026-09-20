@@ -91,7 +91,7 @@
 
         @if (VisibleRecords.Count == 0)
         {
-            <div class="empty-records"><div class="empty-icon">＋</div><h3>Nothing here yet</h3><p>Add your first @(ActiveTab == RecordKind.Liability ? "liability" : "asset") to start building your snapshot.</p></div>
+            <div class="empty-records"><div class="empty-icon" aria-hidden="true"></div><h3>Nothing here yet</h3><p>Add your first @(ActiveTab == RecordKind.Liability ? "liability" : "asset") to start building your snapshot.</p></div>
         }
         else
         {
