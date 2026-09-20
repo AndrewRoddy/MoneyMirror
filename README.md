@@ -105,14 +105,15 @@ features will just report that the provider call failed.
 
 ## Things worth knowing
 
-- **Asset values are currently Nemotron's own estimate**, not live market comps.
-  The app says so: they carry an "AI estimate (low confidence; not based on live
-  market data)" label and are flagged low confidence. The evidence backed comps
-  pipeline is built but not yet wired up.
+- **Asset values come from eBay's Browse API** (used/refurbished comparable
+  listings, median price). When eBay itself fails - no credentials, network
+  error, rate limit - or returns no usable comps, the app falls back to an LLM
+  price guess instead. Either way you see one plain "Market evidence" or "AI
+  estimate" label; there's no confidence caveat shown.
 - **There is no login.** One implicit user, no auth, no multi-tenancy. It's built
   to run on your own machine, so don't put it on the open internet.
-- **Financial entries live in memory** and reset when the app restarts. Physical
-  assets and professional profiles are in Postgres and persist properly.
+- **Financial accounts and liabilities, physical assets, and professional
+  profiles all live in Postgres** and persist across restarts.
 - **The vision model is not deterministic.** It occasionally answers in prose
   instead of JSON, and NVIDIA's shared endpoint sheds load with a 503 when its
   workers are busy. Both are handled, bad replies get re-prompted and transient

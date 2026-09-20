@@ -15,7 +15,7 @@ public class MarketValuationCalculatorTests
         Assert.True(result.IsLowConfidence);
         Assert.False(result.IsAiEstimated);
         Assert.Empty(result.Evidence);
-        Assert.Contains("no usable comparable listings", result.Reasoning);
+        Assert.Contains("No usable comparable listings", result.Reasoning);
         Assert.Equal(ValuedAt, result.ValuationDate);
     }
 
@@ -47,7 +47,7 @@ public class MarketValuationCalculatorTests
 
         Assert.Equal((decimal)expected, result.EstimatedValueUsd);
         Assert.Equal(count < 3, result.IsLowConfidence);
-        Assert.Equal(count < 3, result.SourceLabel.Contains("low confidence"));
+        Assert.Equal("Market evidence", result.SourceLabel);
         Assert.False(result.IsAiEstimated);
         Assert.Equal(count, result.Evidence.Count);
     }
