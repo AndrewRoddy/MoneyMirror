@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using UglyToad.PdfPig;
+using UglyToad.PdfPig.Exceptions;
 
 namespace MoneyMirror.HumanCapital;
 
@@ -46,6 +47,11 @@ public class ResumeTextExtractionService : IResumeTextExtractionService
         catch (ResumeTextExtractionException)
         {
             throw;
+        }
+        catch (PdfDocumentEncryptedException ex)
+        {
+            throw new ResumeTextExtractionException(
+                "This PDF is password-protected. Please remove the password and upload it again.", ex);
         }
         catch (Exception ex)
         {
