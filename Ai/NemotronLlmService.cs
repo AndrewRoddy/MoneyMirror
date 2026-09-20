@@ -30,6 +30,13 @@ public class NemotronLlmService : ILlmService
         {
             Model = _options.Model,
             Messages = [new ChatMessage { Role = "user", Content = prompt }],
+            // #241: without a cap, a reasoning model that falls into a
+            // degenerate repetition loop keeps generating until the provider's
+            // own (much higher) output limit, which can take minutes - a
+            // request appears "stuck." Every prompt this service is used for
+            // expects a short answer or a compact JSON object, so this leaves
+            // generous headroom without removing the bound entirely.
+            MaxTokens = 4096,
         };
 
         HttpResponseMessage response;
@@ -99,6 +106,9 @@ public class NemotronLlmService : ILlmService
 
         [JsonPropertyName("messages")]
         public required ChatMessage[] Messages { get; init; }
+
+        [JsonPropertyName("max_tokens")]
+        public required int MaxTokens { get; init; }
     }
 
     private class ChatMessage
