@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Ai;
 using MoneyMirror.Ai.Configuration;
@@ -20,6 +21,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
+// #265: without this, ASP.NET Core keeps DataProtection keys (which back
+// antiforgery tokens, among other things) in the container's writable
+// layer, so every container restart/redeploy generates a fresh key ring
+// and invalidates tokens issued before it. App_Data is already a
+// persisted volume (see docker-compose.yml), so keys survive recreation
+// with no new volume needed.
+builder
+    .Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("App_Data/keys"));
 
 builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
