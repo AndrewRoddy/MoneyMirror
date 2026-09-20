@@ -3,14 +3,17 @@
 
 <PageTitle>Inventory</PageTitle>
 
-<div class="standard-page">
-<header class="page-header">
-    <div>
-        <h1>Physical Asset Inventory</h1>
-        <p class="page-subtitle">Every item you own, whether scanned or manually added.</p>
-    </div>
-    <a class="primary-button" href="#add-item">+ Add item</a>
-</header>
+<div class="ledger-page">
+    <header class="ledger-header">
+        <div>
+            <h1>Inventory</h1>
+            <p class="ledger-subtitle">Every item you own, whether scanned or manually added.</p>
+        </div>
+        <a class="ledger-cta" href="#add-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Add item
+        </a>
+    </header>
 
-<InventoryList />
+    <InventoryList />
 </div>
