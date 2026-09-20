@@ -167,5 +167,16 @@ test("disposing during frame encoding does not leak a new frame URL", async () =
         return canvas;
     };
     await assert.rejects(scan.prepare(input(), video), /Scan cancelled/);
-    assert.deepEqual(revoked, urls);
+  assert.deepEqual(revoked, urls);
+});
+
+test("an interrupted preparation cannot dispose its replacement", async () => {
+  const video = new Video();
+  const first = scan.prepare(input(), video);
+  const replacement = scan.prepare(input({ name: "replacement.mp4" }), video);
+  await assert.rejects(first, /Scan cancelled/);
+  assert.equal((await replacement).length, 6);
+  assert.ok(scan.frameUrl(video, 0));
+  scan.dispose(video);
+  assert.deepEqual(revoked, urls);
 });

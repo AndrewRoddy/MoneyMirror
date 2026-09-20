@@ -84,8 +84,9 @@ export async function prepare(input, video) {
         }
         video.pause();
         return timestamps;
-    } catch (error) {
-        dispose(video);
+  } catch (error) {
+    // An older decoding task must not dispose a replacement video's session.
+    if (sessions.get(video) === session) dispose(video);
         throw error;
     }
 }

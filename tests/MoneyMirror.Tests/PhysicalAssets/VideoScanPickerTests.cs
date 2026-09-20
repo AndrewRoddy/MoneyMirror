@@ -48,7 +48,7 @@ public sealed class VideoScanPickerTests : IDisposable
     {
         var page = _context.Render<ScanPage>();
         page.Find("#room-video").Change("room.mp4");
-        page.FindAll("button").Single(b => b.TextContent == "Find items in video").Click();
+        await page.FindAll("button").Single(b => b.TextContent == "Find items in video").ClickAsync(new MouseEventArgs());
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".item-region").Count));
         Assert.Empty(_storage.References);
         Assert.Empty(await _repository.GetAllAsync());
@@ -59,7 +59,7 @@ public sealed class VideoScanPickerTests : IDisposable
         page.FindAll(".item-region")[1].Click();
         page.FindAll("button").Single(b => b.TextContent.Trim() == "1.5 s").Click();
         Assert.All(page.FindAll(".item-region"), b => Assert.Equal("true", b.GetAttribute("aria-pressed")));
-        page.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").ClickAsync(new MouseEventArgs());
         page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("img[src^='/api/possession-images/']").Count));
         Assert.Equal(2, _storage.References.Count);
         Assert.Equal(2, _module.Invocations.Count(i => i.Identifier == "cropStream"));
@@ -67,9 +67,9 @@ public sealed class VideoScanPickerTests : IDisposable
 
         for (var i = 0; i < 2; i++)
         {
-            page.FindAll("button").Where(b => b.TextContent.Trim() == "Estimate value").ElementAt(i).Click();
+            await page.FindAll("button").Where(b => b.TextContent.Trim() == "Estimate value").ElementAt(i).ClickAsync(new MouseEventArgs());
             page.WaitForAssertion(() => Assert.Single(page.FindAll("button"), b => b.TextContent.Trim() == "Save as new item"));
-            page.FindAll("button").Single(b => b.TextContent.Trim() == "Save as new item").Click();
+            await page.FindAll("button").Single(b => b.TextContent.Trim() == "Save as new item").ClickAsync(new MouseEventArgs());
             page.WaitForAssertion(() => Assert.Equal(i + 1, page.FindAll("a").Count(a => a.TextContent == "View item")));
         }
 
