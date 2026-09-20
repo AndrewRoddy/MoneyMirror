@@ -11,11 +11,18 @@
 
 <PageTitle>Physical Assets</PageTitle>
 
-<h1>Physical Assets</h1>
+<div class="standard-page">
+    <header class="page-header">
+        <div>
+            <h1>Physical Assets</h1>
+            <p class="page-subtitle">Photograph and value your possessions here.</p>
+        </div>
+    </header>
 
-<p>Photograph and value your possessions here.</p>
-
-<InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@_isProcessing" />
+    <section class="page-card">
+        <h2 class="page-section-title">Scan a possession</h2>
+        <InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@_isProcessing" />
+    </section>
 
 @if (_isProcessing)
 {
@@ -195,6 +202,8 @@
         }
     }
 }
+
+</div>
 
 @code {
     private const double LowConfidenceThreshold = 0.6;

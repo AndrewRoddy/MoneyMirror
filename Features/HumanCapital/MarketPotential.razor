@@ -7,12 +7,18 @@
 
 <PageTitle>Market Potential</PageTitle>
 
-<div class="alert alert-info" role="alert">
+<div class="standard-page">
+<header class="page-header">
+    <div>
+        <h1>Market Potential</h1>
+        <p class="page-subtitle">A grounded view of what your skills and experience could earn.</p>
+    </div>
+</header>
+
+<div class="alert alert-info page-card" role="alert">
     <strong>Market Potential</strong> is a separate estimate of what your skills and experience could earn -
     it is never added to, or combined with, your financial net worth.
 </div>
-
-<h1>Market Potential</h1>
 
 @if (_errorMessage is not null)
 {
@@ -35,7 +41,7 @@ else
         Based on the profile below. <a href="/human-capital">Review or correct it</a> if something looks wrong.
     </p>
 
-    <h2>Estimated Compensation Range</h2>
+    <section class="page-card"><h2 class="page-section-title">Estimated Compensation Range</h2>
     @if (_compensation is null)
     {
         <p><em>Not available.</em></p>
@@ -49,7 +55,8 @@ else
         <p class="text-muted">@_compensation.Explanation</p>
     }
 
-    <h2>Matched Occupations</h2>
+    </section>
+    <section class="page-card"><h2 class="page-section-title">Matched Occupations</h2>
     @if (_occupations is null || _occupations.Count == 0)
     {
         <p><em>No matches available.</em></p>
@@ -158,7 +165,9 @@ else
             </ul>
         }
     }
+    </section>
 }
+</div>
 
 @code {
     private bool _isLoading = true;

@@ -11,11 +11,19 @@
 
 <PageTitle>Human Capital</PageTitle>
 
-<h1>Human Capital</h1>
+<div class="standard-page">
+    <header class="page-header">
+        <div>
+            <h1>Human Capital</h1>
+            <p class="page-subtitle">Upload a resume to estimate your Market Potential.</p>
+        </div>
+    </header>
 
-<p>Upload a resume to estimate your Market Potential here.</p>
-
-<InputFile OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />
+    <section class="page-card">
+        <h2 class="page-section-title">Resume</h2>
+        <p class="text-muted">PDF and DOCX files are supported. Your resume is used to build an editable professional profile.</p>
+        <InputFile OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />
+    </section>
 
 @if (_isProcessing)
 {
@@ -32,8 +40,9 @@
 
 @if (_profile is not null)
 {
-    <h2>Review Extracted Profile</h2>
-    <p>Fix anything the extraction got wrong, then save your corrections.</p>
+    <section class="page-card">
+        <h2 class="page-section-title">Review Extracted Profile</h2>
+        <p>Fix anything the extraction got wrong, then save your corrections.</p>
 
     @if (_savedMessage is not null)
     {
@@ -113,7 +122,9 @@
     <button type="button" class="btn btn-primary mt-2" @onclick="SaveCorrectionsAsync" disabled="@_isSaving">
         @(_isSaving ? "Saving..." : "Save Corrections")
     </button>
+    </section>
 }
+</div>
 
 @code {
     private bool _isProcessing;
