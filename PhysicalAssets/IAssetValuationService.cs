@@ -10,6 +10,8 @@ namespace MoneyMirror.PhysicalAssets;
 /// </summary>
 public interface IAssetValuationService
 {
+    /// <returns>A valuation whose EstimatedValueUsd is null when no market value is available.
+    /// Callers must preserve that distinction instead of treating it as zero.</returns>
     /// <exception cref="AssetValuationException">
     /// The LLM call failed, or its response couldn't be parsed.
     /// </exception>

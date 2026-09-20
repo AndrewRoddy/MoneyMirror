@@ -156,8 +156,8 @@
                     @if (detection.Valuation is not null)
                     {
                         <div class="mt-2">
-                            <span class="fw-bold">$@detection.Valuation.EstimatedValueUsd.ToString("N2")</span>
-                            <span class="badge bg-secondary">AI estimate - not based on live market data</span>
+                            <span class="fw-bold">@(detection.Valuation.EstimatedValueUsd is { } value ? $"${value:N2}" : "No market value available")</span>
+                            <span class="badge bg-secondary">@detection.Valuation.SourceLabel</span>
                             <p class="text-muted mb-0">@detection.Valuation.Reasoning</p>
                         </div>
 
@@ -168,7 +168,7 @@
                                 <a href="/inventory">View in inventory</a>
                             </div>
                         }
-                        else
+                        else if (detection.Valuation.EstimatedValueUsd is not null)
                         {
                             @if (detection.PossibleDuplicates.Count > 0)
                             {
@@ -413,7 +413,7 @@
     // were found.
     private async Task SaveToInventoryAsync(ReviewableDetection detection, Guid? mergeIntoId)
     {
-        if (detection.Valuation is null || IsWorking || _videoBusy || detection.SavedItemId is not null)
+        if (detection.Valuation?.EstimatedValueUsd is not { } value || IsWorking || _videoBusy || detection.SavedItemId is not null)
         {
             return;
         }
@@ -428,8 +428,8 @@
             {
                 var merged = await AssetRepository.AddValuationAsync(
                     existingId,
-                    detection.Valuation.EstimatedValueUsd,
-                    "AI estimate (not evidence-based - see #148)",
+                    value,
+                    detection.Valuation.SourceLabel,
                     detection.Valuation.Reasoning);
 
                 if (!merged)
@@ -449,8 +449,9 @@
                         Category: null,
                         IdentifiedProductModelOf(detection),
                         detection.ImageReference ?? _imageReference,
-                        detection.Valuation.EstimatedValueUsd,
-                        detection.Valuation.Reasoning));
+                        value,
+                        detection.Valuation.Reasoning,
+                        detection.Valuation.SourceLabel));
             }
         }
         catch (Exception ex)

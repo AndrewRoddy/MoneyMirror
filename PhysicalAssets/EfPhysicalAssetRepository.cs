@@ -92,7 +92,7 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
             {
                 PhysicalAssetId = asset.Id,
                 EstimatedValue = input.EstimatedValue,
-                Source = "AI estimate (not evidence-based - see #148)",
+                Source = input.ValuationSource,
                 Notes = input.ValuationEvidence,
             }
         );

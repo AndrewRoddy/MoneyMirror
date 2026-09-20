@@ -329,10 +329,16 @@ else
         {
             var valuation = await ValuationService.EstimateAsync(_detail.Name, brand: null, _detail.IdentifiedProductModel);
 
+            if (valuation.EstimatedValueUsd is not { } value)
+            {
+                _revalueError = valuation.Reasoning;
+                return;
+            }
+
             var updated = await AssetRepository.AddValuationAsync(
                 id,
-                valuation.EstimatedValueUsd,
-                "AI estimate (not evidence-based - see #148)",
+                value,
+                valuation.SourceLabel,
                 valuation.Reasoning);
 
             if (!updated)
