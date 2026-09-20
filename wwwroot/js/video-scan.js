@@ -108,16 +108,15 @@ export function frameStream(video, index) {
     if (!(blob instanceof Blob)) {
         throw new Error("This frame could not be read. Try scanning again.");
     }
-    return DotNet.createJSStreamReference(blob);
+    return blob;
 }
-
 export async function cropStream(video, index, region) {
     const source = requireFrame(video, index);
     if (!region) {
         if (!(source.blob instanceof Blob)) {
             throw new Error("This frame could not be read. Try scanning again.");
         }
-        return DotNet.createJSStreamReference(source.blob);
+        return source.blob;
     }
     const canvas = document.createElement("canvas");
     const x = Math.floor(region.x * source.canvas.width);
@@ -143,7 +142,7 @@ export async function cropStream(video, index, region) {
             canvas.width,
             canvas.height,
         );
-    return DotNet.createJSStreamReference(await blobFromCanvas(canvas));
+    return await blobFromCanvas(canvas);
 }
 
 export function dispose(video) {
