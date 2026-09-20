@@ -1,9 +1,8 @@
 @page "/market-potential"
+@attribute [StreamRendering(true)]
 @rendermode InteractiveServer
 @using MoneyMirror.HumanCapital
-@inject IProfessionalProfileRepository ProfileRepository
-@inject IOccupationMatchingService OccupationMatchingService
-@inject ICompensationEstimationService CompensationService
+@inject IMarketPotentialSummaryService MarketPotentialSummaryService
 
 <PageTitle>Market Potential</PageTitle>
 
@@ -183,18 +182,18 @@ else
     {
         try
         {
-            var profile = await ProfileRepository.GetAsync();
-            if (profile.Education.Count == 0 && profile.Experience.Count == 0 && profile.Skills.Count == 0)
+            var summary = await MarketPotentialSummaryService.GetSummaryAsync();
+            if (!summary.HasProfile)
             {
                 _hasNoProfile = true;
                 return;
             }
 
-            _occupations = await OccupationMatchingService.MatchAsync(profile);
-            _compensation = await CompensationService.EstimateAsync(_occupations);
-            _skillGaps = SkillGapAnalyzer.Analyze(profile.Skills, _occupations);
+            _occupations = summary.Occupations;
+            _compensation = summary.Compensation;
+            _skillGaps = SkillGapAnalyzer.Analyze(summary.Profile.Skills, _occupations);
             _progression = OpportunityFinder.BuildProgression(_occupations);
-            _opportunities = OpportunityFinder.FindOpportunities(profile.Skills, _occupations);
+            _opportunities = OpportunityFinder.FindOpportunities(summary.Profile.Skills, _occupations);
         }
         catch (OccupationMatchingException ex)
         {
