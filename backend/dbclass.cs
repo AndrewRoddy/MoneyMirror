@@ -12,6 +12,7 @@ public class MoneyMirrorDbContext : DbContext
     public DbSet<Liability> Liabilities => Set<Liability>();
     public DbSet<PhysicalAsset> PhysicalAssets => Set<PhysicalAsset>();
     public DbSet<AssetValuationRecord> AssetValuationRecords => Set<AssetValuationRecord>();
+    public DbSet<AssetValuationEvidenceRecord> AssetValuationEvidenceRecords => Set<AssetValuationEvidenceRecord>();
     public DbSet<ProfessionalProfile> ProfessionalProfiles => Set<ProfessionalProfile>();
     public DbSet<EducationRecord> EducationRecords => Set<EducationRecord>();
     public DbSet<Certification> Certifications => Set<Certification>();
@@ -35,11 +36,19 @@ public class MoneyMirrorDbContext : DbContext
             .HasPrecision(18, 2);
         modelBuilder.Entity<AssetValuationRecord>().Property(record => record.EstimatedValue)
             .HasPrecision(18, 2);
+        modelBuilder.Entity<AssetValuationEvidenceRecord>().Property(evidence => evidence.PriceUsd)
+            .HasPrecision(18, 2);
 
         modelBuilder.Entity<PhysicalAsset>()
             .HasMany(asset => asset.ValuationRecords)
             .WithOne(record => record.PhysicalAsset)
             .HasForeignKey(record => record.PhysicalAssetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AssetValuationRecord>()
+            .HasMany(record => record.Evidence)
+            .WithOne(evidence => evidence.AssetValuationRecord)
+            .HasForeignKey(evidence => evidence.AssetValuationRecordId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<ProfessionalProfile>()

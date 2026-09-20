@@ -436,7 +436,8 @@
                     existingId,
                     value,
                     detection.Valuation.SourceLabel,
-                    detection.Valuation.Reasoning);
+                    detection.Valuation.Reasoning,
+                    detection.Valuation.Evidence);
 
                 if (!merged)
                 {
@@ -457,7 +458,8 @@
                         detection.ImageReference ?? _imageReference,
                         value,
                         detection.Valuation.Reasoning,
-                        detection.Valuation.SourceLabel));
+                        detection.Valuation.SourceLabel,
+                        detection.Valuation.Evidence));
             }
         }
         catch (Exception ex)
