@@ -342,7 +342,6 @@ export class ContourExtractor {
                 polygon: [],
                 bounds: { x: 0, y: 0, width: 0, height: 0 },
                 confidence,
-                binaryMask: grid,
                 maskWidth: gridW,
                 maskHeight: gridH,
             };
@@ -367,7 +366,6 @@ export class ContourExtractor {
             polygon,
             bounds,
             confidence,
-            binaryMask: grid,
             maskWidth: gridW,
             maskHeight: gridH,
         };
@@ -696,7 +694,11 @@ export class MobileSamEngine {
             confidence,
         );
         return {
-            ...processed,
+            polygon: processed.polygon,
+            bounds: processed.bounds,
+            confidence: processed.confidence,
+            maskWidth: processed.maskWidth,
+            maskHeight: processed.maskHeight,
             elapsedMs,
         };
     }
