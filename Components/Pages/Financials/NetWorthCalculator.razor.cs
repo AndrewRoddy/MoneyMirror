@@ -135,7 +135,7 @@ public partial class NetWorthCalculator : IDisposable
             Type = ToEntryType(record.Kind),
             Category = record.Type,
             Name = record.Name,
-            Amount = record.Amount,
+            Amount = record.Amount ?? 0m,
             AsOfDate = record.AsOfDate,
         };
 
