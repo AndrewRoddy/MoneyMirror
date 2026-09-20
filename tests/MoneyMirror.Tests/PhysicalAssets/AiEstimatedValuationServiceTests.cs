@@ -76,5 +76,34 @@ public class AiEstimatedValuationServiceTests
 
         await Assert.ThrowsAsync<AssetValuationException>(() => service.EstimateAsync("sofa", null, null));
     }
-}
 
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"reasoning\":\"Unable to estimate\"}")]
+    [InlineData("{\"estimatedValueUsd\":null,\"reasoning\":\"Unable to estimate\"}")]
+    [InlineData("{\"estimatedValueUsd\":50}")]
+    [InlineData("{\"estimatedValueUsd\":50,\"reasoning\":null}")]
+    [InlineData("{\"estimatedValueUsd\":50,\"reasoning\":\"\"}")]
+    [InlineData("{\"estimatedValueUsd\":50,\"reasoning\":\" \\t\\n\"}")]
+    public async Task EstimateAsync_IncompleteResponse_ThrowsAssetValuationException(string json)
+    {
+        var service = new AiEstimatedValuationService(new FakeLlmService(json), FixedTimeProvider);
+
+        await Assert.ThrowsAsync<AssetValuationException>(() => service.EstimateAsync("sofa", null, null));
+    }
+
+    [Fact]
+    public async Task EstimateAsync_ExplicitZeroWithExplanation_RemainsValid()
+    {
+        const string json = """{"estimatedValueUsd":0,"reasoning":"Broken beyond repair; no resale value."}""";
+        var service = new AiEstimatedValuationService(new FakeLlmService(json), FixedTimeProvider);
+
+        var valuation = await service.EstimateAsync("broken lamp", null, null);
+
+        Assert.Equal(0m, valuation.EstimatedValueUsd);
+        Assert.Equal("Broken beyond repair; no resale value.", valuation.Reasoning);
+        Assert.True(valuation.IsAiEstimated);
+        Assert.True(valuation.IsLowConfidence);
+        Assert.Equal(FixedNow, valuation.ValuationDate);
+    }
+}
