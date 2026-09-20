@@ -154,6 +154,24 @@ test("a decoder error is actionable and releases the source URL", async () => {
     assert.deepEqual(revoked, urls);
 });
 
+test("an abort event during load rejects with a clear message", async () => {
+    const video = new Video();
+    video.load = () => {
+        if (video.src) queueMicrotask(() => video.dispatchEvent(new Event("abort")));
+    };
+    await assert.rejects(scan.prepare(input(), video), /interrupted/);
+    assert.deepEqual(revoked, urls);
+});
+
+test("accessing frames after dispose throws instead of passing undefined to DotNet", async () => {
+    const video = new Video();
+    await scan.prepare(input(), video);
+    scan.dispose(video);
+    assert.throws(() => scan.frameUrl(video, 0), /No active video session/);
+    assert.throws(() => scan.frameStream(video, 0), /No active video session/);
+    await assert.rejects(scan.cropStream(video, 0, null), /No active video session/);
+});
+
 test("disposing during frame encoding does not leak a new frame URL", async () => {
     const video = new Video();
     const createCanvas = document.createElement;
