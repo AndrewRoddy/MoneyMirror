@@ -3,18 +3,10 @@ namespace MoneyMirror.HumanCapital;
 /// <summary>
 /// A candidate occupation matched to a professional profile.
 /// </summary>
-/// <param name="IsAiEstimated">
-/// True for this MVP placeholder: the match came from the LLM's judgment,
-/// not from a real labor-market data source. Never present this to the
-/// user (or persist it) as if it were grounded - #142 is a deliberate,
-/// temporary stand-in for the real #23 (ILaborMarketService) pipeline,
-/// which sets this false.
-/// </param>
+/// <param name="IsAiEstimated">True when the match is an AI estimate rather than a source-backed occupation.</param>
 /// <param name="KeySkills">
-/// Skills typically in demand for this occupation, per the same AI
-/// judgment as <paramref name="IsAiEstimated"/> describes. Feeds
-/// <see cref="SkillGapAnalyzer"/>, which does the actual profile
-/// comparison deterministically - this list is just input data.
+/// Skills associated with this occupation by its data provider. Feeds
+/// <see cref="SkillGapAnalyzer"/>, which does the profile comparison deterministically.
 /// </param>
 /// <param name="TypicalMinUsd">
 /// A rough typical compensation range for this specific occupation, per

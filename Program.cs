@@ -54,7 +54,7 @@ builder.Services.AddSingleton<IFinancialEntryStore, InMemoryFinancialEntryStore>
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
-builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
+builder.Services.AddScoped<IOccupationMatchingService, OnetOccupationMatchingService>();
 builder.Services.AddScoped<ICompensationEstimationService, AiEstimatedCompensationService>();
 builder.Services.AddScoped<IProfessionalProfileRepository, EfProfessionalProfileRepository>();
 builder.Services.AddScoped<IPhysicalAssetRepository, EfPhysicalAssetRepository>();

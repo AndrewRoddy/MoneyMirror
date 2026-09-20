@@ -7,3 +7,6 @@ public sealed record OnetOccupation(
     string Description,
     IReadOnlyList<string> SampleReportedTitles
 );
+
+/// <summary>A title and O*NET-SOC code returned by the O*NET keyword search.</summary>
+public sealed record OnetOccupationSearchResult(string Code, string Title);

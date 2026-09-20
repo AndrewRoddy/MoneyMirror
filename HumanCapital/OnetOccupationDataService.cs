@@ -17,6 +17,56 @@ public class OnetOccupationDataService : IOnetOccupationDataService
         _options = options.Value;
     }
 
+    public async Task<IReadOnlyList<OnetOccupationSearchResult>> SearchOccupationsAsync(
+        string keyword,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyword);
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            throw new OnetOccupationDataException("O*NET API key is not configured.");
+        }
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{_options.BaseUrl.TrimEnd('/')}/online/search?keyword={Uri.EscapeDataString(keyword)}"
+        );
+        request.Headers.Add("X-API-Key", _options.ApiKey);
+
+        using var response = await SendAsync(request, cancellationToken);
+        var result = await ReadResponseAsync<OnetSearchResponse>(response, cancellationToken);
+        return result?.Occupations?
+            .Where(item => !string.IsNullOrWhiteSpace(item.Code) && !string.IsNullOrWhiteSpace(item.Title))
+            .Select(item => new OnetOccupationSearchResult(item.Code!, item.Title!))
+            .ToList() ?? [];
+    }
+
+    public async Task<IReadOnlyList<string>> GetOccupationSkillsAsync(
+        string onetSocCode,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(onetSocCode);
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            throw new OnetOccupationDataException("O*NET API key is not configured.");
+        }
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{_options.BaseUrl.TrimEnd('/')}/online/occupations/{Uri.EscapeDataString(onetSocCode)}/summary/skills"
+        );
+        request.Headers.Add("X-API-Key", _options.ApiKey);
+
+        using var response = await SendAsync(request, cancellationToken);
+        var result = await ReadResponseAsync<OnetOccupationSkillsResponse>(response, cancellationToken);
+        return result?.Elements?
+            .Where(element => !string.IsNullOrWhiteSpace(element.Name))
+            .Select(element => element.Name!)
+            .ToList() ?? [];
+    }
+
     public async Task<OnetOccupation> GetOccupationAsync(
         string onetSocCode,
         CancellationToken cancellationToken = default
@@ -34,10 +84,35 @@ public class OnetOccupationDataService : IOnetOccupationDataService
         );
         request.Headers.Add("X-API-Key", _options.ApiKey);
 
-        HttpResponseMessage response;
+        using var response = await SendAsync(request, cancellationToken);
+        var result = await ReadResponseAsync<OnetOccupationResponse>(response, cancellationToken);
+
+        if (
+            result is null
+            || string.IsNullOrWhiteSpace(result.Code)
+            || string.IsNullOrWhiteSpace(result.Title)
+            || result.Description is null
+        )
+        {
+            throw new OnetOccupationDataException("O*NET Web Services returned an incomplete occupation response.");
+        }
+
+        return new OnetOccupation(
+            result.Code,
+            result.Title,
+            result.Description,
+            result.SampleReportedTitles ?? []
+        );
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    )
+    {
         try
         {
-            response = await _httpClient.SendAsync(request, cancellationToken);
+            return await _httpClient.SendAsync(request, cancellationToken);
         }
         catch (HttpRequestException ex)
         {
@@ -47,43 +122,28 @@ public class OnetOccupationDataService : IOnetOccupationDataService
         {
             throw new OnetOccupationDataException("O*NET Web Services request timed out.", ex);
         }
+    }
 
-        using (response)
+    private static async Task<T?> ReadResponseAsync<T>(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!response.IsSuccessStatusCode)
         {
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new OnetOccupationDataException(
-                    $"O*NET Web Services returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}"
-                );
-            }
-
-            OnetOccupationResponse? result;
-            try
-            {
-                result = await response.Content.ReadFromJsonAsync<OnetOccupationResponse>(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                throw new OnetOccupationDataException("Failed to parse the O*NET Web Services response.", ex);
-            }
-
-            if (
-                result is null
-                || string.IsNullOrWhiteSpace(result.Code)
-                || string.IsNullOrWhiteSpace(result.Title)
-                || result.Description is null
-            )
-            {
-                throw new OnetOccupationDataException("O*NET Web Services returned an incomplete occupation response.");
-            }
-
-            return new OnetOccupation(
-                result.Code,
-                result.Title,
-                result.Description,
-                result.SampleReportedTitles ?? []
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new OnetOccupationDataException(
+                $"O*NET Web Services returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}"
             );
+        }
+
+        try
+        {
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new OnetOccupationDataException("Failed to parse the O*NET Web Services response.", ex);
         }
     }
 
@@ -100,5 +160,32 @@ public class OnetOccupationDataService : IOnetOccupationDataService
 
         [JsonPropertyName("sample_of_reported_titles")]
         public IReadOnlyList<string>? SampleReportedTitles { get; init; }
+    }
+
+    private sealed class OnetSearchResponse
+    {
+        [JsonPropertyName("occupation")]
+        public IReadOnlyList<OnetOccupationSearchItem>? Occupations { get; init; }
+    }
+
+    private sealed class OnetOccupationSkillsResponse
+    {
+        [JsonPropertyName("element")]
+        public IReadOnlyList<OnetOccupationSkillItem>? Elements { get; init; }
+    }
+
+    private sealed class OnetOccupationSkillItem
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; init; }
+    }
+
+    private sealed class OnetOccupationSearchItem
+    {
+        [JsonPropertyName("code")]
+        public string? Code { get; init; }
+
+        [JsonPropertyName("title")]
+        public string? Title { get; init; }
     }
 }

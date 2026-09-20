@@ -69,6 +69,16 @@ public class OnetLaborMarketServiceTests
 
         public string? LastCode { get; private set; }
 
+        public Task<IReadOnlyList<OnetOccupationSearchResult>> SearchOccupationsAsync(
+            string keyword,
+            CancellationToken cancellationToken = default
+        ) => Task.FromResult<IReadOnlyList<OnetOccupationSearchResult>>([]);
+
+        public Task<IReadOnlyList<string>> GetOccupationSkillsAsync(
+            string onetSocCode,
+            CancellationToken cancellationToken = default
+        ) => Task.FromResult<IReadOnlyList<string>>([]);
+
         public Task<OnetOccupation> GetOccupationAsync(
             string onetSocCode,
             CancellationToken cancellationToken = default
