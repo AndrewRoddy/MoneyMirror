@@ -13,13 +13,14 @@
 }
 else
 {
-    <p>
-        <strong>Total value: $@_assets.Sum(a => a.CurrentValuation ?? 0).ToString("N2")</strong>
+    <div class="asset-total">
+        <span class="asset-total-label">Total value</span>
+        <strong class="asset-total-amount">$@_assets.Sum(a => a.CurrentValuation ?? 0).ToString("N2")</strong>
         @if (_assets.Any(a => a.CurrentValuation is null))
         {
-            <span class="text-muted"> (some items have no valuation yet)</span>
+            <span class="asset-total-note text-muted">(some items have no valuation yet)</span>
         }
-    </p>
+    </div>
 
     @if (_assets.Count == 0)
     {

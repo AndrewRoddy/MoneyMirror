@@ -1,6 +1,70 @@
+/*
+ * Global styles.
+ *
+ * Written mobile first: the rules outside a media query describe a phone,
+ * and `@media (min-width: 48rem)` widens things out for a desktop. That
+ * breakpoint is shared with the shell (MainLayout / NavMenu), which is
+ * what flips navigation between a bottom tab bar and a side rail.
+ *
+ * Tokens come from theme.css. Nothing here should carry a literal color.
+ */
+
+/* ===================================================================
+ * Base
+ * =================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    /* Stop iOS inflating type when the phone is turned sideways. */
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+}
+
 html,
 body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: var(--font-ui);
+    color: var(--text);
+}
+
+body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--app-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* No grey flash when a finger lands on a button. */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * The ambient wash. A backdrop blur only reads as glass when there is
+ * something behind it worth blurring, so the app sits on a soft field of
+ * brand color rather than flat white. Painted on a fixed pseudo-element
+ * rather than with `background-attachment: fixed`, which stutters badly
+ * while scrolling on iOS.
+ */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        radial-gradient(60rem 36rem at 6% -14%, var(--wash-royal), transparent 62%),
+        radial-gradient(46rem 30rem at 106% 2%, var(--wash-gold), transparent 58%),
+        radial-gradient(54rem 42rem at 48% 116%, var(--wash-sky), transparent 62%);
+}
+
+h1,
+h2,
+h3,
+h4 {
+    letter-spacing: -0.015em;
 }
 
 a,
@@ -8,69 +72,82 @@ a,
     color: var(--link);
 }
 
-.btn-primary {
-    color: var(--text-inverse);
-    background-color: var(--button-primary-bg);
-    border-color: var(--button-primary-border);
+a {
+    text-underline-offset: 0.15em;
 }
 
-.btn:focus,
-.btn:active:focus,
-.btn-link.nav-link:focus,
-.form-control:focus,
-.form-check-input:focus {
-    box-shadow:
-        0 0 0 0.1rem var(--focus-ring-inner),
-        0 0 0 0.25rem var(--focus-ring-outer);
+/* Money, counts and dates: fixed-width digits, so a column does not
+   jitter as its values change. */
+.tabular,
+.headline-amount,
+.record-amount,
+.asset-row-value,
+.display-6 {
+    font-variant-numeric: tabular-nums;
 }
+
+/* ===================================================================
+ * Shared page chrome
+ * ===================================================================
+ * The financials page established the visual language; these primitives
+ * keep the other pages consistent without coupling their markup to it.
+ * Horizontal gutters belong to <main> (see MainLayout), so the wrappers
+ * below only own their vertical rhythm.
+ */
 
 .content {
-    padding-top: 1.1rem;
+    padding-top: 0;
 }
 
-/* Shared page chrome for feature pages. The financials page established the
-   visual language; these primitives keep the other pages consistent without
-   coupling their feature-specific markup to the financials component. */
 .standard-page {
-    max-width: 1100px;
+    max-width: var(--content-max);
     margin: 0 auto;
-    padding: 2.5rem 2rem 4rem;
+    padding: 0.25rem 0 1rem;
     color: var(--text);
 }
 
 .page-header {
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
 }
 
+/* An iOS large title: big, tight, hard against the left margin. */
 .page-header h1 {
-    margin: 0.5rem 0 0;
-    font-family: Times New Roman, serif;
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 8vw, 2.5rem);
     font-weight: 400;
+    line-height: 1.1;
 }
 
 .page-eyebrow {
     color: var(--accent-text);
-    font-size: 0.7rem;
+    font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .page-subtitle {
-    margin: 0.5rem 0 0;
+    margin: 0.35rem 0 0;
     color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.45;
 }
 
+/* The glass pane every grouped section sits on. */
 .page-card {
-    margin-bottom: 1.25rem;
-    padding: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: 0.7rem;
-    background: var(--surface);
+    margin-bottom: 1rem;
+    padding: 1.125rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
 }
 
 .page-card > :last-child {
@@ -78,43 +155,316 @@ a,
 }
 
 .page-section-title {
-    margin: 0 0 1rem;
-    font-family: Times New Roman, serif;
+    margin: 0 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
     font-weight: 400;
 }
+
+/* ===================================================================
+ * Controls
+ * ===================================================================
+ * Every tappable thing clears 44px, the smallest target iOS treats as
+ * reliable, and dips slightly when pressed instead of changing color.
+ */
 
 .primary-button,
 .secondary-button {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.7rem 1rem;
-    border-radius: 0.5rem;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.125rem;
+    border-radius: var(--radius-pill);
+    font: inherit;
+    font-size: 0.9375rem;
     font-weight: 600;
     text-decoration: none;
+    cursor: pointer;
+    transition:
+        transform var(--dur-fast) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-standard),
+        box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 .primary-button {
-    border: 1px solid var(--brand);
+    border: 1px solid transparent;
     color: var(--text-inverse);
     background: var(--brand);
+    box-shadow: var(--shadow-1);
+}
+
+.primary-button:hover {
+    background: var(--brand-strong);
 }
 
 .secondary-button {
-    border: 1px solid var(--border);
+    border: 1px solid var(--glass-border);
     color: var(--brand);
-    background: var(--surface);
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
 }
 
-@media (max-width: 700px) {
-    .standard-page {
-        padding: 1.5rem 1rem 3rem;
-    }
+.secondary-button:hover {
+    background: var(--brand-surface);
+}
 
-    .page-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+.primary-button:active,
+.secondary-button:active {
+    transform: scale(0.97);
+}
+
+/* ===================================================================
+ * Bootstrap, restyled
+ * ===================================================================
+ * Overridden through Bootstrap's own --bs-* custom properties wherever
+ * possible, so hover, active and disabled states stay coherent instead
+ * of being flattened by one hardcoded declaration.
+ */
+
+.btn {
+    --bs-btn-border-radius: var(--radius-pill);
+    --bs-btn-font-size: 0.9375rem;
+    --bs-btn-font-weight: 600;
+    --bs-btn-padding-y: 0.55rem;
+    --bs-btn-padding-x: 1.125rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    transition:
+        transform var(--dur-fast) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-standard),
+        border-color var(--dur-fast) var(--ease-standard),
+        color var(--dur-fast) var(--ease-standard);
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-sm {
+    --bs-btn-font-size: 0.875rem;
+    --bs-btn-padding-y: 0.3rem;
+    --bs-btn-padding-x: 0.8rem;
+    min-height: 2.25rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--button-primary-bg);
+    --bs-btn-border-color: var(--button-primary-border);
+    --bs-btn-color: var(--text-inverse);
+    --bs-btn-hover-bg: var(--brand-strong);
+    --bs-btn-hover-border-color: var(--brand-strong);
+    --bs-btn-hover-color: var(--text-inverse);
+    --bs-btn-active-bg: var(--brand-strong);
+    --bs-btn-active-border-color: var(--brand-strong);
+    --bs-btn-disabled-bg: var(--button-primary-bg);
+    --bs-btn-disabled-border-color: var(--button-primary-border);
+}
+
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger {
+    --bs-btn-bg: var(--glass-bg-strong);
+    --bs-btn-hover-color: var(--text-inverse);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--brand);
+    --bs-btn-border-color: var(--border);
+    --bs-btn-hover-bg: var(--brand);
+    --bs-btn-hover-border-color: var(--brand);
+    --bs-btn-active-bg: var(--brand-strong);
+    --bs-btn-active-border-color: var(--brand-strong);
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--text);
+    --bs-btn-border-color: var(--border);
+    --bs-btn-hover-bg: var(--brand-strong);
+    --bs-btn-hover-border-color: var(--brand-strong);
+    --bs-btn-active-bg: var(--brand-strong);
+    --bs-btn-active-border-color: var(--brand-strong);
+}
+
+.btn-outline-success {
+    --bs-btn-color: var(--positive-text);
+    --bs-btn-border-color: color-mix(in srgb, var(--positive) 40%, transparent);
+    --bs-btn-hover-bg: var(--positive-text);
+    --bs-btn-hover-border-color: var(--positive-text);
+    --bs-btn-active-bg: var(--positive-text);
+    --bs-btn-active-border-color: var(--positive-text);
+}
+
+.btn-outline-danger {
+    --bs-btn-color: var(--negative-text);
+    --bs-btn-border-color: color-mix(in srgb, var(--negative) 40%, transparent);
+    --bs-btn-hover-bg: var(--negative-text);
+    --bs-btn-hover-border-color: var(--negative-text);
+    --bs-btn-active-bg: var(--negative-text);
+    --bs-btn-active-border-color: var(--negative-text);
+}
+
+.btn-link {
+    --bs-btn-color: var(--link);
+    --bs-btn-hover-color: var(--brand-strong);
+    min-height: 0;
+}
+
+/* Grouped cards, the iOS Settings idiom. */
+.card {
+    --bs-card-border-radius: var(--radius-lg);
+    --bs-card-inner-border-radius: var(--radius-md);
+    --bs-card-border-color: var(--glass-border);
+    --bs-card-bg: var(--glass-bg);
+    --bs-card-spacer-y: 1.125rem;
+    --bs-card-spacer-x: 1.125rem;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
+}
+
+.card-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* `.border-primary` and `.border-success` are set with !important by the
+   utility, and a saturated ring around a glass pane looks like a 2015
+   admin panel. Keep the hairline; move the color to a top sheen. */
+.card.border-primary,
+.card.border-success {
+    border-color: var(--glass-border) !important;
+}
+
+.card.border-primary {
+    box-shadow:
+        var(--shadow-2),
+        inset 0 2px 0 color-mix(in srgb, var(--brand) 55%, transparent);
+}
+
+.card.border-success {
+    box-shadow:
+        var(--shadow-2),
+        inset 0 2px 0 color-mix(in srgb, var(--positive) 60%, transparent);
+}
+
+.badge {
+    --bs-badge-border-radius: var(--radius-pill);
+    --bs-badge-font-weight: 600;
+    --bs-badge-padding-y: 0.3em;
+    --bs-badge-padding-x: 0.7em;
+    letter-spacing: 0.01em;
+    vertical-align: middle;
+}
+
+/* The utility sets background-color with !important, so matching it is
+   the only way to pull these off Bootstrap's grey. */
+.badge.bg-secondary {
+    color: var(--brand);
+    background-color: var(--brand-surface) !important;
+}
+
+.alert {
+    --bs-alert-border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-1);
+    font-size: 0.9375rem;
+}
+
+.alert-info {
+    --bs-alert-color: var(--brand-strong);
+    --bs-alert-bg: color-mix(in srgb, var(--brand-surface) 70%, transparent);
+    --bs-alert-border-color: color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.alert-success {
+    --bs-alert-color: var(--positive-text);
+    --bs-alert-bg: color-mix(in srgb, var(--positive-surface) 80%, transparent);
+    --bs-alert-border-color: color-mix(in srgb, var(--positive) 24%, transparent);
+}
+
+.alert-danger {
+    --bs-alert-color: var(--negative-text);
+    --bs-alert-bg: color-mix(in srgb, var(--negative-surface) 80%, transparent);
+    --bs-alert-border-color: color-mix(in srgb, var(--negative) 24%, transparent);
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* ===================================================================
+ * Fields
+ * =================================================================== */
+
+/*
+ * 16px is not a taste call: Safari on iOS zooms the whole page in when a
+ * focused field's text is smaller than that, and does not zoom back out.
+ * So every input stays at 1rem until the desktop breakpoint.
+ */
+.form-control,
+.form-select,
+.form-control-sm,
+.form-select-sm,
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+select,
+textarea {
+    font-size: 1rem;
+}
+
+.form-control,
+.form-select {
+    --bs-border-radius: var(--radius-sm);
+    min-height: 2.75rem;
+    border-color: var(--border);
+    background-color: var(--glass-bg-strong);
+    transition:
+        border-color var(--dur-fast) var(--ease-standard),
+        box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.form-control-sm,
+.form-select-sm {
+    --bs-border-radius: var(--radius-xs);
+    min-height: 2.5rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand);
+    background-color: var(--surface);
+}
+
+/* Keyboard users get the ring; a mouse click does not light it up. */
+.btn:focus-visible,
+.btn-link.nav-link:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 0.1rem var(--focus-ring-inner),
+        0 0 0 0.25rem var(--focus-ring-outer);
 }
 
 h1:focus {
@@ -131,19 +481,6 @@ h1:focus {
 
 .validation-message {
     color: var(--input-invalid);
-}
-
-.blazor-error-boundary {
-    background:
-        url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=)
-            no-repeat 1rem/1.8rem,
-        var(--error-boundary-bg);
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: var(--error-boundary-text);
-}
-
-.blazor-error-boundary::after {
-    content: "An error has occurred.";
 }
 
 .darker-border-checkbox.form-check-input {
@@ -170,22 +507,95 @@ input[type="file"] {
 
 input[type="file"]::file-selector-button {
     margin-right: 0.75rem;
-    padding: 0.6rem 1.1rem;
-    border: 1px solid var(--brand);
-    border-radius: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.55rem 1.125rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
     color: var(--text-inverse);
     background: var(--brand);
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    transition:
+        background-color var(--dur-fast) var(--ease-standard),
+        border-color var(--dur-fast) var(--ease-standard);
 }
 
 input[type="file"]::file-selector-button:hover {
     background: var(--brand-strong);
-    border-color: var(--brand-strong);
 }
 
 input[type="file"]:disabled::file-selector-button {
     cursor: not-allowed;
     opacity: 0.6;
+}
+
+/* ===================================================================
+ * Blazor's built-in error UI
+ * =================================================================== */
+
+.blazor-error-boundary {
+    background:
+        url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=)
+            no-repeat 1rem/1.8rem,
+        var(--error-boundary-bg);
+    padding: 1rem 1rem 1rem 3.7rem;
+    border-radius: var(--radius-md);
+    color: var(--error-boundary-text);
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
+
+/* ===================================================================
+ * Desktop
+ * =================================================================== */
+
+@media (min-width: 48rem) {
+    .page-header {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .page-header h1 {
+        font-size: clamp(2.25rem, 4vw, 3.25rem);
+    }
+
+    .page-card {
+        margin-bottom: 1.25rem;
+        padding: 1.5rem;
+    }
+
+    .page-section-title {
+        font-size: 1.375rem;
+    }
+
+    /* The iOS zoom rule does not apply to a mouse, so the compact field
+       sizes can go back to being compact. */
+    .form-control-sm,
+    .form-select-sm {
+        font-size: 0.875rem;
+        min-height: 2.25rem;
+    }
+}
+
+/* ===================================================================
+ * Accessibility
+ * =================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

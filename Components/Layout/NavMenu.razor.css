@@ -1,46 +1,65 @@
-.navbar-toggler {
-    appearance: none;
-    cursor: pointer;
-    width: 3.5rem;
-    height: 2.5rem;
-    color: var(--nav-link-hover);
-    position: absolute;
-    top: 0.5rem;
-    right: 1rem;
-    border: 1px solid var(--nav-surface-hover);
-    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.55%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e")
-        no-repeat center/1.75rem var(--nav-surface-hover);
-}
+/*
+ * Navigation, in two shapes.
+ *
+ * Phone (default): a bottom tab bar, the way the App Store and every
+ * other first-party iOS app does it. Frosted, pinned above the home
+ * indicator, thumb-reachable.
+ *
+ * Desktop (>= 48rem): the same links become a vertical rail inside the
+ * sidebar box that MainLayout.razor.css brings back at that width.
+ *
+ * The <a> is rendered by NavLink, so it never carries this component's
+ * scope attribute and has to be reached through ::deep. The icon and
+ * label spans are written in NavMenu.razor, so they do carry it and are
+ * styled directly.
+ */
 
-.navbar-toggler:checked {
-    background-color: var(--nav-surface-pressed);
-}
+/* ===================================================================
+ * Brand bar
+ * =================================================================== */
 
 .top-row {
-    min-height: 3.5rem;
-    background-color: var(--nav-scrim);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    min-height: calc(var(--header-height) + var(--safe-top));
+    padding-top: var(--safe-top);
+    padding-right: calc(1rem + var(--safe-right));
+    padding-left: calc(1rem + var(--safe-left));
+    border-bottom: 1px solid var(--glass-hairline);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
 }
 
 .navbar-brand {
-    font-size: 1.1rem;
-    /* Serif wordmark, with the usual fallbacks for machines that have no
-       Times New Roman installed. */
-    font-family: "Times New Roman", Times, serif;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    color: var(--brand);
+    /* Serif wordmark, with the usual fallbacks for machines that have no
+       Times New Roman installed. */
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    text-decoration: none;
 }
 
-/* The browser-tab favicon, reused as the wordmark logo. Same mask-and-currentColor
-   trick as the nav icons below, so it picks up the brand's white instead of the
-   navy the .svg file paints. The growth line stays knocked out to the nav scrim. */
+.brand-name {
+    letter-spacing: -0.01em;
+}
+
+/* The browser-tab favicon, reused as the wordmark logo. Same mask-and-
+   currentColor trick as the nav icons below, so it picks up the brand
+   color instead of the navy the .svg file paints. The growth line stays
+   knocked out, showing the glass behind it. */
 .brand-logo {
     display: inline-block;
     flex: none;
     width: 1.5rem;
     height: 1.5rem;
     background-color: currentColor;
-    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='131%20131%20418%20418'%3E%3Cdefs%3E%3Cpolyline%20id='growthLine'%20points='50,450%20200,400%20260,380%20300,410%20360,340%20420,360%20480,280'/%3E%3Cmask%20id='knockout'%3E%3Ccircle%20cx='340'%20cy='340'%20r='209'%20fill='%23ffffff'/%3E%3Cuse%20href='%23growthLine'%20fill='none'%20stroke='%23000000'%20stroke-width='26'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='475'%20cy='290'%20r='26'%20fill='%23000000'/%3E%3C/mask%3E%3C/defs%3E%3Ccircle%20cx='340'%20cy='340'%20r='209'%20fill='%23ffffff'%20mask='url%28%23knockout%29'/%3E%3C/svg%3E");
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
@@ -49,122 +68,241 @@
     -webkit-mask-size: contain;
 }
 
-.bi {
-    display: inline-block;
+/* ===================================================================
+ * Tab bar
+ * =================================================================== */
+
+.nav-scrollable {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    padding-right: var(--safe-right);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    border-top: 1px solid var(--glass-hairline);
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
+    box-shadow: var(--shadow-bar);
+}
+
+.nav-list {
+    display: flex;
+    align-items: stretch;
+    height: var(--tab-bar-height);
+}
+
+.nav-list ::deep .nav-link {
     position: relative;
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.125rem;
+    margin: 0.1875rem 0.125rem;
+    padding: 0.3125rem 0.125rem 0;
+    border-radius: var(--radius-sm);
+    color: var(--nav-link);
+    text-decoration: none;
+    transition:
+        color var(--dur-fast) var(--ease-standard),
+        background-color var(--dur) var(--ease-spring);
+}
+
+/* The selected tab lifts into a glass capsule, with the brand's gold as
+   the one bit of accent in an otherwise monochrome bar. */
+.nav-list ::deep .nav-link.active {
+    color: var(--nav-link-active);
+    background: var(--nav-surface-active);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+
+.nav-list ::deep .nav-link.active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
     width: 1.25rem;
-    height: 1.25rem;
-    margin-right: 0.75rem;
-    top: -1px;
-    /* Icons are masks painted with currentColor, so they follow the nav link
-       color instead of being hardcoded white - which matters now that the
-       active item sits on a Gold fill. */
+    height: 2px;
+    transform: translateX(-50%);
+    border-radius: var(--radius-pill);
+    background: var(--nav-indicator);
+}
+
+.nav-list ::deep .nav-link:active {
+    background: var(--nav-surface-pressed);
+}
+
+/* Hover states only where there is a cursor. On a touchscreen they stick
+   after a tap and make the wrong tab look selected. */
+@media (hover: hover) {
+    .nav-list ::deep .nav-link:hover {
+        color: var(--nav-link-hover);
+        background: var(--nav-surface-hover);
+    }
+
+    .nav-list ::deep .nav-link.active:hover {
+        background: var(--nav-surface-active-hover);
+    }
+}
+
+.nav-icon {
+    display: block;
+    flex: none;
+    width: 1.375rem;
+    height: 1.375rem;
+    /* Icons are masks painted with currentColor, so they follow the link
+       color rather than being hardcoded. */
     background-color: currentColor;
     mask-repeat: no-repeat;
     mask-position: center;
-    mask-size: cover;
+    mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
-    -webkit-mask-size: cover;
+    -webkit-mask-size: contain;
 }
 
-.bi-house-door-fill-nav-menu {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-house-door-fill' viewBox='0 0 16 16'%3E%3Cpath d='M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z'/%3E%3C/svg%3E");
-}
-
-.bi-plus-square-fill-nav-menu {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-plus-square-fill' viewBox='0 0 16 16'%3E%3Cpath d='M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3a.5.5 0 0 1 1 0z'/%3E%3C/svg%3E");
-}
-
-.bi-coin-fill-nav-menu {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-coin' viewBox='0 0 16 16'%3E%3Cpath d='M5.5 9.511c.076.954.83 1.697 2.182 1.785V12h.6v-.709c1.4-.098 2.218-.846 2.218-1.932 0-.987-.626-1.496-1.745-1.76l-.473-.112V5.57c.6.068.982.396 1.074.85h1.052c-.076-.919-.864-1.638-2.126-1.716V4h-.6v.719c-1.195.117-2.01.836-2.01 1.853 0 .9.606 1.472 1.613 1.707l.397.098v2.034c-.615-.093-1.022-.43-1.114-.9H5.5zm2.177-2.166c-.59-.137-.91-.416-.91-.836 0-.47.345-.822.915-.925v1.76h-.005zm.692 1.193c.717.166 1.048.435 1.048.91 0 .542-.412.914-1.135.982V8.518l.087.02z'/%3E%3Cpath d='M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z'/%3E%3C/svg%3E");
-}
-
-.bi-mortarboard-fill-nav-menu {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-mortarboard-fill' viewBox='0 0 16 16'%3E%3Cpath d='M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z'/%3E%3Cpath d='M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466z'/%3E%3C/svg%3E");
-}
-
-.bi-backpack-fill-nav-menu {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-backpack-fill' viewBox='0 0 16 16'%3E%3Cpath d='M5 13v-3h4v.5a.5.5 0 0 0 1 0V10h1v3z'/%3E%3Cpath d='M6 2v.341C3.67 3.165 2 5.388 2 8v5.5A2.5 2.5 0 0 0 4.5 16h7a2.5 2.5 0 0 0 2.5-2.5V8a6 6 0 0 0-4-5.659V2a2 2 0 1 0-4 0m2-1a1 1 0 0 1 1 1v.083a6 6 0 0 0-2 0V2a1 1 0 0 1 1-1m0 3a4 4 0 0 1 3.96 3.43.5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14A4 4 0 0 1 8 4M4.5 9h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5'/%3E%3C/svg%3E");
-}
-
-.bi-bar-chart-line-fill-nav-menu {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-bar-chart-line-fill' viewBox='0 0 16 16'%3E%3Cpath d='M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1z'/%3E%3C/svg%3E");
-}
-
-.nav-item {
-    font-size: 0.9rem;
-    padding-bottom: 0.5rem;
-}
-
-.nav-item:first-of-type {
-    padding-top: 1rem;
-}
-
-.nav-item:last-of-type {
-    padding-bottom: 1rem;
-}
-
-.nav-item ::deep .nav-link {
-    color: var(--nav-link);
-    background: none;
-    border: none;
-    border-radius: 4px;
-    height: 3rem;
-    display: flex;
-    align-items: center;
-    line-height: 3rem;
-    width: 100%;
-}
-
-.nav-item ::deep .nav-link:hover {
-    background-color: var(--nav-surface-hover);
-    color: var(--nav-link-hover);
-}
-
-/* Pressed, so a click reads differently from a hover. */
-.nav-item ::deep .nav-link:active {
-    background-color: var(--nav-surface-pressed);
-    color: var(--nav-link-hover);
-}
-
-/* The selected page. These come last and carry :hover / :active variants of
- * their own: `.nav-link:hover` (0,3,0) outranks a bare `a.active` (0,2,1), so
- * without them the Gold would vanish the moment the cursor touched it. */
-.nav-item ::deep a.active {
-    background-color: var(--nav-surface-active);
-    color: var(--nav-link-active);
-}
-
-.nav-item ::deep a.active:hover {
-    background-color: var(--nav-surface-active-hover);
-    color: var(--nav-link-active);
-}
-
-.nav-item ::deep a.active:active {
-    background-color: var(--nav-surface-active-pressed);
-    color: var(--nav-link-active);
-}
-
-.nav-scrollable {
-    display: none;
-}
-
-.navbar-toggler:checked ~ .nav-scrollable {
+/*
+ * Every tab reserves two lines, whether it needs them or not, so the
+ * icons all sit on the same baseline no matter how long a label is.
+ */
+.nav-label {
     display: block;
+    overflow: hidden;
+    width: 100%;
+    height: 2.4em;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
 }
 
-@media (min-width: 641px) {
-    .navbar-toggler {
-        display: none;
+/* ===================================================================
+ * Side rail
+ * =================================================================== */
+
+@media (min-width: 48rem) {
+    .top-row {
+        position: static;
+        min-height: 0;
+        padding: 1.5rem 1rem 1rem;
+        border-bottom: 0;
+        background: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .navbar-brand {
+        font-size: 1.1875rem;
     }
 
     .nav-scrollable {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
-
-        /* Allow sidebar to scroll for tall menus */
-        height: calc(100vh - 3.5rem);
+        position: static;
+        height: calc(100dvh - 4.5rem);
+        padding: 0.25rem 0.75rem 1rem;
         overflow-y: auto;
+        border-top: 0;
+        background: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
     }
+
+    .nav-list {
+        flex-direction: column;
+        gap: 0.125rem;
+        height: auto;
+    }
+
+    .nav-list ::deep .nav-link {
+        flex: none;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        min-height: 2.75rem;
+        margin: 0;
+        padding: 0.5rem 0.75rem 0.5rem 0.875rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+    }
+
+    .nav-list ::deep .nav-link.active {
+        font-weight: 600;
+    }
+
+    /* The gold moves from a pip above the tab to a bar down its edge. */
+    .nav-list ::deep .nav-link.active::before {
+        top: 50%;
+        left: 0;
+        width: 3px;
+        height: 1.25rem;
+        transform: translateY(-50%);
+    }
+
+    .nav-icon {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    .nav-label {
+        height: auto;
+        font-size: inherit;
+        font-weight: inherit;
+        line-height: 1.3;
+        text-align: left;
+    }
+}
+
+/* ===================================================================
+ * Icon masks
+ * ===================================================================
+ * Bootstrap Icons, inlined as masks so they are painted with
+ * currentColor and follow the link's state. The -webkit- form is for
+ * Safari older than 15.4, which never learned the unprefixed one.
+ */
+
+/* The wordmark. */
+.brand-logo {
+    mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='131%20131%20418%20418'%3E%3Cdefs%3E%3Cpolyline%20id='growthLine'%20points='50,450%20200,400%20260,380%20300,410%20360,340%20420,360%20480,280'/%3E%3Cmask%20id='knockout'%3E%3Ccircle%20cx='340'%20cy='340'%20r='209'%20fill='%23ffffff'/%3E%3Cuse%20href='%23growthLine'%20fill='none'%20stroke='%23000000'%20stroke-width='26'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='475'%20cy='290'%20r='26'%20fill='%23000000'/%3E%3C/mask%3E%3C/defs%3E%3Ccircle%20cx='340'%20cy='340'%20r='209'%20fill='%23ffffff'%20mask='url%28%23knockout%29'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='131%20131%20418%20418'%3E%3Cdefs%3E%3Cpolyline%20id='growthLine'%20points='50,450%20200,400%20260,380%20300,410%20360,340%20420,360%20480,280'/%3E%3Cmask%20id='knockout'%3E%3Ccircle%20cx='340'%20cy='340'%20r='209'%20fill='%23ffffff'/%3E%3Cuse%20href='%23growthLine'%20fill='none'%20stroke='%23000000'%20stroke-width='26'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='475'%20cy='290'%20r='26'%20fill='%23000000'/%3E%3C/mask%3E%3C/defs%3E%3Ccircle%20cx='340'%20cy='340'%20r='209'%20fill='%23ffffff'%20mask='url%28%23knockout%29'/%3E%3C/svg%3E");
+}
+
+/* Dashboard */
+.bi-house-door-fill-nav-menu {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-house-door-fill' viewBox='0 0 16 16'%3E%3Cpath d='M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-house-door-fill' viewBox='0 0 16 16'%3E%3Cpath d='M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z'/%3E%3C/svg%3E");
+}
+
+/* Financial */
+.bi-coin-fill-nav-menu {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-coin' viewBox='0 0 16 16'%3E%3Cpath d='M5.5 9.511c.076.954.83 1.697 2.182 1.785V12h.6v-.709c1.4-.098 2.218-.846 2.218-1.932 0-.987-.626-1.496-1.745-1.76l-.473-.112V5.57c.6.068.982.396 1.074.85h1.052c-.076-.919-.864-1.638-2.126-1.716V4h-.6v.719c-1.195.117-2.01.836-2.01 1.853 0 .9.606 1.472 1.613 1.707l.397.098v2.034c-.615-.093-1.022-.43-1.114-.9H5.5zm2.177-2.166c-.59-.137-.91-.416-.91-.836 0-.47.345-.822.915-.925v1.76h-.005zm.692 1.193c.717.166 1.048.435 1.048.91 0 .542-.412.914-1.135.982V8.518l.087.02z'/%3E%3Cpath d='M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-coin' viewBox='0 0 16 16'%3E%3Cpath d='M5.5 9.511c.076.954.83 1.697 2.182 1.785V12h.6v-.709c1.4-.098 2.218-.846 2.218-1.932 0-.987-.626-1.496-1.745-1.76l-.473-.112V5.57c.6.068.982.396 1.074.85h1.052c-.076-.919-.864-1.638-2.126-1.716V4h-.6v.719c-1.195.117-2.01.836-2.01 1.853 0 .9.606 1.472 1.613 1.707l.397.098v2.034c-.615-.093-1.022-.43-1.114-.9H5.5zm2.177-2.166c-.59-.137-.91-.416-.91-.836 0-.47.345-.822.915-.925v1.76h-.005zm.692 1.193c.717.166 1.048.435 1.048.91 0 .542-.412.914-1.135.982V8.518l.087.02z'/%3E%3Cpath d='M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z'/%3E%3C/svg%3E");
+}
+
+/* Physical Assets */
+.bi-plus-square-fill-nav-menu {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-plus-square-fill' viewBox='0 0 16 16'%3E%3Cpath d='M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3a.5.5 0 0 1 1 0z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-plus-square-fill' viewBox='0 0 16 16'%3E%3Cpath d='M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3a.5.5 0 0 1 1 0z'/%3E%3C/svg%3E");
+}
+
+/* Inventory */
+.bi-backpack-fill-nav-menu {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-backpack-fill' viewBox='0 0 16 16'%3E%3Cpath d='M5 13v-3h4v.5a.5.5 0 0 0 1 0V10h1v3z'/%3E%3Cpath d='M6 2v.341C3.67 3.165 2 5.388 2 8v5.5A2.5 2.5 0 0 0 4.5 16h7a2.5 2.5 0 0 0 2.5-2.5V8a6 6 0 0 0-4-5.659V2a2 2 0 1 0-4 0m2-1a1 1 0 0 1 1 1v.083a6 6 0 0 0-2 0V2a1 1 0 0 1 1-1m0 3a4 4 0 0 1 3.96 3.43.5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14A4 4 0 0 1 8 4M4.5 9h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-backpack-fill' viewBox='0 0 16 16'%3E%3Cpath d='M5 13v-3h4v.5a.5.5 0 0 0 1 0V10h1v3z'/%3E%3Cpath d='M6 2v.341C3.67 3.165 2 5.388 2 8v5.5A2.5 2.5 0 0 0 4.5 16h7a2.5 2.5 0 0 0 2.5-2.5V8a6 6 0 0 0-4-5.659V2a2 2 0 1 0-4 0m2-1a1 1 0 0 1 1 1v.083a6 6 0 0 0-2 0V2a1 1 0 0 1 1-1m0 3a4 4 0 0 1 3.96 3.43.5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14A4 4 0 0 1 8 4M4.5 9h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5'/%3E%3C/svg%3E");
+}
+
+/* Human Capital */
+.bi-mortarboard-fill-nav-menu {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-mortarboard-fill' viewBox='0 0 16 16'%3E%3Cpath d='M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z'/%3E%3Cpath d='M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-mortarboard-fill' viewBox='0 0 16 16'%3E%3Cpath d='M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z'/%3E%3Cpath d='M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466z'/%3E%3C/svg%3E");
+}
+
+/* Market Potential */
+.bi-bar-chart-line-fill-nav-menu {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-bar-chart-line-fill' viewBox='0 0 16 16'%3E%3Cpath d='M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-bar-chart-line-fill' viewBox='0 0 16 16'%3E%3Cpath d='M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1z'/%3E%3C/svg%3E");
 }

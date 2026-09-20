@@ -1,0 +1,69 @@
+/*
+ * Dashboard.
+ *
+ * Bootstrap's grid already stacks `.col-md-6` on a phone, so the layout
+ * needs no help. What it does need is for the two headline figures to
+ * read as figures rather than as body copy, and for the disclosure rows
+ * at the bottom to look like the grouped-list rows they behave as.
+ */
+
+.row {
+    --bs-gutter-x: 0.75rem;
+}
+
+/* The numbers are the point of this page. Tight, heavy and tabular, so
+   the net worth and the salary range line up with each other. */
+.display-6 {
+    font-family: var(--font-numeric);
+    font-size: clamp(1.875rem, 8.5vw, 2.375rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+}
+
+/*
+ * `.card-title` is small uppercase everywhere else, which is right for
+ * the eyebrow over a figure but wrong for the two disclosure buttons -
+ * they carry `.h5` as well and are headings in their own right.
+ */
+.card-title.h5 {
+    color: var(--text);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
+.card-body .btn-link {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.card-text {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+}
+
+/* Full-width actions on a phone; back to their own width once there is
+   room for them to sit side by side. */
+.card-body > .btn,
+.card-body ::deep > .btn {
+    width: 100%;
+}
+
+@media (min-width: 48rem) {
+    .row {
+        --bs-gutter-x: 1.5rem;
+    }
+
+    .display-6 {
+        font-size: clamp(2rem, 3vw, 2.5rem);
+    }
+
+    .card-body > .btn,
+    .card-body ::deep > .btn {
+        width: auto;
+    }
+}

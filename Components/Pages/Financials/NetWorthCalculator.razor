@@ -102,8 +102,8 @@
                         @foreach (var record in VisibleRecords)
                         {
                             <tr @key="record.Id">
-                                <td><span class="type-pill @(record.Kind == RecordKind.Asset ? "asset-pill" : "liability-pill")"><span></span>@record.Type</span></td>
-                                <td><div class="record-name"><strong>@record.Name</strong></div></td><td class="record-amount">@((record.Amount ?? 0m).ToString("C2"))</td>
+                                <td class="record-type"><span class="type-pill @(record.Kind == RecordKind.Asset ? "asset-pill" : "liability-pill")"><span></span>@record.Type</span></td>
+                                <td class="record-name-cell"><div class="record-name"><strong>@record.Name</strong></div></td><td class="record-amount">@((record.Amount ?? 0m).ToString("C2"))</td>
                                 <td class="record-date">@(record.AsOfDate?.ToString("MMM d, yyyy") ?? "—")</td>
                                 <td class="record-actions"><button title="Edit @record.Name" aria-label="Edit @record.Name" @onclick="() => OpenEditForm(record)">Edit</button><button class="delete-action" title="Delete @record.Name" aria-label="Delete @record.Name" @onclick="() => DeleteRecord(record)">Delete</button></td>
                             </tr>
@@ -119,6 +119,7 @@
 {
     <div class="modal-backdrop" @onclick="CloseForm"></div>
     <aside class="record-drawer" aria-label="@(IsEditing ? "Edit record" : "Add record")">
+        <div class="drawer-grabber" aria-hidden="true"></div>
         <div class="drawer-header"><div><div class="finance-eyebrow">@(IsEditing ? "UPDATE RECORD" : "NEW RECORD")</div><h2>@(IsEditing ? "Edit" : "Add") @(Draft.Kind == RecordKind.Asset ? "asset" : "liability")</h2></div><button class="close-drawer" aria-label="Close" @onclick="CloseForm">×</button></div>
         <p class="drawer-copy">@(Draft.Kind == RecordKind.Asset ? "Add an account or property you own." : "Add a balance or debt you currently owe.")</p>
 
