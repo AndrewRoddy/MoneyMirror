@@ -93,7 +93,6 @@
     private CancellationTokenSource? _operation;
     private bool _disposed;
     private bool _busy;
-    private bool _hasFile;
     private string? _status;
     private string? _error;
     private int _frameIndex;
@@ -108,7 +107,6 @@
     private async Task FileChanged()
     {
         if (_busy || Disabled) return;
-        _hasFile = true;
         _frames.Clear();
         _candidates = new();
         _error = _status = null;
