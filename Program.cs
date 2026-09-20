@@ -19,6 +19,9 @@ builder.Services.Configure<NemotronOptions>(
 builder.Services.Configure<BlsOptions>(
     builder.Configuration.GetSection(BlsOptions.SectionName)
 );
+builder.Services.Configure<OnetOptions>(
+    builder.Configuration.GetSection(OnetOptions.SectionName)
+);
 
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName));
@@ -32,6 +35,7 @@ builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
 builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>();
 builder.Services.AddScoped<IMarketPotentialExplanationService, NemotronMarketPotentialExplanationService>();
 builder.Services.AddScoped<IMarketPotentialPipeline, MarketPotentialPipeline>();
+builder.Services.AddHttpClient<IOnetOccupationDataService, OnetOccupationDataService>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
@@ -99,6 +103,21 @@ if (shouldApplyMigrations)
 
     if (app.Environment.IsDevelopment())
     {
+        // Dev-only smoke test for O*NET wiring (#181). It calls a stable,
+        // real occupation record and deliberately does no matching/ranking.
+        app.MapGet("/dev/onet-smoke-test", async (IOnetOccupationDataService onet) =>
+        {
+            try
+            {
+                var occupation = await onet.GetOccupationAsync("15-1252.00");
+                return Results.Ok(new { occupation.Code, occupation.Title });
+            }
+            catch (OnetOccupationDataException ex)
+            {
+                return Results.Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
+            }
+        });
+
         // Dev-only smoke test for the F3 AI seam (#44) - proves ILlmService and
         // IVisionService round-trip against real providers. No feature logic.
         app.MapGet("/dev/ai-smoke-test", async (ILlmService llm, IVisionService vision) =>
