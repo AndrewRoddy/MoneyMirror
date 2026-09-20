@@ -54,20 +54,49 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
                 "The LLM returned a response that could not be parsed as occupation matches.", ex);
         }
 
-        if (response is null)
+        if (response?.Occupations is not { } occupations)
         {
-            throw new OccupationMatchingException("The LLM returned an unusable occupation match response.");
+            throw new OccupationMatchingException(
+                "The LLM returned an occupation response without a structured occupations list.");
         }
 
-        return response
-            .Occupations.Select(o => new OccupationMatch(
-                o.Title,
-                o.Explanation,
+        var matches = new List<OccupationMatch>(occupations.Count);
+        foreach (var occupation in occupations)
+        {
+            if (occupation is null
+                || string.IsNullOrWhiteSpace(occupation.Title)
+                || string.IsNullOrWhiteSpace(occupation.Explanation))
+            {
+                throw new OccupationMatchingException(
+                    "The LLM returned an occupation match without a title or explanation.");
+            }
+
+            if (occupation.TypicalMinUsd is < 0
+                || occupation.TypicalMaxUsd is < 0
+                || (occupation.TypicalMinUsd is not null
+                    && occupation.TypicalMaxUsd is not null
+                    && occupation.TypicalMinUsd > occupation.TypicalMaxUsd))
+            {
+                throw new OccupationMatchingException(
+                    "The LLM returned an invalid compensation range for an occupation match.");
+            }
+
+            var keySkills = (occupation.KeySkills ?? [])
+                .Where(skill => !string.IsNullOrWhiteSpace(skill))
+                .Select(skill => skill!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            matches.Add(new OccupationMatch(
+                occupation.Title.Trim(),
+                occupation.Explanation.Trim(),
                 IsAiEstimated: true,
-                o.KeySkills ?? [],
-                o.TypicalMinUsd,
-                o.TypicalMaxUsd))
-            .ToList();
+                keySkills,
+                occupation.TypicalMinUsd,
+                occupation.TypicalMaxUsd));
+        }
+
+        return matches;
     }
 
     private static string BuildPrompt(ProfessionalProfile profile)
@@ -150,12 +179,12 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
         return trimmed.Trim();
     }
 
-    private record MatchResponse(IReadOnlyList<OccupationEntry> Occupations);
+    private record MatchResponse(IReadOnlyList<OccupationEntry?>? Occupations);
 
     private record OccupationEntry(
-        string Title,
-        string Explanation,
-        IReadOnlyList<string>? KeySkills,
+        string? Title,
+        string? Explanation,
+        IReadOnlyList<string?>? KeySkills,
         int? TypicalMinUsd,
         int? TypicalMaxUsd);
 }

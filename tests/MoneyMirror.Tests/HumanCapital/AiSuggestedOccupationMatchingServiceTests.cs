@@ -76,6 +76,55 @@ public class AiSuggestedOccupationMatchingServiceTests
     }
 
     [Fact]
+    public async Task MatchAsync_MissingOccupationsList_ThrowsOccupationMatchingException()
+    {
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService("{}"));
+
+        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+    }
+
+    [Fact]
+    public async Task MatchAsync_MatchMissingTitleOrExplanation_ThrowsOccupationMatchingException()
+    {
+        const string json = "{ \"occupations\": [{ \"title\": \"Software Engineer\" }] }";
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(json));
+
+        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+    }
+
+    [Fact]
+    public async Task MatchAsync_InvalidCompensationRange_ThrowsOccupationMatchingException()
+    {
+        const string json = """
+            {
+              "occupations": [
+                {"title": "Software Engineer", "explanation": "Strong C# background.", "typicalMinUsd": 130000, "typicalMaxUsd": 85000}
+              ]
+            }
+            """;
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(json));
+
+        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+    }
+
+    [Fact]
+    public async Task MatchAsync_StructuredSkills_AreTrimmedAndDeduplicated()
+    {
+        const string json = """
+            {
+              "occupations": [
+                {"title": "Software Engineer", "explanation": "Strong C# background.", "keySkills": [" C# ", "c#", "", "SQL"]}
+              ]
+            }
+            """;
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(json));
+
+        var match = Assert.Single(await service.MatchAsync(SampleProfile));
+
+        Assert.Equal(["C#", "SQL"], match.KeySkills);
+    }
+
+    [Fact]
     public async Task MatchAsync_JsonWrappedInCodeFence_StripsFenceAndParses()
     {
         var fenced = $"```json\n{ValidJson}\n```";
