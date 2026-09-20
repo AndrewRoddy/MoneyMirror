@@ -682,7 +682,8 @@ export class MobileSamEngine {
 
         const masksTensor = results.masks;
         const iouTensor = results.iou_predictions;
-        const confidence = iouTensor ? Number(iouTensor.data[0]) : 1.0;
+        const rawConfidence = iouTensor ? Number(iouTensor.data[0]) : 1.0;
+        const confidence = Math.max(0.0, Math.min(1.0, rawConfidence));
 
         const maskDims = masksTensor.dims;
         const maskHeight = maskDims[maskDims.length - 2];

@@ -43,17 +43,25 @@
         @if (_lastResult?.Polygon is { Count: >= 3 } polygon)
         {
             <svg class="contour-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                <polygon points="@PolygonPoints(polygon)" class="glowing-contour" />
+                <polygon points="@PolygonPoints(polygon)"
+                         class="glowing-contour"
+                         fill="rgba(0, 220, 255, 0.25)"
+                         stroke="#00dcff"
+                         stroke-width="0.8"
+                         stroke-linejoin="round"
+                         stroke-linecap="round" />
                 @foreach (var prompt in _prompts)
                 {
                     <circle cx="@((prompt.X * 100).ToString("F2", CultureInfo.InvariantCulture))"
                             cy="@((prompt.Y * 100).ToString("F2", CultureInfo.InvariantCulture))"
                             r="1.5"
-                            class="prompt-marker @(prompt.Type == SamPromptType.Positive ? "positive" : "negative")" />
+                            class="prompt-marker @(prompt.Type == SamPromptType.Positive ? "positive" : "negative")"
+                            fill="@(prompt.Type == SamPromptType.Positive ? "#10b981" : "#ef4444")"
+                            stroke="#ffffff"
+                            stroke-width="0.4" />
                 }
             </svg>
         }
-
         @if (_isStreaming && !_isFrozen && _statusHint is null)
         {
             <div class="viewfinder-hint">Tap any item to segment</div>
