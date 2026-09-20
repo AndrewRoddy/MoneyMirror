@@ -47,6 +47,56 @@ Market Potential is displayed alongside net worth, not folded into it.
 Single modular monolith, single database, single implicit user/profile — no accounts,
 auth, or multi-tenancy.
 
+## Short-video possession scans
+
+On **Physical Assets**, choose or record a video, then select **Find items in video**.
+The initial implementation accepts clips up to **30 seconds and 100 MiB** in MP4,
+WebM, MOV, or M4V containers. Codec support depends on the browser; try an H.264
+MP4 if a phone recording cannot be decoded. Camera capture is a browser-dependent
+file-picker hint, not a built-in recording interface.
+
+- The browser samples up to six evenly spaced JPEG frames (maximum 1280 pixels
+  on the longest edge). The full video never leaves the device; these stills are
+  sent to the configured vision provider. Detection time/cost can be up to six
+  image requests per scan, processed sequentially.
+- Review the sampled frames by timestamp and click an item's **bounding box**
+  or checkbox. These are approximate rectangles, not pixel-level segmentation
+  masks. Items without reliable coordinates remain selectable with an explicit
+  whole-frame image warning.
+- Nearby detections with matching labels/identification in adjacent frames share
+  a selection. This is a conservative overlap heuristic, not reliable object
+  tracking: camera movement can produce duplicates, and identical objects can be
+  confused. Select repeats only once; use **This is a different item** to split
+  an incorrect association. At most 20 detections per frame enter review.
+- **Review selected items** uploads only the selected crops (or the warned-about
+  full-frame fallback). Review identification, edit brand/model, estimate value,
+  and explicitly save or merge using the existing inventory workflow. Reviewing
+  alone does not create inventory records. Current valuation remains an AI
+  estimate, not an evidence-based market appraisal.
+
+Selected images use the existing possession-image store and can remain there if
+review is abandoned; this feature does not introduce automatic image retention
+cleanup. Raw video/frame object URLs are released on replacement or navigation.
+No new model, database migration, video service, or server-side FFmpeg is required.
+
+### Video scan verification
+
+Run the component/repository tests and browser-module logic tests:
+
+```sh
+dotnet test tests/MoneyMirror.Tests/MoneyMirror.Tests.csproj
+npm run test:video
+```
+
+The automated tests use synthetic detections, simulated browser/canvas APIs, and
+SQLite. They verify selection, separate image references, explicit persistence,
+sampling/cropping arithmetic, limits, cancellation, retry, and URL cleanup. They
+do **not** establish actual browser codec support, visual box alignment, or live
+provider detection quality. Before release, check a real 10–30 second room pan
+on desktop and phone: switch frames, select boxes/checkboxes, split a repeated
+item, confirm its crop, save it, and open the inventory detail. Also try an
+overlong clip, an unsupported codec, cancellation, and replacing the clip.
+
 ## Configuration
 
 The app reads AI provider settings from the `Ai:Nemotron` and `Ai:VisionModel`

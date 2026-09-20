@@ -1,0 +1,257 @@
+@using MoneyMirror.PhysicalAssets
+@using System.Globalization
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject IPhysicalAssetDetectionService Detector
+@inject IPossessionImageStorage ImageStorage
+@inject ILogger<VideoScanPicker> Logger
+
+<section class="page-card" aria-labelledby="video-scan-title">
+    <h2 id="video-scan-title" class="page-section-title">Scan a room with video</h2>
+    <p>Record a slow pan or choose a clip up to 30 seconds / 100 MB. Your video stays on this device;
+        up to six still frames are sent for AI detection. Only selected item images are saved.</p>
+    <label for="room-video">Choose or record a video</label>
+    <input @ref="_input" id="room-video" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"
+           capture="environment" disabled="@(_busy || Disabled)" @onchange="FileChanged" />
+    <video @ref="_video" class="video-preview" controls="@(!_busy)" muted playsinline aria-label="Room video preview"></video>
+    <div class="d-flex gap-2 my-3">
+        <button type="button" class="btn btn-primary" disabled="@(_busy || Disabled || !_hasFile)" @onclick="AnalyzeAsync">Find items in video</button>
+        @if (_busy)
+        {
+            <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+        }
+    </div>
+    <p role="status" aria-live="polite">@_status</p>
+    @if (_error is not null)
+    {
+        <div role="alert" class="alert alert-warning">@_error</div>
+    }
+    @if (_frames.Count > 0 && !_busy)
+    {
+        <p>Click an item box or its checkbox to select it. Boxes are approximate. Check repeat sightings before continuing.</p>
+        <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Sampled video frames">
+            @for (var i = 0; i < _frames.Count; i++)
+            {
+                var frameIndex = i;
+                <button type="button" class="btn @(_frameIndex == i ? "btn-primary" : "btn-outline-secondary")"
+                        aria-pressed="@(_frameIndex == i ? "true" : "false")" @onclick="() => _frameIndex = frameIndex">
+                    @_frames[i].Seconds.ToString("F1") s
+                </button>
+            }
+        </div>
+        <div class="frame-stage">
+            <img src="@_frames[_frameIndex].Url" alt="Video frame at @_frames[_frameIndex].Seconds.ToString("F1") seconds" />
+            @foreach (var pair in CurrentObservations)
+            {
+                if (pair.Observation.Detection.Region is { } box)
+                {
+                    <button type="button" class="item-region @(pair.Candidate.Selected ? "selected" : "")"
+                            style="@BoxStyle(box)" aria-label="Select @pair.Observation.Detection.Label"
+                            aria-pressed="@(pair.Candidate.Selected ? "true" : "false")"
+                            disabled="@Disabled" @onclick="() => Toggle(pair.Candidate, pair.Observation)">
+                        <span>@pair.Observation.Detection.Label</span>
+                    </button>
+                }
+            }
+        </div>
+        <ul class="list-unstyled mt-3">
+            @foreach (var pair in CurrentObservations)
+            {
+                <li class="mb-2" @key="pair.Candidate.Id">
+                    <label>
+                        <input type="checkbox" checked="@pair.Candidate.Selected" disabled="@Disabled"
+                               @onchange="() => Toggle(pair.Candidate, pair.Observation)" />
+                        @pair.Observation.Detection.Label — @pair.Observation.Detection.Confidence.ToString("P0") confidence
+                    </label>
+                    @if (pair.Observation.Detection.Region is null)
+                    {
+                        <span class="text-muted">(no reliable box; saves the whole frame)</span>
+                    }
+                    @if (pair.Candidate.Observations.Count > 1)
+                    {
+                        <span class="text-muted">Seen in @pair.Candidate.Observations.Count frames.</span>
+                        <button type="button" class="btn btn-sm btn-link" disabled="@Disabled"
+                                @onclick="() => Separate(pair.Candidate, pair.Observation)">This is a different item</button>
+                    }
+                </li>
+            }
+        </ul>
+        <p>@_candidates.Items.Count(c => c.Selected) selected across all frames. The same item may appear more than once after camera movement; select it once.</p>
+        <button type="button" class="btn btn-success" disabled="@(Disabled || !_candidates.Items.Any(c => c.Selected))" @onclick="ContinueAsync">
+            Review selected items
+        </button>
+    }
+</section>
+
+@code {
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<SelectedVideoAsset>> OnSelected { get; set; }
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+    private ElementReference _input;
+    private ElementReference _video;
+    private IJSObjectReference? _module;
+    private CancellationTokenSource? _operation;
+    private bool _disposed;
+    private bool _busy;
+    private bool _hasFile;
+    private string? _status;
+    private string? _error;
+    private int _frameIndex;
+    private VideoScanCandidates _candidates = new();
+    private readonly List<(double Seconds, string Url)> _frames = [];
+    private IEnumerable<(VideoCandidate Candidate, VideoObservation Observation)> CurrentObservations =>
+        _candidates.Items.SelectMany(c => c.Observations.Where(o => o.FrameIndex == _frameIndex).Select(o => (c, o))).ToList();
+
+    private static string BoxStyle(BoundingBox b) => FormattableString.Invariant(
+        $"left:{b.X * 100}%;top:{b.Y * 100}%;width:{b.Width * 100}%;height:{b.Height * 100}%;");
+
+    private async Task FileChanged()
+    {
+        if (_busy || Disabled) return;
+        _hasFile = true;
+        _frames.Clear();
+        _candidates = new();
+        _error = _status = null;
+        if (_module is not null) await _module.InvokeVoidAsync("dispose", _video);
+    }
+
+    private void Toggle(VideoCandidate candidate, VideoObservation observation)
+    {
+        if (_busy || Disabled) return;
+        candidate.Selected = !candidate.Selected;
+        candidate.Representative = observation;
+        candidate.StoredImageReference = null;
+    }
+
+    private void Separate(VideoCandidate candidate, VideoObservation observation)
+    {
+        if (_busy || Disabled) return;
+        _candidates.Separate(candidate, observation);
+    }
+
+    private void Cancel() => _operation?.Cancel();
+
+    private async Task AnalyzeAsync()
+    {
+        if (_busy || Disabled) return;
+        _operation?.Dispose();
+        _operation = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        var token = _operation.Token;
+        _busy = true;
+        await BusyChanged.InvokeAsync(true);
+        _frames.Clear();
+        _candidates = new();
+        _frameIndex = 0;
+        _error = null;
+        _status = "Preparing still frames…";
+        try
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/video-scan.js");
+            // Let preparation finish before re-enabling the input, even after cancellation.
+            var times = await _module.InvokeAsync<double[]>("prepare", _input, _video);
+            token.ThrowIfCancellationRequested();
+            var failed = 0;
+            foreach (var index in Enumerable.Range(0, Math.Min(times.Length, VideoScanCandidates.MaxFrames)))
+            {
+                token.ThrowIfCancellationRequested();
+                _status = $"Finding items in frame {index + 1} of {times.Length}…";
+                await InvokeAsync(StateHasChanged);
+                var url = await _module.InvokeAsync<string>("frameUrl", _video, index);
+                _frames.Add((times[index], url));
+                try
+                {
+                    await using var reference = await _module.InvokeAsync<IJSStreamReference>("frameStream", _video, index);
+                    await using var stream = await reference.OpenReadStreamAsync(2 * 1024 * 1024, token);
+                    using var buffer = new MemoryStream();
+                    await stream.CopyToAsync(buffer, token);
+                    var detected = await Detector.DetectAsync(buffer.ToArray(), "image/jpeg", token);
+                    _candidates.AddFrame(index, detected);
+                }
+                catch (AssetDetectionException ex)
+                {
+                    Logger.LogWarning(ex, "Video frame {Index} detection failed", index);
+                    failed++;
+                }
+            }
+            _status = $"Found {_candidates.Items.Count} candidate items. Select the ones you want to track.";
+            if (failed > 0) _error = $"{failed} frame(s) could not be analyzed. You can review the other frames or retry the scan.";
+        }
+        catch (OperationCanceledException)
+        {
+            _status = "Scan cancelled or timed out. You can review any completed frames or try again.";
+        }
+        catch (Exception ex) when (ex is JSException or IOException or InvalidOperationException)
+        {
+            Logger.LogWarning(ex, "Video scan failed");
+            _error = ex is JSException ? ex.Message.Split('\n')[0] : "Could not read this video. Try a shorter MP4 or WebM clip.";
+        }
+        finally
+        {
+            _busy = false;
+            if (!_disposed) await BusyChanged.InvokeAsync(false);
+        }
+    }
+
+    private async Task ContinueAsync()
+    {
+        if (_busy || Disabled || _module is null) return;
+        _operation?.Dispose();
+        _operation = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var token = _operation.Token;
+        _busy = true;
+        await BusyChanged.InvokeAsync(true);
+        _error = null;
+        _status = "Saving selected item images…";
+        try
+        {
+            var selected = new List<SelectedVideoAsset>();
+            foreach (var candidate in _candidates.Items.Where(c => c.Selected))
+            {
+                token.ThrowIfCancellationRequested();
+                var observation = candidate.Representative;
+                if (candidate.StoredImageReference is null)
+                {
+                    await using var reference = await _module.InvokeAsync<IJSStreamReference>(
+                        "cropStream", _video, observation.FrameIndex, observation.Detection.Region);
+                    await using var stream = await reference.OpenReadStreamAsync(2 * 1024 * 1024, token);
+                    candidate.StoredImageReference = await ImageStorage.SaveAsync(stream, "video-item.jpg", token);
+                }
+                selected.Add(new SelectedVideoAsset(observation.Detection, candidate.StoredImageReference));
+            }
+            token.ThrowIfCancellationRequested();
+            await OnSelected.InvokeAsync(selected);
+            _frames.Clear();
+            _candidates = new();
+            await _module.InvokeVoidAsync("dispose", _video);
+            _status = "Selected items are ready below. Confirm identification, estimate value, and save to inventory.";
+        }
+        catch (OperationCanceledException)
+        {
+            _status = "Saving cancelled or timed out. Your selection is preserved; you can retry.";
+        }
+        catch (Exception ex) when (ex is JSException or IOException or PossessionImageStorageException or InvalidOperationException)
+        {
+            Logger.LogWarning(ex, "Selected video images could not be saved");
+            _error = "Could not save the selected images. Your selection is preserved; please retry.";
+        }
+        finally
+        {
+            _busy = false;
+            if (!_disposed) await BusyChanged.InvokeAsync(false);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        _operation?.Cancel();
+        _operation?.Dispose();
+        if (_module is null) return;
+        try
+        {
+            await _module.InvokeVoidAsync("dispose", _video);
+            await _module.DisposeAsync();
+        }
+        catch (JSException) { }
+    }
+}
