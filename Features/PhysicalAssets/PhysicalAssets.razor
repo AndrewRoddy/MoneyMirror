@@ -36,7 +36,7 @@
 
 @if (_errorMessage is not null)
 {
-    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    <ErrorAlert Message="@_errorMessage" RawResponse="@_errorRawResponse" />
 }
 
 @if (_imageReference is not null)
@@ -150,7 +150,9 @@
 
                     @if (detection.ValuationError is not null)
                     {
-                        <div class="alert alert-danger mt-2 mb-0 py-1" role="alert">@detection.ValuationError</div>
+                        <div class="mt-2">
+                            <ErrorAlert Message="@detection.ValuationError" RawResponse="@detection.ValuationRawResponse" />
+                        </div>
                     }
 
                     @if (detection.Valuation is not null)
@@ -221,6 +223,7 @@
     private bool IsWorking => _isProcessing || (_detections?.Any(d => d.IsSaving || d.IsEstimating) ?? false);
     private string? _processingMessage;
     private string? _errorMessage;
+    private string? _errorRawResponse;
     private string? _fileName;
     private string? _imageReference;
     private List<ReviewableDetection>? _detections;
@@ -230,7 +233,7 @@
 
     private void ReviewVideoItems(IReadOnlyList<SelectedVideoAsset> items)
     {
-        _errorMessage = null;
+        ClearError();
         _imageReference = null;
         _categoryFilter = _confidenceFilter = "all";
         _sortOrder = "confidence-desc";
@@ -313,7 +316,7 @@
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         if (IsWorking || _videoBusy) return;
-        _errorMessage = null;
+        ClearError();
         _imageReference = null;
         _detections = null;
         _processingMessage = null;
@@ -365,6 +368,7 @@
         catch (AssetDetectionException ex)
         {
             _errorMessage = ex.Message;
+            _errorRawResponse = ex.RawResponse;
         }
         finally
         {
@@ -377,6 +381,7 @@
     {
         if (IsWorking || _videoBusy || detection.SavedItemId is not null) return;
         detection.ValuationError = null;
+        detection.ValuationRawResponse = null;
         detection.IsEstimating = true;
         StateHasChanged();
 
@@ -394,6 +399,7 @@
         catch (AssetValuationException ex)
         {
             detection.ValuationError = ex.Message;
+            detection.ValuationRawResponse = ex.RawResponse;
         }
         finally
         {
@@ -464,6 +470,12 @@
         }
     }
 
+    private void ClearError()
+    {
+        _errorMessage = null;
+        _errorRawResponse = null;
+    }
+
     /// <summary>
     /// In-memory review state for one DetectedAsset: whether the user is
     /// keeping it, any brand/model correction, an optional AI-estimated
@@ -481,6 +493,7 @@
         public bool IsEstimating { get; set; }
         public AssetValuation? Valuation { get; set; }
         public string? ValuationError { get; set; }
+        public string? ValuationRawResponse { get; set; }
         public bool IsSaving { get; set; }
         public string? SaveError { get; set; }
         public Guid? SavedItemId { get; set; }

@@ -4,7 +4,7 @@
 
 @if (_errorMessage is not null)
 {
-    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+    <ErrorAlert Message="@_errorMessage" RawResponse="@_errorRawResponse" />
 }
 
 @if (_assets is null)
@@ -109,7 +109,9 @@ else
                                         </button>
                                         @if (_revalueError is not null)
                                         {
-                                            <div class="alert alert-danger mt-2" role="alert">@_revalueError</div>
+                                            <div class="mt-2">
+                                                <ErrorAlert Message="@_revalueError" RawResponse="@_revalueRawResponse" />
+                                            </div>
                                         }
                                     </div>
 
@@ -172,6 +174,7 @@ else
 
     private List<PhysicalAssetSummary>? _assets;
     private string? _errorMessage;
+    private string? _errorRawResponse;
 
     private string _newName = string.Empty;
     private string? _newCategory;
@@ -189,6 +192,7 @@ else
     private string? _detailError;
     private bool _isRevaluing;
     private string? _revalueError;
+    private string? _revalueRawResponse;
 
     protected override async Task OnInitializedAsync()
     {
@@ -247,6 +251,7 @@ else
         }
 
         _errorMessage = null;
+        _errorRawResponse = null;
         _isAdding = true;
 
         try
@@ -269,6 +274,7 @@ else
             catch (AssetValuationException ex)
             {
                 _errorMessage = $"Item added, but its value could not be estimated: {ex.Message}";
+                _errorRawResponse = ex.RawResponse;
             }
 
             _newName = string.Empty;
@@ -350,6 +356,7 @@ else
         }
 
         _revalueError = null;
+        _revalueRawResponse = null;
         _isRevaluing = true;
 
         try
@@ -380,6 +387,7 @@ else
         catch (AssetValuationException ex)
         {
             _revalueError = ex.Message;
+            _revalueRawResponse = ex.RawResponse;
         }
         finally
         {
