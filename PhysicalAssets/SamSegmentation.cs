@@ -141,7 +141,7 @@ public class BlazorSamSegmentationEngine : ISamSegmentationEngine
         return await module.InvokeAsync<SamSegmentationResult>(
             "decodeMultiPoints",
             cancellationToken,
-            jsPoints
+            new object[] { jsPoints }
         );
     }
 

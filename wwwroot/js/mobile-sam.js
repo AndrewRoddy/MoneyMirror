@@ -618,22 +618,27 @@ export class MobileSamEngine {
             throw new Error("No image embeddings available. Call encodeImage first.");
         }
 
-        if (!points || points.length === 0) {
+        const pointList = Array.isArray(points)
+            ? points
+            : points && typeof points.x === "number"
+              ? [points]
+              : [];
+
+        if (pointList.length === 0) {
             throw new Error("At least one point prompt is required.");
         }
 
         const startTime = performance.now();
-        const pointCount = points.length;
+        const pointCount = pointList.length;
         const coordData = new Float32Array(pointCount * 2);
         const labelData = new Float32Array(pointCount);
 
         const { scale, origWidth, origHeight } = this.#currentMeta;
 
         for (let i = 0; i < pointCount; i++) {
-            const pt = points[i];
+            const pt = pointList[i];
             const origX = pt.x <= 1.0 ? pt.x * origWidth : pt.x;
             const origY = pt.y <= 1.0 ? pt.y * origHeight : pt.y;
-
             coordData[i * 2] = origX * scale;
             coordData[i * 2 + 1] = origY * scale;
             labelData[i] = typeof pt.type === "number" ? pt.type : PromptType.Positive;
@@ -773,10 +778,22 @@ export async function decodePoint(x, y, type = PromptType.Positive) {
     return await decodeMultiPoints([{ x, y, type }]);
 }
 
-export async function decodeMultiPoints(points, options = {}) {
+export async function decodeMultiPoints(...args) {
     if (!defaultEngine) {
         throw new Error("MobileSAM engine is not initialized. Call initEngine first.");
     }
+
+    let points = [];
+    let options = {};
+
+    if (Array.isArray(args[0])) {
+        points = args[0];
+        options = args[1] || {};
+    } else {
+        points = args.filter((a) => a && typeof a.x === "number");
+        options = args.find((a) => a && typeof a.x !== "number") || {};
+    }
+
     return await defaultEngine.decodePoints(points, options);
 }
 
