@@ -37,18 +37,32 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
                 "Failed to detect objects: the vision provider call failed.", ex);
         }
 
-        var json = StripCodeFence(completion);
+        JsonException? lastError = null;
 
-        try
+        foreach (var candidate in JsonObjectCandidates(completion))
         {
-            var result = JsonSerializer.Deserialize<DetectionResponse>(json, JsonOptions);
-            return result?.Objects ?? [];
+            try
+            {
+                if (JsonSerializer.Deserialize<DetectionResponse>(candidate, JsonOptions)
+                    is { Objects: { } objects })
+                {
+                    return objects;
+                }
+            }
+            catch (JsonException ex)
+            {
+                // Not the detection object - an earlier brace in the model's
+                // commentary opened something else. Fall through to the next span.
+                lastError = ex;
+            }
         }
-        catch (JsonException ex)
-        {
-            throw new AssetDetectionException(
-                "The vision model returned a response that could not be parsed as detected objects.", ex);
-        }
+
+        const string message =
+            "The vision model returned a response that could not be parsed as detected objects.";
+
+        throw lastError is null
+            ? new AssetDetectionException(message)
+            : new AssetDetectionException(message, lastError);
     }
 
     private const string Prompt = """
@@ -80,27 +94,77 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         - If no objects are found, return {"objects": []}.
         """;
 
-    private static string StripCodeFence(string text)
+    /// <summary>
+    /// Yields every balanced <c>{...}</c> span in <paramref name="text"/>, outermost
+    /// first. The model regularly ignores the "JSON only" instruction and precedes
+    /// the object with a prose description, a markdown fence, or both, and can echo
+    /// the schema from the prompt before answering - so callers try each span rather
+    /// than assuming the whole response is one JSON object.
+    /// </summary>
+    private static IEnumerable<string> JsonObjectCandidates(string text)
     {
-        var trimmed = text.Trim();
-        if (!trimmed.StartsWith("```"))
+        for (var start = text.IndexOf('{'); start >= 0; start = text.IndexOf('{', start + 1))
         {
-            return trimmed;
+            if (ReadBalancedObject(text, start) is { } candidate)
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the <c>{...}</c> span starting at <paramref name="start"/>, or null if
+    /// the braces never balance because the response was cut off mid-object. Braces
+    /// inside string literals are ignored, so a label like "a {thing}" cannot end it.
+    /// </summary>
+    private static string? ReadBalancedObject(string text, int start)
+    {
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+
+        for (var i = start; i < text.Length; i++)
+        {
+            var c = text[i];
+
+            if (inString)
+            {
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (c == '\\')
+                {
+                    escaped = true;
+                }
+                else if (c == '"')
+                {
+                    inString = false;
+                }
+
+                continue;
+            }
+
+            switch (c)
+            {
+                case '"':
+                    inString = true;
+                    break;
+                case '{':
+                    depth++;
+                    break;
+                case '}':
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return text[start..(i + 1)];
+                    }
+
+                    break;
+            }
         }
 
-        var firstNewline = trimmed.IndexOf('\n');
-        if (firstNewline >= 0)
-        {
-            trimmed = trimmed[(firstNewline + 1)..];
-        }
-
-        var closingFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-        if (closingFence >= 0)
-        {
-            trimmed = trimmed[..closingFence];
-        }
-
-        return trimmed.Trim();
+        return null;
     }
 
     private record DetectionResponse(IReadOnlyList<DetectedAsset> Objects);
