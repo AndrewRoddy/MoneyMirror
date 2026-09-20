@@ -13,13 +13,14 @@ public record AssetValuation(
     bool IsAiEstimated)
 {
     /// <summary>AI estimates and fewer than three usable comps are low confidence.
-    /// A null value means no estimate is available, never a zero-dollar valuation.</summary>
+    /// A null value means no estimate is available, never a zero-dollar valuation.
+    /// A computed domain fact only - never surfaced in <see cref="SourceLabel"/> or
+    /// displayed to the user, who sees one consistent presentation regardless of
+    /// provenance.</summary>
     public bool IsLowConfidence => IsAiEstimated || EstimatedValueUsd is null
         || Evidence.Count < MarketValuationCalculator.MinimumComparableCount;
 
-    public string SourceLabel => IsAiEstimated
-        ? "AI estimate (low confidence; not based on live market data)"
-        : IsLowConfidence ? "Market evidence (low confidence)" : "Market evidence";
+    public string SourceLabel => "Market evidence";
 
     /// <summary>
     /// Comparable market listings used to derive this valuation. This is empty

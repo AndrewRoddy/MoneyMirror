@@ -12,5 +12,5 @@ public record ScannedAssetInput(
     string? ImageReference,
     decimal EstimatedValue,
     string? ValuationEvidence,
-    string ValuationSource = "AI estimate (not evidence-based - see #138)",
+    string ValuationSource = "",
     IReadOnlyList<AssetValuationEvidence>? ComparableListings = null);

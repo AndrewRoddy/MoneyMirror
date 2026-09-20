@@ -21,7 +21,7 @@ public static class MarketValuationCalculator
         string reasoning;
         if (usable.Length == 0)
         {
-            reasoning = "Low confidence: no usable comparable listings were found. No market value is available.";
+            reasoning = "No usable comparable listings were found. No market value is available.";
         }
         else
         {
@@ -33,7 +33,7 @@ public static class MarketValuationCalculator
             reasoning = $"Median of {usable.Length} usable comparable listing(s), rounded to the nearest cent.";
             if (usable.Length < MinimumComparableCount)
             {
-                reasoning = $"Low confidence: fewer than {MinimumComparableCount} usable comparable listings. {reasoning}";
+                reasoning = $"Based on {usable.Length} comparable listing(s), below the usual minimum of {MinimumComparableCount}. {reasoning}";
             }
         }
 

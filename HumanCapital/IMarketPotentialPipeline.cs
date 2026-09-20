@@ -11,8 +11,8 @@ namespace MoneyMirror.HumanCapital;
 /// <remarks>
 /// #266: not currently called from any page - <c>/market-potential</c> and
 /// the Dashboard still use the AI-guess-only <see cref="ICompensationEstimationService"/>
-/// (#148), whose UI explicitly labels its output "AI estimate - not based
-/// on live wage data". This isn't an oversight: this method needs a BLS
+/// (#148) instead.
+/// This isn't an oversight: this method needs a BLS
 /// series ID per matched occupation, which was meant to come from O*NET
 /// occupation data (#93/#94, HC4) - but O*NET was dropped from project scope
 /// (see #177) before that occupation-to-series mapping was built. Wiring this

@@ -149,8 +149,7 @@
     <h2 class="page-section-title">Market Potential</h2>
 
     <div class="alert alert-info page-card" role="alert">
-        Market Potential is a separate estimate of what your skills and experience could earn -
-        it is <strong>never</strong> added to, or combined with, your financial net worth.
+        Market Potential is a separate estimate of what your skills and experience could earn
     </div>
 
 @if (_marketPotentialError is not null)
@@ -183,7 +182,6 @@ else
     {
         <p class="fs-4 fw-bold">
             $@_compensation.MinUsd.ToString("N0") &ndash; $@_compensation.MaxUsd.ToString("N0")
-            <span class="badge bg-secondary fs-6 align-middle">AI estimate - not based on live wage data</span>
         </p>
         <p class="text-muted">@_compensation.Explanation</p>
     }
@@ -201,7 +199,6 @@ else
             {
                 <li>
                     <strong>@occupation.Title</strong>
-                    <span class="badge bg-secondary">AI-suggested</span>
                     @if (occupation.TypicalMinUsd is not null && occupation.TypicalMaxUsd is not null)
                     {
                         <span class="text-muted"> - $@occupation.TypicalMinUsd.Value.ToString("N0") &ndash; $@occupation.TypicalMaxUsd.Value.ToString("N0")</span>

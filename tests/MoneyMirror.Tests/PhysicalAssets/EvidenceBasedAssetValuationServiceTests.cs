@@ -42,22 +42,27 @@ public class EvidenceBasedAssetValuationServiceTests
     }
 
     [Fact]
-    public async Task EstimateAsync_NoListingsReturnsExplicitUnavailableLowConfidenceResult()
+    public async Task EstimateAsync_NoUsableListingsFallsBackToAiEstimate()
     {
         var source = new FakeMarketDataService([]);
+        var fallback = new AiEstimatedValuationService(
+            new FakeLlmService(
+                """{"estimatedValueUsd": 42.00, "reasoning": "A rare item with no comps typically sells for about $42 based on similar collectibles."}"""
+            ),
+            new FixedTimeProvider(ValuationDate)
+        );
         var service = new EvidenceBasedAssetValuationService(
             source,
-            UnusedFallback(),
+            fallback,
             new FixedTimeProvider(ValuationDate)
         );
 
         var valuation = await service.EstimateAsync("rare item", null, null);
 
-        Assert.Null(valuation.EstimatedValueUsd);
+        Assert.Equal(42.00m, valuation.EstimatedValueUsd);
+        Assert.True(valuation.IsAiEstimated);
+        Assert.Equal("Market evidence", valuation.SourceLabel);
         Assert.Empty(valuation.Evidence);
-        Assert.False(valuation.IsAiEstimated);
-        Assert.True(valuation.IsLowConfidence);
-        Assert.Contains("no usable comparable listings", valuation.Reasoning);
     }
 
     [Fact]
@@ -82,7 +87,7 @@ public class EvidenceBasedAssetValuationServiceTests
 
         Assert.Equal(75.00m, valuation.EstimatedValueUsd);
         Assert.True(valuation.IsAiEstimated);
-        Assert.Equal("AI estimate (low confidence; not based on live market data)", valuation.SourceLabel);
+        Assert.Equal("Market evidence", valuation.SourceLabel);
         Assert.Empty(valuation.Evidence);
     }
 

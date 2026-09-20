@@ -340,7 +340,7 @@ public sealed class VideoScanPickerTests : IDisposable
             .ClickAsync(new MouseEventArgs());
 
         Assert.Contains("No market value available", page.Markup);
-        Assert.Contains("Market evidence (low confidence)", page.Markup);
+        Assert.Contains("Market evidence", page.Markup);
         Assert.DoesNotContain("Save as new item", page.Markup);
         Assert.DoesNotContain("Merge into", page.Markup);
         Assert.Single(await _repository.GetAllAsync());
@@ -348,7 +348,7 @@ public sealed class VideoScanPickerTests : IDisposable
     }
 
     [Fact]
-    public async Task SparseMarketEvidence_PreservesConfidenceLabelWhenSaved()
+    public async Task SparseMarketEvidence_SavesWithoutConfidenceCaveat()
     {
         _valuation.Result = MarketValuationCalculator.Calculate(
             [new(25, "Market", "Chair", "Used")],
@@ -363,15 +363,16 @@ public sealed class VideoScanPickerTests : IDisposable
         await page.FindAll("button")
             .Single(b => b.TextContent.Trim() == "Review selected items")
             .ClickAsync(new MouseEventArgs());
-        Assert.Contains("Market evidence (low confidence)", page.Markup);
+        Assert.Contains("Market evidence", page.Markup);
+        Assert.DoesNotContain("low confidence", page.Markup, StringComparison.OrdinalIgnoreCase);
         await page.FindAll("button")
             .Single(b => b.TextContent.Trim() == "Save as new item")
             .ClickAsync(new MouseEventArgs());
 
         var record = Assert.Single(_db.AssetValuationRecords);
         Assert.Equal(25m, record.EstimatedValue);
-        Assert.Equal("Market evidence (low confidence)", record.Source);
-        Assert.Contains("Low confidence", record.Notes);
+        Assert.Equal("Market evidence", record.Source);
+        Assert.Contains("comparable listing", record.Notes);
     }
 
     [Fact]
@@ -385,7 +386,7 @@ public sealed class VideoScanPickerTests : IDisposable
             .Single(b => b.TextContent.Trim() == "Revalue")
             .ClickAsync(new MouseEventArgs());
 
-        Assert.Contains("no usable comparable listings", page.Find("[role=alert]").TextContent);
+        Assert.Contains("No usable comparable listings", page.Find("[role=alert]").TextContent);
         var detail = await _repository.GetByIdAsync(id);
         Assert.Equal(50m, Assert.Single(detail!.ValuationHistory).EstimatedValue);
     }

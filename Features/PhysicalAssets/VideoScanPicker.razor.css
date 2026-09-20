@@ -32,8 +32,8 @@
 .item-polygon {
     pointer-events: auto;
     cursor: pointer;
-    fill: rgb(255 193 7 / 20%);
-    stroke: #ffc107;
+    fill: color-mix(in srgb, var(--accent) 20%, transparent);
+    stroke: var(--accent);
     stroke-width: 0.5;
     transition:
         fill 0.15s,
@@ -41,39 +41,39 @@
 }
 
 .item-polygon:hover {
-    fill: rgb(255 193 7 / 40%);
+    fill: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .item-polygon.selected {
-    fill: rgb(25 135 84 / 35%);
-    stroke: #75ffba;
+    fill: color-mix(in srgb, var(--positive) 35%, transparent);
+    stroke: var(--positive);
     stroke-width: 0.7;
 }
 
 .item-polygon.selected:hover {
-    fill: rgb(25 135 84 / 50%);
+    fill: color-mix(in srgb, var(--positive) 50%, transparent);
 }
 
 .item-region {
     position: absolute;
-    border: 3px solid #ffc107;
-    background: rgb(255 193 7 / 12%);
+    border: 3px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
     padding: 0;
     cursor: pointer;
     z-index: 2;
 }
 
 .item-region.selected {
-    border-color: #75ffba;
-    background: rgb(25 135 84 / 25%);
+    border-color: var(--positive);
+    background: color-mix(in srgb, var(--positive) 25%, transparent);
 }
 
 .item-region span {
     position: absolute;
     top: 0;
     left: 0;
-    background: #172838;
-    color: white;
+    background: var(--brand-strong);
+    color: var(--text-inverse);
     padding: 2px 5px;
     font-size: 0.8rem;
     max-width: 100%;

@@ -1,9 +1,11 @@
 namespace MoneyMirror.PhysicalAssets;
 
 /// <summary>Builds an asset valuation from structured market listings, without an LLM.
-/// Falls back to <see cref="AiEstimatedValuationService"/>'s price guess when the market-data
-/// provider itself fails (credentials, network, rate limit) - not when it succeeds with zero
-/// usable listings, which is already a valid, explicit "no market value" result.</summary>
+/// Falls back to <see cref="AiEstimatedValuationService"/>'s price guess whenever eBay
+/// itself does not produce a usable value - either it fails outright (credentials,
+/// network, rate limit) or it succeeds with zero usable comparable listings. Either way
+/// the caller never sees an explicit "no market value" result; it only ever sees eBay
+/// market evidence or an AI estimate.</summary>
 public sealed class EvidenceBasedAssetValuationService : IAssetValuationService
 {
     private readonly IMarketDataService _marketDataService;
@@ -28,6 +30,7 @@ public sealed class EvidenceBasedAssetValuationService : IAssetValuationService
         CancellationToken cancellationToken = default
     )
     {
+        AssetValuation? marketValuation = null;
         try
         {
             var evidence = await _marketDataService.SearchUsedListingsAsync(
@@ -36,11 +39,15 @@ public sealed class EvidenceBasedAssetValuationService : IAssetValuationService
                 model,
                 cancellationToken
             );
-            return MarketValuationCalculator.Calculate(evidence, _timeProvider.GetUtcNow());
+            marketValuation = MarketValuationCalculator.Calculate(evidence, _timeProvider.GetUtcNow());
         }
         catch (EbayMarketDataException)
         {
-            return await _fallback.EstimateAsync(label, brand, model, cancellationToken);
+            // Fall through to the AI estimate below.
         }
+
+        return marketValuation?.EstimatedValueUsd is not null
+            ? marketValuation
+            : await _fallback.EstimateAsync(label, brand, model, cancellationToken);
     }
 }

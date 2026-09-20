@@ -375,6 +375,33 @@ a {
     background-color: var(--brand-surface) !important;
 }
 
+.badge.bg-success {
+    color: var(--text-inverse);
+    background-color: var(--positive-text) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--accent-surface) !important;
+}
+
+.badge.bg-info {
+    color: var(--brand);
+    background-color: var(--brand-surface) !important;
+}
+
+.btn-success {
+    --bs-btn-bg: var(--positive-text);
+    --bs-btn-border-color: var(--positive-text);
+    --bs-btn-color: var(--text-inverse);
+    --bs-btn-hover-bg: var(--positive);
+    --bs-btn-hover-border-color: var(--positive);
+    --bs-btn-hover-color: var(--text-inverse);
+    --bs-btn-active-bg: var(--positive);
+    --bs-btn-active-border-color: var(--positive);
+    --bs-btn-disabled-bg: var(--positive-text);
+    --bs-btn-disabled-border-color: var(--positive-text);
+}
+
 .alert {
     --bs-alert-border-radius: var(--radius-md);
     border: 1px solid var(--glass-border);

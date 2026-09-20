@@ -49,7 +49,7 @@ public sealed class InventoryListTests : IDisposable
 
         var detail = await _repository.GetByIdAsync(saved.Id);
         var entry = Assert.Single(detail!.ValuationHistory);
-        Assert.Contains("AI estimate", entry.Source);
+        Assert.Contains("Market evidence", entry.Source);
         Assert.Equal("Standing Desk", _valuation.LastLabel);
     }
 
