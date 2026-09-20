@@ -1,23 +1,26 @@
 /* "Pocket Ledger" mobile concept (see design/mobile-mockups/c-pocket-ledger.html)
-   built for real here. Tokens are declared on this wrapper rather than :root -
-   scoped .razor.css files must never redeclare :root, see theme.css - and
-   inherit down into InventoryList.razor's markup through the normal CSS
-   cascade regardless of each component's own scope attribute. Sora/Inter are
-   loaded from App.razor's <head> - scoped CSS files cannot use @import. */
+   built for real here, recolored to the site's own palette rather than a
+   distinct violet identity. Tokens are declared on this wrapper rather than
+   :root - scoped .razor.css files must never redeclare :root, see theme.css
+   - and inherit down into InventoryList.razor's markup through the normal
+   CSS cascade regardless of each component's own scope attribute. The
+   --pl-* names are kept (rather than renamed to the tokens they now equal)
+   so the rest of this file and InventoryList.razor.css did not need every
+   color property rewritten. Sora/Inter are loaded from App.razor's <head> -
+   scoped CSS files cannot use @import. */
 .ledger-page {
-    --pl-bg: #f5f3ff;
-    --pl-card: #ffffff;
-    --pl-violet: #7c6ff0;
-    --pl-violet-deep: #5d4fd6;
-    --pl-violet-tint: #efecff;
-    --pl-ink: #1b1832;
-    --pl-muted: #746e8c;
-    --pl-shadow: 0 10px 24px -14px rgba(60, 50, 120, 0.35);
+    --pl-bg: transparent;
+    --pl-card: var(--glass-bg);
+    --pl-violet: var(--brand);
+    --pl-violet-deep: var(--brand-strong);
+    --pl-violet-tint: var(--brand-surface);
+    --pl-ink: var(--text);
+    --pl-muted: var(--text-muted);
+    --pl-shadow: var(--shadow-2);
 
     max-width: 640px;
     margin: 0 auto;
-    padding: 2rem 1.25rem 4rem;
-    border-radius: 1.5rem;
+    padding: 1.5rem 1rem 3rem;
     background: var(--pl-bg);
     color: var(--pl-ink);
     font-family: "Inter", sans-serif;
@@ -25,20 +28,10 @@
 
 .ledger-header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
     gap: 1rem;
     margin-bottom: 1.25rem;
-}
-
-.ledger-eyebrow {
-    margin: 0 0 0.25rem;
-    color: var(--pl-violet-deep);
-    font-family: "Inter", sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
 }
 
 .ledger-header h1 {
@@ -58,8 +51,8 @@
 
 .ledger-cta {
     display: inline-flex;
-    flex: none;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
     padding: 0.6rem 1rem;
     border-radius: 999px;
@@ -70,7 +63,7 @@
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
-    box-shadow: 0 8px 18px -8px rgba(124, 111, 240, 0.7);
+    box-shadow: var(--shadow-1);
 }
 
 .ledger-cta svg {
@@ -83,18 +76,29 @@
     color: #fff;
 }
 
-@media (max-width: 480px) {
+/* ===================================================================
+ * Desktop
+ * ===================================================================
+ * Color already matches at every width - these are the shape changes
+ * that make a page-header read the same as every other page's once
+ * there is room for a row layout instead of a stack.
+ */
+@media (min-width: 48rem) {
     .ledger-page {
-        padding: 1.5rem 1rem 3rem;
-        border-radius: 0;
+        max-width: var(--content-max);
+        padding: 0.25rem 0 1rem;
     }
 
     .ledger-header {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 1.75rem;
     }
 
-    .ledger-cta {
-        justify-content: center;
+    .ledger-header h1 {
+        font-family: var(--font-display);
+        font-size: clamp(2.25rem, 4vw, 3.25rem);
+        font-weight: 400;
     }
 }

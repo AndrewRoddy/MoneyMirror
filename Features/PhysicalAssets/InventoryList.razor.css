@@ -8,30 +8,30 @@
     overflow: hidden;
     margin-bottom: 1rem;
     padding: 1.1rem 1.2rem 1rem;
+    border: 1px solid var(--glass-border);
     border-radius: 1.4rem;
-    background: linear-gradient(135deg, var(--pl-violet) 0%, #9b8ff5 100%);
-    color: #fff;
-    box-shadow: 0 14px 30px -16px rgba(124, 111, 240, 0.65);
+    background-color: var(--pl-card);
+    background-image: radial-gradient(
+        20rem 11rem at 88% -25%,
+        color-mix(in srgb, var(--accent) 24%, transparent),
+        transparent 70%
+    );
+    color: var(--pl-ink);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-3);
 }
 
-.ledger-total-card::after {
-    content: "";
-    position: absolute;
-    top: -60px;
-    right: -40px;
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.16);
-}
-
-.ledger-total-card .ledger-eyebrow {
-    position: relative;
-    color: rgba(255, 255, 255, 0.8);
+.ledger-total-label {
+    margin: 0 0 0.25rem;
+    color: var(--accent-text);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
 }
 
 .ledger-total-figure {
-    position: relative;
     display: flex;
     align-items: baseline;
     gap: 0.4rem;
@@ -43,23 +43,23 @@
 .ledger-total-figure small {
     font-size: 0.8rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--pl-muted);
 }
 
 .ledger-total-foot {
-    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-top: 0.6rem;
+    color: var(--pl-muted);
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.85);
 }
 
 .ledger-total-pill {
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--accent-surface);
+    color: var(--accent-text);
     font-weight: 600;
 }
 
@@ -119,16 +119,9 @@
     box-shadow: var(--pl-shadow);
 }
 
-/*
- * Name and value on the first line, category and provenance on the
- * second, with the caret spanning both. Laid out on a grid rather than
- * left to wrap, so a long item name cannot push the value onto its own
- * line on a narrow screen.
- */
 .asset-row-summary {
     display: flex;
     align-items: center;
-
     width: 100%;
     gap: 0.7rem;
     padding: 0.7rem 0.85rem;
@@ -138,7 +131,6 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
-    transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .asset-row-summary:hover {
@@ -186,7 +178,7 @@
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     mask-repeat: no-repeat;
     mask-position: center;
-    mask-size: contain;
+    mask-size: cover;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
     -webkit-mask-size: cover;
@@ -279,48 +271,50 @@
     gap: 0.5rem;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 26rem) {
     .ledger-add-grid {
         grid-template-columns: 1.4fr 1fr 1fr auto;
         align-items: center;
     }
+}
 
-    .asset-row-summary {
-        grid-template-columns: minmax(0, 1fr) auto auto auto;
-        grid-template-areas: "name meta value caret";
-        gap: 0.75rem;
-        padding: 0.9rem 1.25rem;
+/* ===================================================================
+ * Desktop
+ * ===================================================================
+ * Color already matches the rest of the app at every width now - what
+ * is left is shape. A stack of floating cards is a mobile idiom, so
+ * here the list becomes the one glass pane with hairline rows every
+ * other list already uses (see NetWorthCalculator's .records-card).
+ */
+@media (min-width: 48rem) {
+    .asset-list {
+        gap: 0;
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        box-shadow: var(--shadow-2);
+    }
+
+    .asset-row {
+        border-radius: 0;
+        background: none;
+        box-shadow: none;
+        border-top: 1px solid var(--glass-hairline);
+    }
+
+    .asset-row:first-child {
+        border-top: 0;
     }
 
     .asset-row-detail {
-        padding: 0 1.25rem 1.25rem;
+        border-top-color: var(--glass-hairline);
     }
 
-    .asset-edit-form {
-        grid-template-columns: 2fr 1.5fr 1.5fr 1fr auto;
-        align-items: center;
-        padding: 0.9rem 1.25rem;
+    .ledger-add-card {
+        border: 1px solid var(--glass-border);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
     }
-
-    .asset-row-actions .btn {
-        flex: none;
-    }
-
-    #add-item .col {
-        flex: 1 0 0%;
-    }
-
-    #add-item .col-auto {
-        flex: 0 0 auto;
-    }
-
-    #add-item .col-auto .btn {
-        width: auto;
-    }
-}
-
-/* The chevron, carried over unchanged. */
-.asset-row-caret {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
 }
