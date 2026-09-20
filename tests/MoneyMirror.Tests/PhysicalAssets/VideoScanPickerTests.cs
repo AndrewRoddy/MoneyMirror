@@ -69,8 +69,12 @@ public sealed class VideoScanPickerTests : IDisposable
         {
             await page.FindAll("button").Where(b => b.TextContent.Trim() == "Estimate value").ElementAt(i).ClickAsync(new MouseEventArgs());
             page.WaitForAssertion(() => Assert.Single(page.FindAll("button"), b => b.TextContent.Trim() == "Save as new item"));
-            await page.FindAll("button").Single(b => b.TextContent.Trim() == "Save as new item").ClickAsync(new MouseEventArgs());
-            page.WaitForAssertion(() => Assert.Equal(i + 1, page.FindAll("a").Count(a => a.TextContent == "View item")));
+            var saveButton = page.FindAll("button").Single(b => b.TextContent.Trim() == "Save as new item");
+            Assert.False(saveButton.HasAttribute("disabled"), page.Markup);
+            await saveButton.ClickAsync(new MouseEventArgs());
+            Assert.DoesNotContain("Failed to save to inventory:", page.Markup);
+            Assert.Equal(i + 1, (await _repository.GetAllAsync()).Count);
+            page.WaitForAssertion(() => Assert.True(page.FindAll("a").Count(a => a.TextContent.Trim() == "View item") == i + 1, page.Markup));
         }
 
         var saved = await _repository.GetAllAsync();
