@@ -1,0 +1,238 @@
+using Bunit;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
+using MoneyMirror.Data;
+using MoneyMirror.Features.PhysicalAssets;
+using MoneyMirror.PhysicalAssets;
+using ScanPage = MoneyMirror.Features.PhysicalAssets.PhysicalAssets;
+
+namespace MoneyMirror.Tests.PhysicalAssets;
+
+/// <summary>Real rendered components and SQLite repository; only browser streams and AI are faked.</summary>
+public sealed class VideoScanPickerTests : IDisposable
+{
+    private readonly BunitContext _context = new();
+    private readonly SqliteConnection _connection = new("Filename=:memory:");
+    private readonly MoneyMirrorDbContext _db;
+    private readonly EfPhysicalAssetRepository _repository;
+    private readonly FakeDetector _detector = new();
+    private readonly FakeStorage _storage = new();
+    private readonly BunitJSModuleInterop _module;
+
+    public VideoScanPickerTests()
+    {
+        _connection.Open();
+        _db = new MoneyMirrorDbContext(new DbContextOptionsBuilder<MoneyMirrorDbContext>().UseSqlite(_connection).Options);
+        _db.Database.EnsureCreated();
+        _repository = new EfPhysicalAssetRepository(_db);
+        _context.Services.AddLogging();
+        _context.Services.AddOptions<ImageUploadOptions>();
+        _context.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
+        _context.Services.AddSingleton<IPhysicalAssetDetectionService>(_detector);
+        _context.Services.AddSingleton<IPossessionImageStorage>(_storage);
+        _context.Services.AddSingleton<IAssetValuationService>(new FakeValuation());
+        _context.Services.AddSingleton<IPhysicalAssetRepository>(_repository);
+        _module = _context.JSInterop.SetupModule("./js/video-scan.js");
+        _module.Setup<double[]>("prepare", _ => true).SetResult([0.5, 1.5]);
+        _module.Setup<string>("frameUrl", _ => true).SetResult("blob:test-frame");
+        _module.Setup<IJSStreamReference>("frameStream", _ => true).SetResult(new FakeStream());
+        _module.Setup<IJSStreamReference>("cropStream", _ => true).SetResult(new FakeStream());
+        _module.SetupVoid("dispose", _ => true).SetVoidResult();
+    }
+
+    [Fact]
+    public async Task SelectedItemsOnly_GetSeparateCrops_AndPersistThroughExistingReview()
+    {
+        var page = _context.Render<ScanPage>();
+        page.Find("#room-video").Change("room.mp4");
+        page.FindAll("button").Single(b => b.TextContent == "Find items in video").Click();
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".item-region").Count));
+        Assert.Empty(_storage.References);
+        Assert.Empty(await _repository.GetAllAsync());
+
+        // Two adjacent sightings of each item share selection. No items start selected.
+        Assert.All(page.FindAll(".item-region"), b => Assert.Equal("false", b.GetAttribute("aria-pressed")));
+        page.FindAll(".item-region")[0].Click();
+        page.FindAll(".item-region")[1].Click();
+        page.FindAll("button").Single(b => b.TextContent.Trim() == "1.5 s").Click();
+        Assert.All(page.FindAll(".item-region"), b => Assert.Equal("true", b.GetAttribute("aria-pressed")));
+        page.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("img[src^='/api/possession-images/']").Count));
+        Assert.Equal(2, _storage.References.Count);
+        Assert.Equal(2, _module.Invocations.Count(i => i.Identifier == "cropStream"));
+        Assert.Empty(await _repository.GetAllAsync()); // Reviewing is not inventory consent.
+
+        for (var i = 0; i < 2; i++)
+        {
+            page.FindAll("button").Where(b => b.TextContent.Trim() == "Estimate value").ElementAt(i).Click();
+            page.WaitForAssertion(() => Assert.Single(page.FindAll("button"), b => b.TextContent.Trim() == "Save as new item"));
+            page.FindAll("button").Single(b => b.TextContent.Trim() == "Save as new item").Click();
+            page.WaitForAssertion(() => Assert.Equal(i + 1, page.FindAll("a").Count(a => a.TextContent == "View item")));
+        }
+
+        var saved = await _repository.GetAllAsync();
+        Assert.Equal(2, saved.Count);
+        var details = await Task.WhenAll(saved.Select(s => _repository.GetByIdAsync(s.Id)));
+        Assert.Equal(_storage.References.Order(), details.Select(d => d!.ImageReference).Order());
+    }
+
+    [Fact]
+    public void UnselectedItems_AreNotCroppedOrPassedToReview()
+    {
+        IReadOnlyList<SelectedVideoAsset>? reviewed = null;
+        var picker = _context.Render<VideoScanPicker>(p => p.Add(c => c.OnSelected, items => reviewed = items));
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Equal(2, picker.FindAll(".item-region").Count));
+        picker.FindAll(".item-region")[1].Click();
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        picker.WaitForAssertion(() => Assert.NotNull(reviewed));
+        Assert.Equal("Lamp", Assert.Single(reviewed!).Detection.Label);
+        Assert.Single(_storage.References);
+        var crop = Assert.Single(_module.Invocations, i => i.Identifier == "cropStream");
+        Assert.Equal(new BoundingBox(0.6, 0.1, 0.2, 0.4), crop.Arguments[2]);
+    }
+
+    [Fact]
+    public void MissingBoxes_UseCheckbox_AndFailedFramesDoNotDiscardSuccessfulOnes()
+    {
+        _detector.Detect = (call, _) => call == 1
+            ? Task.FromException<IReadOnlyList<DetectedAsset>>(new AssetDetectionException("Provider unavailable"))
+            : Task.FromResult<IReadOnlyList<DetectedAsset>>([new("Chair", 0.9, null, null, [])]);
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Contains("1 frame(s) could not be analyzed", picker.Markup));
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "1.5 s").Click();
+        Assert.Empty(picker.FindAll(".item-region"));
+        Assert.Contains("saves the whole frame", picker.Markup);
+        picker.Find("input[type=checkbox]").Change(true);
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        picker.WaitForAssertion(() => Assert.Single(_storage.References));
+        Assert.Null(Assert.Single(_module.Invocations, i => i.Identifier == "cropStream").Arguments[2]);
+    }
+
+    [Fact]
+    public async Task CancelDetection_ReleasesBusyState_WithoutSavingImages()
+    {
+        _detector.Detect = async (_, token) =>
+        {
+            await Task.Delay(Timeout.Infinite, token);
+            return [];
+        };
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        var scan = picker.Find("button").ClickAsync(new MouseEventArgs());
+        picker.WaitForAssertion(() => Assert.True(picker.Find("#room-video").HasAttribute("disabled")));
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+        await scan;
+        picker.WaitForAssertion(() => Assert.Contains("Scan cancelled", picker.Markup));
+        Assert.False(picker.Find("#room-video").HasAttribute("disabled"));
+        Assert.Empty(_storage.References);
+    }
+
+    [Fact]
+    public void SaveFailure_PreservesSelection_AndRetryReusesAlreadySavedCrop()
+    {
+        _storage.FailOnCall = 2;
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Equal(2, picker.FindAll(".item-region").Count));
+        picker.FindAll(".item-region")[0].Click();
+        picker.FindAll(".item-region")[1].Click();
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        picker.WaitForAssertion(() => Assert.Contains("selection is preserved", picker.Markup));
+        Assert.Single(_storage.References);
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        picker.WaitForAssertion(() => Assert.Contains("Selected items are ready below", picker.Markup));
+        Assert.Equal(2, _storage.References.Count);
+        Assert.Equal(3, _storage.Calls);
+    }
+
+    [Fact]
+    public async Task CancelSaving_PreservesSelection_ForRetry()
+    {
+        _storage.WaitForCancellation = true;
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Equal(2, picker.FindAll(".item-region").Count));
+        picker.FindAll(".item-region")[0].Click();
+        var save = picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").ClickAsync(new MouseEventArgs());
+        picker.WaitForAssertion(() => Assert.Contains("Saving selected item images", picker.Markup));
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Cancel").Click();
+        await save;
+        picker.WaitForAssertion(() => Assert.Contains("Saving cancelled", picker.Markup));
+        Assert.Empty(_storage.References);
+        Assert.Equal("true", picker.FindAll(".item-region")[0].GetAttribute("aria-pressed"));
+        _storage.WaitForCancellation = false;
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        picker.WaitForAssertion(() => Assert.Single(_storage.References));
+    }
+
+    [Fact]
+    public void DecodeFailure_ShowsActionableError_AndAllowsRetry()
+    {
+        _module.Setup<double[]>("prepare", _ => true).SetException(new JSException("Choose a video up to 30 seconds long.\nstack trace"));
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Contains("Choose a video up to 30 seconds long.", picker.Find("[role=alert]").TextContent));
+        Assert.DoesNotContain("stack trace", picker.Markup);
+        Assert.False(picker.Find("#room-video").HasAttribute("disabled"));
+        Assert.Empty(_storage.References);
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+        _db.Dispose();
+        _connection.Dispose();
+    }
+
+    private sealed class FakeStream : IJSStreamReference
+    {
+        public long Length => 3;
+        public ValueTask<Stream> OpenReadStreamAsync(long maxAllowedSize = 512000, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<Stream>(new MemoryStream([1, 2, 3]));
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class FakeDetector : IPhysicalAssetDetectionService
+    {
+        private int _calls;
+        public Func<int, CancellationToken, Task<IReadOnlyList<DetectedAsset>>> Detect { get; set; } = (_, _) =>
+            Task.FromResult<IReadOnlyList<DetectedAsset>>([
+                new("Chair", 0.9, new(0.1, 0.1, 0.3, 0.3), null, []),
+                new("Lamp", 0.8, new(0.6, 0.1, 0.2, 0.4), null, [])]);
+        public Task<IReadOnlyList<DetectedAsset>> DetectAsync(byte[] imageBytes, string mediaType, CancellationToken cancellationToken = default) =>
+            Detect(++_calls, cancellationToken);
+    }
+
+    private sealed class FakeStorage : IPossessionImageStorage
+    {
+        public List<string> References { get; } = [];
+        public int Calls { get; private set; }
+        public int FailOnCall { get; set; }
+        public bool WaitForCancellation { get; set; }
+        public async Task<string> SaveAsync(Stream content, string fileName, CancellationToken cancellationToken = default)
+        {
+            if (WaitForCancellation) await Task.Delay(Timeout.Infinite, cancellationToken);
+            if (++Calls == FailOnCall) throw new PossessionImageStorageException("Test disk failure");
+            var reference = $"item-{Calls}.jpg";
+            References.Add(reference);
+            return reference;
+        }
+        public Task<Stream?> OpenReadAsync(string reference, CancellationToken cancellationToken = default) => Task.FromResult<Stream?>(null);
+    }
+
+    private sealed class FakeValuation : IAssetValuationService
+    {
+        public Task<AssetValuation> EstimateAsync(string label, string? brand, string? model, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new AssetValuation(100, "Test estimate", DateTimeOffset.UtcNow, true));
+    }
+}

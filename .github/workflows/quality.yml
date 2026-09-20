@@ -38,3 +38,8 @@ jobs:
         run: dotnet restore tests/MoneyMirror.Tests/MoneyMirror.Tests.csproj
       - name: Run tests
         run: dotnet test tests/MoneyMirror.Tests/MoneyMirror.Tests.csproj --no-restore --configuration Release --logger "console;verbosity=normal"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test video frame sampling and crops
+        run: npm run test:video

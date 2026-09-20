@@ -15,14 +15,16 @@
     <header class="page-header">
         <div>
             <h1>Physical Assets</h1>
-            <p class="page-subtitle">Photograph and value your possessions here.</p>
+            <p class="page-subtitle">Scan a photo or short video to identify and value your possessions.</p>
         </div>
     </header>
 
     <section class="page-card">
         <h2 class="page-section-title">Scan a possession</h2>
-        <InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@_isProcessing" />
+        <InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@(IsWorking || _videoBusy)" />
     </section>
+
+    <VideoScanPicker Disabled="@IsWorking" OnSelected="ReviewVideoItems" BusyChanged="@(busy => _videoBusy = busy)" />
 
 @if (_isProcessing)
 {
@@ -95,13 +97,18 @@
             <button type="button" class="btn btn-outline-danger" @onclick="DiscardLowConfidence">
                 Discard all low-confidence
             </button>
-            <span class="text-muted small">Bulk actions apply to all detections in this photo.</span>
+            <span class="text-muted small">Bulk actions apply to all items in this review.</span>
         </div>
 
         @foreach (var detection in FilteredDetections)
         {
             var detectionIndex = DetectionIndex(detection);
             <div class="border rounded p-3 mb-2 @(detection.Included ? "" : "opacity-50")">
+                @if (detection.ImageReference is not null)
+                {
+                    <img src="@($"/api/possession-images/{detection.ImageReference}")" alt="Selected @detection.Original.Label from video"
+                         style="max-width: 240px; max-height: 180px;" class="mb-2" />
+                }
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="include-@detectionIndex" @bind="detection.Included" />
                     <label class="form-check-label" for="include-@detectionIndex">
@@ -137,7 +144,7 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@detection.IsEstimating">
+                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@(IsWorking || _videoBusy || detection.SavedItemId is not null)">
                         @(detection.IsEstimating ? "Estimating value with AI..." : "Estimate value")
                     </button>
 
@@ -173,7 +180,7 @@
                                             type="button"
                                             class="btn btn-outline-warning btn-sm me-2 mb-1"
                                             @onclick="() => SaveToInventoryAsync(detection, mergeIntoId: duplicate.Id)"
-                                            disabled="@detection.IsSaving">
+                                            disabled="@(IsWorking || _videoBusy)">
                                             Merge into "@duplicate.Name"
                                         </button>
                                     }
@@ -183,7 +190,7 @@
                             <button
                                 class="btn btn-success btn-sm mt-2"
                                 @onclick="() => SaveToInventoryAsync(detection, mergeIntoId: null)"
-                                disabled="@detection.IsSaving">
+                                disabled="@(IsWorking || _videoBusy)">
                                 @(detection.IsSaving ? "Saving..." : "Save as new item")
                             </button>
 
@@ -210,6 +217,8 @@
     private const double HighConfidenceThreshold = 0.8;
 
     private bool _isProcessing;
+    private bool _videoBusy;
+    private bool IsWorking => _isProcessing || (_detections?.Any(d => d.IsSaving || d.IsEstimating) ?? false);
     private string? _processingMessage;
     private string? _errorMessage;
     private string? _fileName;
@@ -218,6 +227,15 @@
     private string _categoryFilter = "all";
     private string _confidenceFilter = "all";
     private string _sortOrder = "confidence-desc";
+
+    private void ReviewVideoItems(IReadOnlyList<SelectedVideoAsset> items)
+    {
+        _errorMessage = null;
+        _imageReference = null;
+        _categoryFilter = _confidenceFilter = "all";
+        _sortOrder = "confidence-desc";
+        _detections = items.Select(item => new ReviewableDetection(item.Detection) { ImageReference = item.ImageReference }).ToList();
+    }
 
     private IReadOnlyList<string> CategoryOptions => _detections is null
         ? Array.Empty<string>()
@@ -294,6 +312,7 @@
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
+        if (IsWorking || _videoBusy) return;
         _errorMessage = null;
         _imageReference = null;
         _detections = null;
@@ -356,6 +375,7 @@
 
     private async Task EstimateValueAsync(ReviewableDetection detection)
     {
+        if (IsWorking || _videoBusy || detection.SavedItemId is not null) return;
         detection.ValuationError = null;
         detection.IsEstimating = true;
         StateHasChanged();
@@ -393,7 +413,7 @@
     // were found.
     private async Task SaveToInventoryAsync(ReviewableDetection detection, Guid? mergeIntoId)
     {
-        if (detection.Valuation is null)
+        if (detection.Valuation is null || IsWorking || _videoBusy || detection.SavedItemId is not null)
         {
             return;
         }
@@ -428,7 +448,7 @@
                         detection.Original.Label,
                         Category: null,
                         IdentifiedProductModelOf(detection),
-                        _imageReference,
+                        detection.ImageReference ?? _imageReference,
                         detection.Valuation.EstimatedValueUsd,
                         detection.Valuation.Reasoning));
             }
@@ -453,6 +473,7 @@
     private class ReviewableDetection(DetectedAsset original)
     {
         public DetectedAsset Original { get; } = original;
+        public string? ImageReference { get; init; }
         public bool Included { get; set; } = true;
         public string Brand { get; set; } = original.Identification?.Brand ?? string.Empty;
         public string Model { get; set; } = original.Identification?.Model ?? string.Empty;
@@ -474,4 +495,3 @@
             || (Original.Identification is not null && Original.Identification.Confidence < LowConfidenceThreshold);
     }
 }
-
