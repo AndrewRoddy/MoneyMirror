@@ -6,17 +6,27 @@ monolith, one database, one implicit user — no auth or multi-tenancy.
 
 ## Configuration
 
-AI and BLS settings live under `Ai:Nemotron`, `Ai:VisionModel`, and `Bls`
-(`BaseUrl`, `Model` / `ApiKey` as applicable). `appsettings.json` ships empty
-`ApiKey` placeholders — never commit real keys. Set them locally:
+AI, BLS, and eBay Browse API settings live under `Ai:Nemotron`,
+`Ai:VisionModel`, `Bls`, and `Ebay` (`ClientId`, `ClientSecret`, `BaseUrl`, and
+`MarketplaceId`). `appsettings.json` ships empty secret placeholders — never
+commit real keys. Set them locally:
 
 ```sh
 dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
 dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
 dotnet user-secrets set "Bls:ApiKey" "<your-key>"
+dotnet user-secrets set "Ebay:ClientId" "<your-app-id>"
+dotnet user-secrets set "Ebay:ClientSecret" "<your-app-secret>"
 ```
 
-Or use env vars: `Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`, `Bls__ApiKey`.
+Or use env vars: `Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`,
+`Bls__ApiKey`, `Ebay__ClientId`, `Ebay__ClientSecret`.
+
+Physical asset valuations query up to 20 used eBay US listings and calculate a
+median from usable USD prices. No usable listings produce a null value and an
+explicit low-confidence explanation. The valuation returns each comparable's
+price, source, title, and condition in `AssetValuation.Evidence`; that evidence
+is persisted and displayed alongside each valuation in inventory history.
 
 A free BLS v2 key from [data.bls.gov/registrationEngine](https://data.bls.gov/registrationEngine/)
 raises rate limits; the app works without one at the unregistered limit.
@@ -37,6 +47,8 @@ on Postgres volumes and host-local `dotnet run`: [backend/postgresql_setup.md](.
 | `NEMOTRON_API_KEY` | `Ai:Nemotron:ApiKey` |
 | `VISION_API_KEY` | `Ai:VisionModel:ApiKey` |
 | `BLS_API_KEY` | `Bls:ApiKey` |
+| `EBAY_CLIENT_ID` | `Ebay:ClientId` |
+| `EBAY_CLIENT_SECRET` | `Ebay:ClientSecret` |
 
 `docker compose down` stops the stack; add `-v` to wipe DB and image volumes.
 

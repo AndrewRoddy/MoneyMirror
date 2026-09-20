@@ -8,6 +8,7 @@ using MoneyMirror.Features.Financial;
 using MoneyMirror.HumanCapital;
 using MoneyMirror.HumanCapital.Configuration;
 using MoneyMirror.PhysicalAssets;
+using MoneyMirror.PhysicalAssets.Configuration;
 
 // Containers start with no LANG/LC_ALL, so .NET falls back to the invariant culture
 // and renders currency as "¤" instead of "$". Pin the formatting culture so money
@@ -29,6 +30,7 @@ builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
 );
 builder.Services.Configure<BlsOptions>(builder.Configuration.GetSection(BlsOptions.SectionName));
+builder.Services.Configure<EbayOptions>(builder.Configuration.GetSection(EbayOptions.SectionName));
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName)
 );
@@ -65,6 +67,9 @@ builder
 builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>(client =>
     client.Timeout = TimeSpan.FromSeconds(15)
 );
+builder.Services.AddHttpClient<IEbayMarketDataService, EbayMarketDataService>(client =>
+    client.Timeout = TimeSpan.FromSeconds(15)
+);
 builder.Services.AddScoped<
     IMarketPotentialExplanationService,
     NemotronMarketPotentialExplanationService
@@ -83,7 +88,7 @@ builder.Services.AddScoped<ISamSegmentationEngine, BlazorSamSegmentationEngine>(
 builder.Services.AddSingleton<IFinancialEntryStore, InMemoryFinancialEntryStore>();
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
-builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
+builder.Services.AddScoped<IAssetValuationService, EvidenceBasedAssetValuationService>();
 builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 builder.Services.AddScoped<ICompensationEstimationService, AiEstimatedCompensationService>();
 builder.Services.AddScoped<IMarketPotentialSummaryService, CachedMarketPotentialSummaryService>();
