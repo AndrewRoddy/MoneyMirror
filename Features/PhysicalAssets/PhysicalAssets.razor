@@ -21,8 +21,8 @@
 
     <section class="page-card">
         <h2 class="page-section-title">Scan a possession</h2>
-        <InputFile OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@(IsWorking || _videoBusy)" />
-    </section>
+        <label for="possession-photo" class="btn btn-primary @(IsWorking || _videoBusy ? "disabled" : "")">Choose a photo</label>
+        <InputFile id="possession-photo" class="visually-hidden" OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@(IsWorking || _videoBusy)" />    </section>
 
     <VideoScanPicker Disabled="@IsWorking" OnSelected="ReviewVideoItems" BusyChanged="@(busy => _videoBusy = busy)" />
 

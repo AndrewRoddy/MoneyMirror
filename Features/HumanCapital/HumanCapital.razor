@@ -22,8 +22,8 @@
     <section class="page-card">
         <h2 class="page-section-title">Resume</h2>
         <p class="text-muted">PDF and DOCX files are supported. Your resume is used to build an editable professional profile.</p>
-        <InputFile OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />
-    </section>
+        <label for="resume-file" class="btn btn-primary @(_isProcessing ? "disabled" : "")">Upload a Resume</label>
+        <InputFile id="resume-file" class="visually-hidden" OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />    </section>
 
 @if (_isProcessing)
 {
