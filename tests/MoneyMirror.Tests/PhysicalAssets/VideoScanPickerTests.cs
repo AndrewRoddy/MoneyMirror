@@ -50,7 +50,7 @@ public sealed class VideoScanPickerTests : IDisposable
     [Fact]
     public async Task SelectedItemsOnly_GetSeparateCrops_AndPersistThroughExistingReview()
     {
-        var page = _context.Render<ScanPage>();
+        var page = _context.Render<ScanPage>(p => p.Add(x => x.ShowVideoScan, true));
         page.Find("#room-video").Change("room.mp4");
         await page.FindAll("button")
             .Single(b => b.TextContent == "Find items in video")
@@ -332,7 +332,7 @@ public sealed class VideoScanPickerTests : IDisposable
     {
         await _repository.AddAsync(new PhysicalAssetInput("Chair", null, null, 50));
         _valuation.Result = MarketValuationCalculator.Calculate([], DateTimeOffset.UtcNow);
-        var page = _context.Render<ScanPage>();
+        var page = _context.Render<ScanPage>(p => p.Add(x => x.ShowVideoScan, true));
         page.Find("#room-video").Change("room.mp4");
         await page.FindAll("button")
             .Single(b => b.TextContent.Trim() == "Find items in video")
@@ -360,7 +360,7 @@ public sealed class VideoScanPickerTests : IDisposable
             [new(25, "Market", "Chair", "Used")],
             DateTimeOffset.UtcNow
         );
-        var page = _context.Render<ScanPage>();
+        var page = _context.Render<ScanPage>(p => p.Add(x => x.ShowVideoScan, true));
         page.Find("#room-video").Change("room.mp4");
         await page.FindAll("button")
             .Single(b => b.TextContent.Trim() == "Find items in video")

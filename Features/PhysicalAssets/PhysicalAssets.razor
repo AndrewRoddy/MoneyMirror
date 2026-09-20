@@ -15,18 +15,21 @@
     <header class="page-header">
         <div>
             <h1>Physical Assets</h1>
-            <p class="page-subtitle">Scan a photo or short video to identify and value your possessions.</p>
+            <p class="page-subtitle">Scan a photo or point your camera at possessions to identify and value them in real time.</p>
         </div>
     </header>
 
     <section class="page-card">
         <h2 class="page-section-title">Scan a possession</h2>
-        <label for="possession-photo" class="btn btn-primary @(IsWorking || _videoBusy ? "disabled" : "")">Choose a photo</label>
-        <InputFile id="possession-photo" class="visually-hidden" OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@(IsWorking || _videoBusy)" />    </section>
-
-    <VideoScanPicker Disabled="@IsWorking" OnSelected="ReviewVideoItems" BusyChanged="@(busy => _videoBusy = busy)" />
+        <label for="possession-photo" class="btn btn-primary @(IsWorking ? "disabled" : "")">Choose a photo</label>
+        <InputFile id="possession-photo" class="visually-hidden" OnChange="OnFileSelectedAsync" accept="image/*" capture="environment" disabled="@IsWorking" />    </section>
 
     <LiveCameraScanner Disabled="@IsWorking" OnItemAccepted="ReviewLiveScannedItem" BusyChanged="@(busy => _cameraBusy = busy)" />
+
+@if (ShowVideoScan)
+{
+    <VideoScanPicker Disabled="@IsWorking" OnSelected="ReviewVideoItems" BusyChanged="@(busy => _videoBusy = busy)" />
+}
 
 @if (_isProcessing)
 {
@@ -146,7 +149,7 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@(IsWorking || _videoBusy || detection.SavedItemId is not null)">
+                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@(IsWorking || detection.SavedItemId is not null)">
                         @(detection.IsEstimating ? "Estimating value with AI..." : "Estimate value")
                     </button>
 
@@ -184,7 +187,7 @@
                                             type="button"
                                             class="btn btn-outline-warning btn-sm me-2 mb-1"
                                             @onclick="() => SaveToInventoryAsync(detection, mergeIntoId: duplicate.Id)"
-                                            disabled="@(IsWorking || _videoBusy)">
+                                            disabled="@IsWorking">
                                             Merge into "@duplicate.Name"
                                         </button>
                                     }
@@ -194,7 +197,7 @@
                             <button
                                 class="btn btn-success btn-sm mt-2"
                                 @onclick="() => SaveToInventoryAsync(detection, mergeIntoId: null)"
-                                disabled="@(IsWorking || _videoBusy)">
+                                disabled="@IsWorking">
                                 @(detection.IsSaving ? "Saving..." : "Save as new item")
                             </button>
 
@@ -219,11 +222,13 @@
 @code {
     private const double LowConfidenceThreshold = 0.6;
     private const double HighConfidenceThreshold = 0.8;
+    [Parameter]
+    public bool ShowVideoScan { get; set; }
 
     private bool _isProcessing;
-    private bool _videoBusy;
     private bool _cameraBusy;
-    private bool IsWorking => _isProcessing || _videoBusy || _cameraBusy || (_detections?.Any(d => d.IsSaving || d.IsEstimating) ?? false);
+    private bool _videoBusy;
+    private bool IsWorking => _isProcessing || _cameraBusy || (_videoBusy && ShowVideoScan) || (_detections?.Any(d => d.IsSaving || d.IsEstimating) ?? false);
     private string? _processingMessage;
     private string? _errorMessage;
     private string? _errorRawResponse;
@@ -234,6 +239,8 @@
     private string _confidenceFilter = "all";
     private string _sortOrder = "confidence-desc";
 
+
+
     private void ReviewVideoItems(IReadOnlyList<SelectedVideoAsset> items)
     {
         ClearError();
@@ -242,7 +249,6 @@
         _sortOrder = "confidence-desc";
         _detections = items.Select(item => new ReviewableDetection(item.Detection) { ImageReference = item.ImageReference }).ToList();
     }
-
     private void ReviewLiveScannedItem(LiveScannedItem item)
     {
         ClearError();
@@ -340,7 +346,7 @@
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
-        if (IsWorking || _videoBusy) return;
+        if (IsWorking) return;
         ClearError();
         _imageReference = null;
         _detections = null;
@@ -404,7 +410,7 @@
 
     private async Task EstimateValueAsync(ReviewableDetection detection)
     {
-        if (IsWorking || _videoBusy || detection.SavedItemId is not null) return;
+        if (IsWorking || detection.SavedItemId is not null) return;
         detection.ValuationError = null;
         detection.ValuationRawResponse = null;
         detection.IsEstimating = true;
@@ -444,7 +450,7 @@
     // were found.
     private async Task SaveToInventoryAsync(ReviewableDetection detection, Guid? mergeIntoId)
     {
-        if (detection.Valuation?.EstimatedValueUsd is not { } value || IsWorking || _videoBusy || detection.SavedItemId is not null)
+        if (detection.Valuation?.EstimatedValueUsd is not { } value || IsWorking || detection.SavedItemId is not null)
         {
             return;
         }

@@ -46,9 +46,13 @@
             </svg>
         }
 
-        @if (_isStreaming && !_isFrozen)
+        @if (_isStreaming && !_isFrozen && _statusHint is null)
         {
             <div class="viewfinder-hint">Tap any item to segment</div>
+        }
+        else if (_statusHint is not null)
+        {
+            <div class="viewfinder-hint">@_statusHint</div>
         }
         else if (_isFrozen && _isSegmenting)
         {
@@ -121,10 +125,11 @@
     private bool _isFrozen;
     private bool _isSegmenting;
     private bool _isWorking;
+    private string? _errorMessage;
+    private string? _statusHint;
+    private SamSegmentationResult? _lastResult;
     private string _cameraFacing = FacingEnvironment;
     private SamPromptType _currentPromptMode = SamPromptType.Positive;
-    private string? _errorMessage;
-    private SamSegmentationResult? _lastResult;
     private readonly List<SamPointPrompt> _prompts = new();
 
     public async Task StartCameraAsync()
@@ -205,38 +210,65 @@
 
         _isSegmenting = true;
         await BusyChanged.InvokeAsync(true);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         try
         {
             if (!_isFrozen)
             {
                 await _cameraModule.InvokeVoidAsync("freezeFrame", _video, _canvas);
+
+                _statusHint = "Encoding frame...";
+                StateHasChanged();
+
+                await SamEngine.EncodeFrameAsync(_canvas, cts.Token);
                 _isFrozen = true;
 
-                await SamEngine.EncodeFrameAsync(_canvas);
                 _prompts.Clear();
-
                 var prompt = new SamPointPrompt(coords.X, coords.Y, SamPromptType.Positive);
                 _prompts.Add(prompt);
 
-                _lastResult = await SamEngine.DecodePointAsync(prompt.X, prompt.Y, prompt.Type);
+                _statusHint = "Snapping outline...";
+                StateHasChanged();
+
+                _lastResult = await SamEngine.DecodePointAsync(prompt.X, prompt.Y, prompt.Type, cts.Token);
+                _statusHint = null;
             }
             else
             {
+                _statusHint = "Refining outline...";
+                StateHasChanged();
+
                 var prompt = new SamPointPrompt(coords.X, coords.Y, _currentPromptMode);
                 _prompts.Add(prompt);
 
-                _lastResult = await SamEngine.DecodePointsAsync(_prompts);
+                _lastResult = await SamEngine.DecodePointsAsync(_prompts, cts.Token);
+                _statusHint = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _errorMessage = "Segmentation timed out. Please try tapping again.";
+            _statusHint = null;
+            if (_cameraModule is not null)
+            {
+                await _cameraModule.InvokeVoidAsync("unfreezeFrame", _video);
             }
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
+            _statusHint = null;
+            if (_cameraModule is not null)
+            {
+                await _cameraModule.InvokeVoidAsync("unfreezeFrame", _video);
+            }
             Logger.LogError(ex, "Tap segmentation failed.");
         }
         finally
         {
             _isSegmenting = false;
+            _statusHint = null;
             await BusyChanged.InvokeAsync(false);
         }
     }

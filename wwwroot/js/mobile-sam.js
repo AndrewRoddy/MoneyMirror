@@ -84,23 +84,31 @@ export class ModelStorage {
             throw new Error(`Failed to download model asset from ${url}: HTTP ${response.status}`);
         }
 
+        const totalBytes = Number(response.headers.get("content-length")) || 0;
+        let buffer;
+
+        if (response.body && onProgress && totalBytes > 0) {
+            buffer = await this.#readStreamWithProgress(response.body, totalBytes, onProgress);
+        } else {
+            buffer = await response.arrayBuffer();
+        }
+
         if ("caches" in globalThis) {
             try {
                 const cache = await globalThis.caches.open(this.#cacheName);
-                await cache.put(url, response.clone());
+                const cacheResponse = new Response(buffer.slice(0), {
+                    headers: {
+                        "content-type": "application/octet-stream",
+                    },
+                });
+                await cache.put(url, cacheResponse);
             } catch {
                 // Storage quota exceeded or private mode restriction
             }
         }
 
-        const totalBytes = Number(response.headers.get("content-length")) || 0;
-        if (!response.body || !onProgress || totalBytes <= 0) {
-            return await response.arrayBuffer();
-        }
-
-        return await this.#readStreamWithProgress(response.body, totalBytes, onProgress);
+        return buffer;
     }
-
     async #readStreamWithProgress(body, totalBytes, onProgress) {
         const reader = body.getReader();
         const chunks = [];
@@ -471,6 +479,7 @@ export class MobileSamEngine {
     #processor;
     #extractor;
     #state = EngineState.Uninitialized;
+    #initPromise = null;
 
     #ort = null;
     #encoderSession = null;
@@ -480,7 +489,6 @@ export class MobileSamEngine {
     #currentEmbeddings = null;
     #currentMeta = null;
     #currentMaskPrior = null;
-
     constructor(options = {}) {
         this.#storage = options.storage || new ModelStorage();
         this.#driver = options.driver || new OrtDriver(options);
@@ -501,8 +509,34 @@ export class MobileSamEngine {
             return this.getStatus();
         }
 
-        this.#state = EngineState.Loading;
+        if (this.#state === EngineState.Loading && this.#initPromise) {
+            return await this.#initPromise;
+        }
 
+        this.#state = EngineState.Loading;
+        this.#initPromise = this.#doInit(options);
+
+        try {
+            return await this.#initPromise;
+        } finally {
+            this.#initPromise = null;
+        }
+    }
+
+    async waitForReady() {
+        if (this.#state === EngineState.Ready) {
+            return;
+        }
+
+        if (this.#initPromise) {
+            await this.#initPromise;
+            return;
+        }
+
+        await this.init();
+    }
+
+    async #doInit(options) {
         try {
             this.#ort = await this.#driver.getOrt();
 
@@ -707,8 +741,13 @@ export async function initEngine(options = {}) {
 }
 
 export async function encodeFrame(source) {
-    if (!defaultEngine) {
-        throw new Error("MobileSAM engine is not initialized. Call initEngine first.");
+    if (!defaultEngine || defaultEngine.state === EngineState.Disposed) {
+        defaultEngine = new MobileSamEngine();
+        await defaultEngine.init();
+    } else if (defaultEngine.state === EngineState.Loading) {
+        await defaultEngine.waitForReady();
+    } else if (defaultEngine.state === EngineState.Uninitialized) {
+        await defaultEngine.init();
     }
     return await defaultEngine.encodeImage(source);
 }
