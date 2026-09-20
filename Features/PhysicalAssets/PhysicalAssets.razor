@@ -150,9 +150,13 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-outline-secondary btn-sm mt-2" @onclick="() => EstimateValueAsync(detection)" disabled="@(IsWorking || detection.SavedItemId is not null)">
-                        @(detection.IsEstimating ? "Estimating value with AI..." : "Estimate value")
-                    </button>
+                    @if (detection.IsEstimating)
+                    {
+                        <p class="text-muted mt-2 mb-0">
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                            <em>Estimating value with AI...</em>
+                        </p>
+                    }
 
                     @if (detection.ValuationError is not null)
                     {
@@ -242,13 +246,14 @@
 
 
 
-    private void ReviewVideoItems(IReadOnlyList<SelectedVideoAsset> items)
+    private async Task ReviewVideoItems(IReadOnlyList<SelectedVideoAsset> items)
     {
         ClearError();
         _imageReference = null;
         _categoryFilter = _confidenceFilter = "all";
         _sortOrder = "confidence-desc";
         _detections = items.Select(item => new ReviewableDetection(item.Detection) { ImageReference = item.ImageReference }).ToList();
+        await EstimateAllAsync(_detections);
     }
     private async Task ReviewLiveScannedItem(LiveScannedItem item)
     {
@@ -309,6 +314,7 @@
         };
 
         _detections = new List<ReviewableDetection> { reviewable };
+        await EstimateAllAsync(_detections);
     }
 
     private IReadOnlyList<string> CategoryOptions => _detections is null
@@ -446,11 +452,29 @@
             _isProcessing = false;
             _processingMessage = null;
         }
+
+        await EstimateAllAsync(_detections);
+    }
+
+    // Runs sequentially so IsWorking (which any single EstimateValueAsync call
+    // both checks and sets) stays a reliable "something is in flight" signal
+    // instead of racing across concurrently-started estimates.
+    private async Task EstimateAllAsync(IEnumerable<ReviewableDetection>? detections)
+    {
+        if (detections is null) return;
+
+        foreach (var detection in detections.Where(detection => detection.Included).ToList())
+        {
+            await EstimateValueAsync(detection);
+        }
     }
 
     private async Task EstimateValueAsync(ReviewableDetection detection)
     {
-        if (IsWorking || detection.SavedItemId is not null) return;
+        // Guards on this detection's own state, not global IsWorking: this
+        // runs automatically right after ReviewVideoItems/ReviewLiveScannedItem,
+        // while the triggering child component still reports itself busy.
+        if (detection.IsEstimating || detection.SavedItemId is not null) return;
         detection.ValuationError = null;
         detection.ValuationRawResponse = null;
         detection.IsEstimating = true;

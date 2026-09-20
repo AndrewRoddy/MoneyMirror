@@ -81,20 +81,17 @@ public sealed class VideoScanPickerTests : IDisposable
         Assert.Equal(2, _module.Invocations.Count(i => i.Identifier == "cropStream"));
         Assert.Empty(await _repository.GetAllAsync()); // Reviewing is not inventory consent.
 
+        page.WaitForAssertion(() =>
+            Assert.Equal(
+                2,
+                page.FindAll("button").Count(b => b.TextContent.Trim() == "Save as new item")
+            )
+        );
+
         for (var i = 0; i < 2; i++)
         {
-            await page.FindAll("button")
-                .Where(b => b.TextContent.Trim() == "Estimate value")
-                .ElementAt(i)
-                .ClickAsync(new MouseEventArgs());
-            page.WaitForAssertion(() =>
-                Assert.Single(
-                    page.FindAll("button"),
-                    b => b.TextContent.Trim() == "Save as new item"
-                )
-            );
             var saveButton = page.FindAll("button")
-                .Single(b => b.TextContent.Trim() == "Save as new item");
+                .First(b => b.TextContent.Trim() == "Save as new item");
             Assert.False(saveButton.HasAttribute("disabled"), page.Markup);
             await saveButton.ClickAsync(new MouseEventArgs());
             Assert.DoesNotContain("Failed to save to inventory:", page.Markup);
@@ -341,9 +338,6 @@ public sealed class VideoScanPickerTests : IDisposable
         await page.FindAll("button")
             .Single(b => b.TextContent.Trim() == "Review selected items")
             .ClickAsync(new MouseEventArgs());
-        await page.FindAll("button")
-            .Single(b => b.TextContent.Trim() == "Estimate value")
-            .ClickAsync(new MouseEventArgs());
 
         Assert.Contains("No market value available", page.Markup);
         Assert.Contains("Market evidence (low confidence)", page.Markup);
@@ -368,9 +362,6 @@ public sealed class VideoScanPickerTests : IDisposable
         page.FindAll(".item-region")[0].Click();
         await page.FindAll("button")
             .Single(b => b.TextContent.Trim() == "Review selected items")
-            .ClickAsync(new MouseEventArgs());
-        await page.FindAll("button")
-            .Single(b => b.TextContent.Trim() == "Estimate value")
             .ClickAsync(new MouseEventArgs());
         Assert.Contains("Market evidence (low confidence)", page.Markup);
         await page.FindAll("button")
