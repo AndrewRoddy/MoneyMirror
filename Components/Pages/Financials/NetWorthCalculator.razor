@@ -15,7 +15,7 @@
 <div class="finance-page">
     <header class="finance-header">
         <div>
-            <h1>Net Worth</h1>
+            <h1>Financial</h1>
         </div>
         <div class="header-actions">
             <button class="secondary-button" @onclick="() => OpenAddForm(RecordKind.Asset)">
@@ -39,9 +39,9 @@
 
     <section class="net-worth-summary" aria-label="Net worth summary">
         <div class="headline-figure">
-            <span class="finance-eyebrow">Net Worth<span class="eyebrow-line"></span></span>
+            <dt>Net Worth</dt>
             <strong class="headline-amount">@NetWorth.ToString("C0")</strong>
-            <p class="headline-note">Financial assets + physical capital &minus; liabilities</p>
+            <p class="headline-note">Financial assets + physical capital - liabilities</p>
         </div>
 
         <dl class="breakdown-row">
@@ -103,7 +103,7 @@
                         {
                             <tr @key="record.Id">
                                 <td><span class="type-pill @(record.Kind == RecordKind.Asset ? "asset-pill" : "liability-pill")"><span></span>@record.Type</span></td>
-                                <td><div class="record-name"><strong>@record.Name</strong></div></td><td class="record-amount">@record.Amount.ToString("C2")</td>
+                                <td><div class="record-name"><strong>@record.Name</strong></div></td><td class="record-amount">@((record.Amount ?? 0m).ToString("C2"))</td>
                                 <td class="record-date">@(record.AsOfDate?.ToString("MMM d, yyyy") ?? "—")</td>
                                 <td class="record-actions"><button title="Edit @record.Name" aria-label="Edit @record.Name" @onclick="() => OpenEditForm(record)">Edit</button><button class="delete-action" title="Delete @record.Name" aria-label="Delete @record.Name" @onclick="() => DeleteRecord(record)">Delete</button></td>
                             </tr>
@@ -125,7 +125,7 @@
         <EditForm Model="Draft" OnValidSubmit="SaveRecord" class="record-form">
             <DataAnnotationsValidator />
             <ValidationSummary class="form-summary" />
-            <div class="form-field"><label for="record-type">Type</label><InputSelect id="record-type" @bind-Value="Draft.Type"><option value="">Select a type</option>@foreach (var type in TypesFor(Draft.Kind)) { <option value="@type">@type</option> }</InputSelect><ValidationMessage For="() => Draft.Type" /></div>
+            <div class="form-field"><label for="record-type">Type</label><div class="select-field"><InputSelect id="record-type" @bind-Value="Draft.Type"><option value="">Select a type</option>@foreach (var type in TypesFor(Draft.Kind)) { <option value="@type">@type</option> }</InputSelect></div><ValidationMessage For="() => Draft.Type" /></div>
             <div class="form-field"><label for="record-name">Name</label><InputText id="record-name" @bind-Value="Draft.Name" placeholder="e.g. Chase checking" /><ValidationMessage For="() => Draft.Name" /></div>
             <div class="form-field"><label for="record-amount">@(Draft.Kind == RecordKind.Asset ? "Current value" : "Current balance")</label><div class="currency-field"><span>$</span><InputNumber id="record-amount" @bind-Value="Draft.Amount" min="0" step="0.01" placeholder="0.00" /></div><ValidationMessage For="() => Draft.Amount" /></div>
             <div class="form-field"><label for="record-date">As-of date</label><InputDate id="record-date" @bind-Value="Draft.AsOfDate" /><ValidationMessage For="() => Draft.AsOfDate" /></div>
@@ -150,12 +150,12 @@
     // FC2's formula extended per #75: financial assets + physical capital -
     // liabilities. Still purely deterministic - no AI participates here.
     private decimal NetWorth => FinancialNetWorthCalculator.Calculate(
-        AssetRecords.Select(record => record.Amount)
+        AssetRecords.Select(record => record.Amount ?? 0m)
             .Concat(PhysicalAssets.Select(asset => asset.CurrentValuation ?? 0m)),
-        LiabilityRecords.Select(record => record.Amount));
-    private decimal TotalFinancialAssets => AssetRecords.Sum(record => record.Amount);
+        LiabilityRecords.Select(record => record.Amount ?? 0m));
+    private decimal TotalFinancialAssets => AssetRecords.Sum(record => record.Amount ?? 0m);
     private decimal TotalPhysicalCapital => PhysicalAssets.Sum(asset => asset.CurrentValuation ?? 0m);
-    private decimal TotalLiabilities => LiabilityRecords.Sum(record => record.Amount);
+    private decimal TotalLiabilities => LiabilityRecords.Sum(record => record.Amount ?? 0m);
     private List<FinancialRecord> VisibleRecords => ActiveTab switch
     {
         RecordKind.Asset => AssetRecords,
@@ -170,7 +170,7 @@
     };
 
     private static string[] TypesFor(RecordKind kind) => RecordTypes[kind];
-    private static FinancialRecord NewDraft(RecordKind kind) => new(kind, "", "", 0m, DateTime.Today);
+    private static FinancialRecord NewDraft(RecordKind kind) => new(kind, "", "", null, DateTime.Today);
     private static DateTimeOffset ToDateTimeOffset(DateTime date) =>
         new(DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified), TimeSpan.Zero);
 
@@ -224,6 +224,7 @@
         try
         {
             var asOfDate = Draft.AsOfDate ?? DateTime.Today;
+            var amount = Draft.Amount ?? 0m;
 
             if (IsEditing && EditingRecord is not null)
             {
@@ -233,7 +234,7 @@
                         ?? throw new InvalidOperationException("The financial account no longer exists.");
                     account.AccountType = Draft.Type;
                     account.Name = Draft.Name;
-                    account.CurrentBalance = Draft.Amount;
+                    account.CurrentBalance = amount;
                     account.AsOfDate = ToDateTimeOffset(asOfDate);
                     account.UpdatedAt = DateTimeOffset.UtcNow;
                 }
@@ -243,7 +244,7 @@
                         ?? throw new InvalidOperationException("The liability no longer exists.");
                     liability.LiabilityType = Draft.Type;
                     liability.Name = Draft.Name;
-                    liability.OutstandingBalance = Draft.Amount;
+                    liability.OutstandingBalance = amount;
                     liability.AsOfDate = ToDateTimeOffset(asOfDate);
                     liability.UpdatedAt = DateTimeOffset.UtcNow;
                 }
@@ -261,7 +262,7 @@
                     Id = Draft.Id,
                     AccountType = Draft.Type,
                     Name = Draft.Name,
-                    CurrentBalance = Draft.Amount,
+                    CurrentBalance = amount,
                     AsOfDate = ToDateTimeOffset(asOfDate),
                     UpdatedAt = DateTimeOffset.UtcNow
                 });
@@ -275,7 +276,7 @@
                     Id = Draft.Id,
                     LiabilityType = Draft.Type,
                     Name = Draft.Name,
-                    OutstandingBalance = Draft.Amount,
+                    OutstandingBalance = amount,
                     AsOfDate = ToDateTimeOffset(asOfDate),
                     UpdatedAt = DateTimeOffset.UtcNow
                 });
@@ -328,10 +329,10 @@
 
     private sealed class FinancialRecord
     {
-        public FinancialRecord(RecordKind kind, string type, string name, decimal amount, DateTime? asOfDate)
+        public FinancialRecord(RecordKind kind, string type, string name, decimal? amount, DateTime? asOfDate)
             : this(Guid.NewGuid(), kind, type, name, amount, asOfDate) { }
 
-        public FinancialRecord(Guid id, RecordKind kind, string type, string name, decimal amount, DateTime? asOfDate)
+        public FinancialRecord(Guid id, RecordKind kind, string type, string name, decimal? amount, DateTime? asOfDate)
         {
             Id = id;
             Kind = kind;
@@ -345,7 +346,7 @@
         public RecordKind Kind { get; }
         [Required(ErrorMessage = "Choose a type.")] public string Type { get; set; }
         [Required(ErrorMessage = "Enter a name.")] public string Name { get; set; }
-        [Range(0, double.MaxValue, ErrorMessage = "Amount must be zero or more.")] public decimal Amount { get; set; }
+        [Required(ErrorMessage = "Enter an amount.")] [Range(0, double.MaxValue, ErrorMessage = "Amount must be zero or more.")] public decimal? Amount { get; set; }
         [Required(ErrorMessage = "Choose an as-of date.")] public DateTime? AsOfDate { get; set; }
 
         public FinancialRecord ToRecord() => new(Id, Kind, Type, Name, Amount, AsOfDate);

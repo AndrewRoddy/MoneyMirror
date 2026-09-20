@@ -335,7 +335,10 @@ button {
     margin: 0.75rem 0 1.5rem;
     font-size: 0.9rem;
 }
-.record-form {
+/* The controls inside a .form-field are rendered by Blazor's Input*
+   components, so they never receive this component's scope attribute -
+   ::deep is the only way a scoped rule can reach them. */
+.record-drawer ::deep .record-form {
     display: grid;
     gap: 1rem;
 }
@@ -346,36 +349,128 @@ button {
     font-size: 0.8rem;
     font-weight: 600;
 }
-.form-field input,
-.form-field select {
+.form-field ::deep input,
+.form-field ::deep select {
     width: 100%;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.65rem;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.7rem;
     box-sizing: border-box;
     border: 1px solid var(--border);
-    border-radius: 0.4rem;
+    border-radius: 0.5rem;
     color: var(--text);
     background: var(--surface-muted);
+    font: inherit;
+    font-size: 0.9rem;
+    transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease,
+        box-shadow 0.15s ease;
 }
+.form-field ::deep input::placeholder {
+    color: var(--text-muted);
+}
+.form-field ::deep input:hover,
+.form-field ::deep select:hover {
+    border-color: var(--brand);
+}
+/* Same focus ring the rest of the app uses (see app.css). */
+.form-field ::deep input:focus,
+.form-field ::deep select:focus {
+    outline: none;
+    border-color: var(--brand);
+    background: var(--surface);
+    box-shadow:
+        0 0 0 0.1rem var(--focus-ring-inner),
+        0 0 0 0.25rem var(--focus-ring-outer);
+}
+/* Blazor stamps `invalid` on a control that fails validation; keep the border
+   in step with the outline app.css already draws, so the two don't disagree. */
+.form-field ::deep input.invalid,
+.form-field ::deep select.invalid {
+    border-color: var(--input-invalid);
+}
+.form-field ::deep input:disabled,
+.form-field ::deep select:disabled {
+    color: var(--text-muted);
+    background: var(--border-subtle);
+    cursor: not-allowed;
+}
+
+/* Drop the OS dropdown arrow and draw our own, so the select matches the rest
+   of the form instead of the platform. Must follow the .form-field rules
+   above: the two selectors tie on specificity. */
+.select-field {
+    position: relative;
+}
+.select-field ::deep select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.25rem;
+    cursor: pointer;
+}
+.select-field::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0.85rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background-color: var(--text-muted);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+}
+
 .currency-field {
     position: relative;
 }
 .currency-field > span {
     position: absolute;
-    top: 0.6rem;
-    left: 0.7rem;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
     color: var(--text-muted);
+    font-size: 0.9rem;
 }
-.currency-field input {
-    padding-left: 1.5rem;
+.currency-field ::deep input {
+    padding-left: 1.6rem;
 }
-.validation-message {
+/* The spinners fight the custom padding and add nothing to a dollar amount. */
+.currency-field ::deep input::-webkit-outer-spin-button,
+.currency-field ::deep input::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+.currency-field ::deep input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+/* Tone down the native calendar button so it reads as part of the field. */
+.form-field ::deep input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+}
+.form-field ::deep input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+.form-field ::deep .validation-message {
     display: block;
     margin-top: 0.3rem;
     color: var(--negative-text);
     font-size: 0.75rem;
 }
-.form-summary {
+/* ValidationSummary renders its own <ul class="validation-errors">, which
+   replaces the class we pass it - match both so the styling sticks. */
+.record-drawer ::deep .form-summary,
+.record-drawer ::deep .validation-errors {
+    margin: 0;
+    padding-left: 1.1rem;
     color: var(--negative-text);
     font-size: 0.8rem;
 }
