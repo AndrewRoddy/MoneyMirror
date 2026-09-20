@@ -30,7 +30,9 @@ builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
 );
 builder.Services.Configure<BlsOptions>(builder.Configuration.GetSection(BlsOptions.SectionName));
-builder.Services.Configure<EbayOptions>(builder.Configuration.GetSection(EbayOptions.SectionName));
+builder.Services.Configure<SerpApiOptions>(
+    builder.Configuration.GetSection(SerpApiOptions.SectionName)
+);
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName)
 );
@@ -67,9 +69,12 @@ builder
 builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>(client =>
     client.Timeout = TimeSpan.FromSeconds(15)
 );
-builder.Services.AddHttpClient<IEbayMarketDataService, EbayMarketDataService>(client =>
+builder.Services.AddHttpClient<ISerpApiMarketDataService, SerpApiMarketDataService>(client =>
     client.Timeout = TimeSpan.FromSeconds(15)
 );
+
+// SerpApi requires its key in the query string. Keep routine HTTP logs from recording it.
+builder.Logging.AddFilter("System.Net.Http.HttpClient.ISerpApiMarketDataService", LogLevel.Warning);
 builder.Services.AddScoped<
     IMarketPotentialExplanationService,
     NemotronMarketPotentialExplanationService

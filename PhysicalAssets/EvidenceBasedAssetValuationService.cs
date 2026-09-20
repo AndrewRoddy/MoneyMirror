@@ -3,11 +3,11 @@ namespace MoneyMirror.PhysicalAssets;
 /// <summary>Builds an asset valuation from structured market listings, without an LLM.</summary>
 public sealed class EvidenceBasedAssetValuationService : IAssetValuationService
 {
-    private readonly IEbayMarketDataService _marketDataService;
+    private readonly ISerpApiMarketDataService _marketDataService;
     private readonly TimeProvider _timeProvider;
 
     public EvidenceBasedAssetValuationService(
-        IEbayMarketDataService marketDataService,
+        ISerpApiMarketDataService marketDataService,
         TimeProvider? timeProvider = null
     )
     {
@@ -32,7 +32,7 @@ public sealed class EvidenceBasedAssetValuationService : IAssetValuationService
             );
             return MarketValuationCalculator.Calculate(evidence, _timeProvider.GetUtcNow());
         }
-        catch (EbayMarketDataException ex)
+        catch (SerpApiMarketDataException ex)
         {
             throw new AssetValuationException("Failed to retrieve comparable market listings.", ex);
         }

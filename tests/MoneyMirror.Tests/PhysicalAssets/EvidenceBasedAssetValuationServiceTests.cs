@@ -4,18 +4,28 @@ namespace MoneyMirror.Tests.PhysicalAssets;
 
 public class EvidenceBasedAssetValuationServiceTests
 {
-    private static readonly DateTimeOffset ValuationDate = new(2026, 9, 20, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset ValuationDate = new(
+        2026,
+        9,
+        20,
+        12,
+        0,
+        0,
+        TimeSpan.Zero
+    );
 
     [Fact]
     public async Task EstimateAsync_UsesMarketListingsAndReturnsStructuredEvidence()
     {
-        var source = new FakeMarketDataService(
-        [
-            new(80m, "eBay", "Used item A", "Used"),
-            new(100m, "eBay", "Used item B", "Very Good"),
-            new(140m, "eBay", "Used item C", "Used"),
+        var source = new FakeMarketDataService([
+            new(80m, "Reverb", "Used item A", "Used"),
+            new(100m, "Craigslist", "Used item B", "Used"),
+            new(140m, "Marketplace", "Used item C", "Used"),
         ]);
-        var service = new EvidenceBasedAssetValuationService(source, new FixedTimeProvider(ValuationDate));
+        var service = new EvidenceBasedAssetValuationService(
+            source,
+            new FixedTimeProvider(ValuationDate)
+        );
 
         var valuation = await service.EstimateAsync("guitar", "Fender", "CD-60S");
 
@@ -33,7 +43,10 @@ public class EvidenceBasedAssetValuationServiceTests
     public async Task EstimateAsync_NoListingsReturnsExplicitUnavailableLowConfidenceResult()
     {
         var source = new FakeMarketDataService([]);
-        var service = new EvidenceBasedAssetValuationService(source, new FixedTimeProvider(ValuationDate));
+        var service = new EvidenceBasedAssetValuationService(
+            source,
+            new FixedTimeProvider(ValuationDate)
+        );
 
         var valuation = await service.EstimateAsync("rare item", null, null);
 
@@ -47,23 +60,29 @@ public class EvidenceBasedAssetValuationServiceTests
     [Fact]
     public async Task EstimateAsync_ProviderFailureBecomesDomainException()
     {
-        var source = new FakeMarketDataService(new EbayMarketDataException("provider unavailable"));
-        var service = new EvidenceBasedAssetValuationService(source, new FixedTimeProvider(ValuationDate));
+        var source = new FakeMarketDataService(
+            new SerpApiMarketDataException("provider unavailable")
+        );
+        var service = new EvidenceBasedAssetValuationService(
+            source,
+            new FixedTimeProvider(ValuationDate)
+        );
 
-        var exception = await Assert.ThrowsAsync<AssetValuationException>(
-            () => service.EstimateAsync("guitar", null, null)
+        var exception = await Assert.ThrowsAsync<AssetValuationException>(() =>
+            service.EstimateAsync("guitar", null, null)
         );
 
         Assert.Equal("Failed to retrieve comparable market listings.", exception.Message);
-        Assert.IsType<EbayMarketDataException>(exception.InnerException);
+        Assert.IsType<SerpApiMarketDataException>(exception.InnerException);
     }
 
     private sealed class FakeMarketDataService(IReadOnlyList<AssetValuationEvidence> result)
-        : IEbayMarketDataService
+        : ISerpApiMarketDataService
     {
         private readonly Exception? _exception = null;
 
-        public FakeMarketDataService(Exception exception) : this([])
+        public FakeMarketDataService(Exception exception)
+            : this([])
         {
             _exception = exception;
         }

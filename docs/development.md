@@ -6,24 +6,25 @@ monolith, one database, one implicit user — no auth or multi-tenancy.
 
 ## Configuration
 
-AI, BLS, and eBay Browse API settings live under `Ai:Nemotron`,
-`Ai:VisionModel`, `Bls`, and `Ebay` (`ClientId`, `ClientSecret`, `BaseUrl`, and
-`MarketplaceId`). `appsettings.json` ships empty secret placeholders — never
+AI, BLS, and SerpApi Google Search settings live under `Ai:Nemotron`,
+`Ai:VisionModel`, `Bls`, and `SerpApi` (`ApiKey`, `BaseUrl`, `CountryCode`, and
+`Language`). `appsettings.json` ships empty secret placeholders — never
 commit real keys. Set them locally:
 
 ```sh
 dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
 dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
 dotnet user-secrets set "Bls:ApiKey" "<your-key>"
-dotnet user-secrets set "Ebay:ClientId" "<your-app-id>"
-dotnet user-secrets set "Ebay:ClientSecret" "<your-app-secret>"
+dotnet user-secrets set "SerpApi:ApiKey" "<your-serpapi-key>"
 ```
 
 Or use env vars: `Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`,
-`Bls__ApiKey`, `Ebay__ClientId`, `Ebay__ClientSecret`.
+`Bls__ApiKey`, `SerpApi__ApiKey`.
 
-Physical asset valuations query up to 20 used eBay US listings and calculate a
-median from usable USD prices. No usable listings produce a null value and an
+Physical asset valuations query SerpApi's Google Search API for up to 20 used
+listings and calculate a median from unambiguous USD prices. Results without
+clear used/refurbished condition or a single USD price are ignored. No usable
+listings produce a null value and an
 explicit low-confidence explanation. The valuation returns each comparable's
 price, source, title, and condition in `AssetValuation.Evidence`; that evidence
 is persisted and displayed alongside each valuation in inventory history.
@@ -47,8 +48,7 @@ on Postgres volumes and host-local `dotnet run`: [backend/postgresql_setup.md](.
 | `NEMOTRON_API_KEY` | `Ai:Nemotron:ApiKey` |
 | `VISION_API_KEY` | `Ai:VisionModel:ApiKey` |
 | `BLS_API_KEY` | `Bls:ApiKey` |
-| `EBAY_CLIENT_ID` | `Ebay:ClientId` |
-| `EBAY_CLIENT_SECRET` | `Ebay:ClientSecret` |
+| `SERPAPI_API_KEY` | `SerpApi:ApiKey` |
 
 `docker compose down` stops the stack; add `-v` to wipe DB and image volumes.
 

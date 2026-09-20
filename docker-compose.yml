@@ -16,8 +16,7 @@ services:
       Ai__Nemotron__ApiKey: ${NEMOTRON_API_KEY:-}
       Ai__VisionModel__ApiKey: ${VISION_API_KEY:-}
       Bls__ApiKey: ${BLS_API_KEY:-}
-      Ebay__ClientId: ${EBAY_CLIENT_ID:-}
-      Ebay__ClientSecret: ${EBAY_CLIENT_SECRET:-}
+      SerpApi__ApiKey: ${SERPAPI_API_KEY:-}
     ports:
       - "${APP_PORT:-8000}:8080"
     volumes:
