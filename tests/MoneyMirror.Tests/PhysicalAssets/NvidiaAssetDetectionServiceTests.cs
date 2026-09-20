@@ -443,4 +443,68 @@ public class NvidiaAssetDetectionServiceTests
 
         Assert.Equal("sign reading {closed}", asset.Label);
     }
+
+    [Fact]
+    public async Task DetectAsync_ConversationalPrefaceWithCodeFence_ExtractsAndParsesObjects()
+    {
+        var response = """
+            The image shows an acoustic guitar in the room.
+            ```json
+            {
+              "objects": [
+                {
+                  "label": "acoustic guitar",
+                  "confidence": 0.95,
+                  "region": null,
+                  "identification": null,
+                  "tags": ["wood"]
+                }
+              ]
+            }
+            ```
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        var asset = Assert.Single(results);
+        Assert.Equal("acoustic guitar", asset.Label);
+    }
+
+    [Fact]
+    public async Task DetectAsync_ConversationalNoObjectsDetected_ReturnsEmptyList()
+    {
+        var response = "There are no distinct physical objects or possessions visible in this photo.";
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task DetectAsync_JsonEmbeddedInProseWithoutFence_ExtractsAndParsesObjects()
+    {
+        var response = """
+            Here is what I found:
+            {
+              "objects": [
+                {
+                  "label": "keyboard",
+                  "confidence": 0.9,
+                  "region": null,
+                  "identification": null,
+                  "tags": ["black"]
+                }
+              ]
+            }
+            Hope this helps!
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        var asset = Assert.Single(results);
+        Assert.Equal("keyboard", asset.Label);
+    }
 }

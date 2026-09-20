@@ -78,6 +78,12 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
     {
         parseError = null;
 
+        if (NoObjectPhrases.Any(p => completion.Contains(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            detections = [];
+            return true;
+        }
+
         foreach (var candidate in JsonObjectCandidates(completion))
         {
             try
@@ -237,6 +243,15 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         - If no objects are found, return {"objects": []}.
         """;
 
+    private static readonly string[] NoObjectPhrases =
+    [
+        "no distinct physical objects",
+        "no physical objects",
+        "no objects",
+        "no identifiable",
+        "no possessions",
+    ];
+
     /// <summary>
     /// Second attempt after a failed parse. Kept as a suffix rather than a
     /// rewrite so the schema and rules stay identical - only the insistence
@@ -269,6 +284,7 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
                 yield return candidate;
             }
         }
+
     }
 
     /// <summary>
