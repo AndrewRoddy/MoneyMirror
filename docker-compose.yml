@@ -15,6 +15,8 @@ services:
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-MoneyMirror};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       Ai__Nemotron__ApiKey: ${NEMOTRON_API_KEY:-}
       Ai__VisionModel__ApiKey: ${VISION_API_KEY:-}
+      Ai__Claude__ApiKey: ${ANTHROPIC_API_KEY:-}
+      Ai__Claude__WorkspaceId: ${ANTHROPIC_WORKSPACE_ID:-}
       Bls__ApiKey: ${BLS_API_KEY:-}
       Ebay__ClientId: ${EBAY_CLIENT_ID:-}
       Ebay__ClientSecret: ${EBAY_CLIENT_SECRET:-}

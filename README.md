@@ -48,6 +48,11 @@ under `Ai:Nemotron` and `Ai:VisionModel`.
 
 Both hosted models point at the same endpoint, so one NVIDIA API key covers them.
 
+Every Nemotron job runs through `FallbackLlmService`, which retries the same
+prompt against Anthropic Claude (`claude-sonnet-4-5`) whenever Nemotron is
+unreachable or errors out. Claude is a backup, not a fourth job - it never
+runs unless Nemotron already failed.
+
 MobileSAM never leaves the client. You tap an object in the camera view and the
 mask is computed on device, which keeps the interaction instant and means only
 the crop you chose is ever uploaded.

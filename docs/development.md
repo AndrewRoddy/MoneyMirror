@@ -7,20 +7,27 @@ monolith, one database, one implicit user — no auth or multi-tenancy.
 ## Configuration
 
 AI, BLS, and eBay Browse API settings live under `Ai:Nemotron`,
-`Ai:VisionModel`, `Bls`, and `Ebay` (`ClientId`, `ClientSecret`, `AuthUrl`,
-`SearchUrl`, `MarketplaceId`, and `CacheDurationHours`). `appsettings.json`
-ships empty secret placeholders — never commit real keys. Set them locally:
+`Ai:VisionModel`, `Ai:Claude`, `Bls`, and `Ebay` (`ClientId`, `ClientSecret`,
+`AuthUrl`, `SearchUrl`, `MarketplaceId`, and `CacheDurationHours`).
+`appsettings.json` ships empty secret placeholders — never commit real keys.
+`Ai:Claude` is a fallback only: `FallbackLlmService` uses it when Nemotron is
+unreachable or errors out, so it's optional in dev but required for prod
+resilience. `Ai:Claude:WorkspaceId` is only needed for API keys that are not
+already scoped to a single workspace. Set them locally:
 
 ```sh
 dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
 dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
+dotnet user-secrets set "Ai:Claude:ApiKey" "<your-key>"
+dotnet user-secrets set "Ai:Claude:WorkspaceId" "<your-workspace-id>"
 dotnet user-secrets set "Bls:ApiKey" "<your-key>"
 dotnet user-secrets set "Ebay:ClientId" "<your-ebay-client-id>"
 dotnet user-secrets set "Ebay:ClientSecret" "<your-ebay-client-secret>"
 ```
 
 Or use env vars: `Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`,
-`Bls__ApiKey`, `Ebay__ClientId`, `Ebay__ClientSecret`.
+`Ai__Claude__ApiKey`, `Ai__Claude__WorkspaceId`, `Bls__ApiKey`,
+`Ebay__ClientId`, `Ebay__ClientSecret`.
 
 Physical asset valuations authenticate to eBay's Browse API with an
 OAuth2 client-credentials app token (cached in memory for its ~2-hour
@@ -60,6 +67,8 @@ on Postgres volumes and host-local `dotnet run`: [backend/postgresql_setup.md](.
 | `POSTGRES_*` | `ConnectionStrings:DefaultConnection` |
 | `NEMOTRON_API_KEY` | `Ai:Nemotron:ApiKey` |
 | `VISION_API_KEY` | `Ai:VisionModel:ApiKey` |
+| `ANTHROPIC_API_KEY` | `Ai:Claude:ApiKey` |
+| `ANTHROPIC_WORKSPACE_ID` | `Ai:Claude:WorkspaceId` |
 | `BLS_API_KEY` | `Bls:ApiKey` |
 | `EBAY_CLIENT_ID` | `Ebay:ClientId` |
 | `EBAY_CLIENT_SECRET` | `Ebay:ClientSecret` |
