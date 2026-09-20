@@ -27,7 +27,18 @@ public class EfProfessionalProfileRepository : IProfessionalProfileRepository
             .Include(p => p.Certifications)
             .Include(p => p.Skills)
             .Include(p => p.Experiences)
-            .FirstOrDefaultAsync(p => p.Id == DataEntities.ProfessionalProfile.DefaultId, cancellationToken);
+            // #263: four independent collections in one Include chain makes
+            // EF Core join them into a single query whose row count is the
+            // product of all four collection sizes by default (and warn
+            // about it) - EF Core still reconstructs the object graph
+            // correctly either way, but the extra rows sent over the wire
+            // get expensive as any one collection grows. Split into one
+            // query per collection instead.
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(
+                p => p.Id == DataEntities.ProfessionalProfile.DefaultId,
+                cancellationToken
+            );
 
         if (entity is null)
         {
@@ -47,7 +58,11 @@ public class EfProfessionalProfileRepository : IProfessionalProfileRepository
                 ))
                 .ToList(),
             Certifications: entity
-                .Certifications.Select(c => new Certification(c.Name, c.IssuingOrganization, FormatDate(c.IssuedAt)))
+                .Certifications.Select(c => new Certification(
+                    c.Name,
+                    c.IssuingOrganization,
+                    FormatDate(c.IssuedAt)
+                ))
                 .ToList(),
             Skills: entity.Skills.Select(s => new Skill(s.Name, s.ProficiencyLevel)).ToList(),
             Experience: entity
@@ -65,16 +80,24 @@ public class EfProfessionalProfileRepository : IProfessionalProfileRepository
         );
     }
 
-    private static string? FormatDate(DateTimeOffset? date) => date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    private static string? FormatDate(DateTimeOffset? date) =>
+        date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-    public async Task SaveAsync(ProfessionalProfile profile, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(
+        ProfessionalProfile profile,
+        CancellationToken cancellationToken = default
+    )
     {
         var entity = await _db
             .ProfessionalProfiles.Include(p => p.EducationRecords)
             .Include(p => p.Certifications)
             .Include(p => p.Skills)
             .Include(p => p.Experiences)
-            .FirstOrDefaultAsync(p => p.Id == DataEntities.ProfessionalProfile.DefaultId, cancellationToken);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(
+                p => p.Id == DataEntities.ProfessionalProfile.DefaultId,
+                cancellationToken
+            );
 
         if (entity is null)
         {
@@ -186,14 +209,29 @@ public class EfProfessionalProfileRepository : IProfessionalProfileRepository
             return null;
         }
 
-        if (DateTimeOffset.TryParse(trimmed, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        if (
+            DateTimeOffset.TryParse(
+                trimmed,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var parsed
+            )
+        )
         {
             return parsed;
         }
 
         foreach (var format in LooseDateFormats)
         {
-            if (DateTime.TryParseExact(trimmed, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            if (
+                DateTime.TryParseExact(
+                    trimmed,
+                    format,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var dt
+                )
+            )
             {
                 return new DateTimeOffset(DateTime.SpecifyKind(dt, DateTimeKind.Utc));
             }

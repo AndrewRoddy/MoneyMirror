@@ -24,7 +24,9 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
 
-        var options = new DbContextOptionsBuilder<MoneyMirrorDbContext>().UseSqlite(_connection).Options;
+        var options = new DbContextOptionsBuilder<MoneyMirrorDbContext>()
+            .UseSqlite(_connection)
+            .Options;
         _db = new MoneyMirrorDbContext(options);
         _db.Database.EnsureCreated();
 
@@ -38,13 +40,23 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
     }
 
     private static readonly ProfessionalProfile SampleProfile = new(
-        Education: [new EducationRecord("University of Pittsburgh", "B.S.", "Computer Science", "2018", "2022")],
+        Education:
+        [
+            new EducationRecord(
+                "University of Pittsburgh",
+                "B.S.",
+                "Computer Science",
+                "2018",
+                "2022"
+            ),
+        ],
         Certifications: [new Certification("AWS Certified", "Amazon", "2023")],
         Skills: [new Skill("C#", null), new Skill("SQL", null)],
         Experience: [new Experience("Acme Corp", "Engineer", "2022", "Present", "Built things")],
         Projects: [new Project("Side project", "A thing I built")],
         Publications: [],
-        Awards: []);
+        Awards: []
+    );
 
     [Fact]
     public async Task SaveAsync_FirstSave_CreatesDefaultProfileWithAllSections()
@@ -60,7 +72,10 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
 
         Assert.Single(entity.EducationRecords);
         Assert.Equal("University of Pittsburgh", entity.EducationRecords.Single().InstitutionName);
-        Assert.Equal(new DateTimeOffset(2018, 1, 1, 0, 0, 0, TimeSpan.Zero), entity.EducationRecords.Single().StartedAt);
+        Assert.Equal(
+            new DateTimeOffset(2018, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            entity.EducationRecords.Single().StartedAt
+        );
 
         Assert.Single(entity.Certifications);
         Assert.Equal(2, entity.Skills.Count);
@@ -80,7 +95,8 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
         var updated = SampleProfile with { Skills = [new Skill("Only this one now", null)] };
         await _repository.SaveAsync(updated);
 
-        var entity = await _db.ProfessionalProfiles.Include(p => p.Skills)
+        var entity = await _db
+            .ProfessionalProfiles.Include(p => p.Skills)
             .SingleAsync(p => p.Id == MoneyMirror.Data.Entities.ProfessionalProfile.DefaultId);
 
         Assert.Single(entity.Skills);
@@ -92,12 +108,22 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
     {
         var profile = ProfessionalProfile.Empty with
         {
-            Experience = [new Experience("Acme Corp", "Engineer", StartDate: null, EndDate: null, Description: null)],
+            Experience =
+            [
+                new Experience(
+                    "Acme Corp",
+                    "Engineer",
+                    StartDate: null,
+                    EndDate: null,
+                    Description: null
+                ),
+            ],
         };
 
         await _repository.SaveAsync(profile);
 
-        var entity = await _db.ProfessionalProfiles.Include(p => p.Experiences)
+        var entity = await _db
+            .ProfessionalProfiles.Include(p => p.Experiences)
             .SingleAsync(p => p.Id == MoneyMirror.Data.Entities.ProfessionalProfile.DefaultId);
 
         Assert.Empty(entity.Experiences);
@@ -157,5 +183,34 @@ public class EfProfessionalProfileRepositoryTests : IDisposable
         Assert.Empty(profile.Projects);
         Assert.Empty(profile.Publications);
         Assert.Empty(profile.Awards);
+    }
+
+    [Fact]
+    public async Task GetAsync_MultipleEntriesInMultipleCollections_ReturnsEachEntryExactlyOnce()
+    {
+        // #263: regression guard for AsSplitQuery() on the Include chain -
+        // EF Core reconstructs the object graph correctly with or without
+        // it, so this doesn't catch a correctness bug, but it does pin down
+        // the shape callers depend on (one entry in, one entry out) across
+        // that change.
+        var profile = ProfessionalProfile.Empty with
+        {
+            Education =
+            [
+                new EducationRecord("University A", "B.S.", "CS", "2014", "2018"),
+                new EducationRecord("University B", "M.S.", "CS", "2018", "2020"),
+            ],
+            Experience =
+            [
+                new Experience("Company A", "Engineer", "2018", "2020", null),
+                new Experience("Company B", "Senior Engineer", "2020", null, null),
+            ],
+        };
+
+        await _repository.SaveAsync(profile);
+        var roundTripped = await _repository.GetAsync();
+
+        Assert.Equal(2, roundTripped.Education.Count);
+        Assert.Equal(2, roundTripped.Experience.Count);
     }
 }
