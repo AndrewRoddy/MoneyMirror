@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using MoneyMirror.PhysicalAssets
 @inject IPhysicalAssetRepository AssetRepository
+@inject IAssetValuationService ValuationService
 
 <PageTitle>Inventory</PageTitle>
 
@@ -40,58 +41,124 @@ else
     }
     else
     {
-        <table class="table records-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Product/Model</th>
-                    <th>Source</th>
-                    <th>Valuation</th>
-                    <th>Valued</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var asset in _assets)
-                {
-                    <tr>
-                        @if (_editingId == asset.Id)
-                        {
-                            <td><input class="form-control form-control-sm" @bind="_editName" /></td>
-                            <td><input class="form-control form-control-sm" @bind="_editCategory" /></td>
-                            <td><input class="form-control form-control-sm" @bind="_editModel" /></td>
-                            <td>@(asset.IsManuallyAdded ? "Manual" : "Scanned")</td>
-                            <td colspan="2">
-                                <input
-                                    class="form-control form-control-sm"
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="New valuation (optional)"
-                                    @bind="_editValuation" />
-                            </td>
-                            <td>
+        <ul class="asset-list">
+            @foreach (var asset in _assets)
+            {
+                <li class="asset-row">
+                    @if (_editingId == asset.Id)
+                    {
+                        <div class="asset-edit-form">
+                            <input class="form-control form-control-sm" placeholder="Name" @bind="_editName" />
+                            <input class="form-control form-control-sm" placeholder="Category" @bind="_editCategory" />
+                            <input class="form-control form-control-sm" placeholder="Product/Model" @bind="_editModel" />
+                            <input
+                                class="form-control form-control-sm"
+                                type="number"
+                                step="0.01"
+                                placeholder="New valuation (optional)"
+                                @bind="_editValuation" />
+                            <div class="asset-row-actions">
                                 <button class="btn btn-sm btn-primary" @onclick="SaveEditAsync">Save</button>
                                 <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
-                            </td>
-                        }
-                        else
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <button
+                            type="button"
+                            class="asset-row-summary"
+                            aria-expanded="@(_expandedId == asset.Id)"
+                            @onclick="() => ToggleExpandAsync(asset.Id)">
+                            <span class="asset-row-name">@asset.Name</span>
+                            <span class="asset-row-meta">
+                                @asset.Category
+                                @if (!string.IsNullOrWhiteSpace(asset.Category))
+                                {
+                                    <text> &middot; </text>
+                                }
+                                @(asset.IsManuallyAdded ? "Manual" : "Scanned")
+                            </span>
+                            <span class="asset-row-value">@(asset.CurrentValuation is { } v ? $"${v:N2}" : "—")</span>
+                            <span class="asset-row-caret" aria-hidden="true"></span>
+                        </button>
+
+                        <div class="asset-row-quick-actions">
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => BeginEdit(asset)">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(asset.Id)">Delete</button>
+                        </div>
+
+                        @if (_expandedId == asset.Id)
                         {
-                            <td><a href="@($"/inventory/{asset.Id}")">@asset.Name</a></td>
-                            <td>@asset.Category</td>
-                            <td>@asset.IdentifiedProductModel</td>
-                            <td>@(asset.IsManuallyAdded ? "Manual" : "Scanned")</td>
-                            <td>@(asset.CurrentValuation is { } v ? $"${v:N2}" : "—")</td>
-                            <td>@(asset.ValuationDate?.ToString("d") ?? "—")</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => BeginEdit(asset)">Edit</button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(asset.Id)">Delete</button>
-                            </td>
+                            <div class="asset-row-detail">
+                                @if (_detailError is not null)
+                                {
+                                    <div class="alert alert-danger" role="alert">@_detailError</div>
+                                }
+                                else if (_detail is null)
+                                {
+                                    <p><em>Loading details...</em></p>
+                                }
+                                else
+                                {
+                                    @if (_detail.ImageReference is not null)
+                                    {
+                                        <img
+                                            src="@($"/api/possession-images/{_detail.ImageReference}")"
+                                            alt="@_detail.Name"
+                                            class="asset-detail-image" />
+                                    }
+
+                                    <dl class="asset-detail-facts">
+                                        <dt>Product/Model</dt>
+                                        <dd>@(_detail.IdentifiedProductModel ?? "—")</dd>
+                                    </dl>
+
+                                    <div class="asset-detail-revalue">
+                                        <button
+                                            class="btn btn-outline-primary btn-sm"
+                                            disabled="@_isRevaluing"
+                                            @onclick="RevalueAsync">
+                                            @(_isRevaluing ? "Revaluing..." : "Revalue")
+                                        </button>
+                                        @if (_revalueError is not null)
+                                        {
+                                            <div class="alert alert-danger mt-2" role="alert">@_revalueError</div>
+                                        }
+                                    </div>
+
+                                    <h3>Valuation History</h3>
+                                    @if (_detail.ValuationHistory.Count == 0)
+                                    {
+                                        <p><em>No valuations yet.</em></p>
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-unstyled">
+                                            @foreach (var entry in _detail.ValuationHistory)
+                                            {
+                                                <li class="border rounded p-3 mb-2">
+                                                    <span class="fw-bold">$@entry.EstimatedValue.ToString("N2")</span>
+                                                    <span class="text-muted">on @entry.ValuedAt.ToString("d")</span>
+                                                    @if (entry.Source is not null)
+                                                    {
+                                                        <span class="badge bg-secondary">@entry.Source</span>
+                                                    }
+                                                    @if (entry.Notes is not null)
+                                                    {
+                                                        <p class="mb-0 mt-1">@entry.Notes</p>
+                                                    }
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                }
+                            </div>
                         }
-                    </tr>
-                }
-            </tbody>
-        </table>
+                    }
+                </li>
+            }
+        </ul>
     }
     </section>
 }
@@ -127,6 +194,12 @@ else
     private string? _editModel;
     private decimal? _editValuation;
 
+    private Guid? _expandedId;
+    private PhysicalAssetDetail? _detail;
+    private string? _detailError;
+    private bool _isRevaluing;
+    private string? _revalueError;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
@@ -141,6 +214,35 @@ else
         catch (Exception ex)
         {
             _errorMessage = $"Failed to load inventory: {ex.Message}";
+        }
+    }
+
+    private async Task ToggleExpandAsync(Guid id)
+    {
+        if (_expandedId == id)
+        {
+            _expandedId = null;
+            _detail = null;
+            _detailError = null;
+            return;
+        }
+
+        _expandedId = id;
+        _detail = null;
+        _detailError = null;
+        _revalueError = null;
+
+        try
+        {
+            _detail = await AssetRepository.GetByIdAsync(id);
+            if (_detail is null)
+            {
+                _detailError = "This item could not be found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _detailError = $"Failed to load item: {ex.Message}";
         }
     }
 
@@ -169,6 +271,8 @@ else
 
     private void BeginEdit(PhysicalAssetSummary asset)
     {
+        _expandedId = null;
+        _detail = null;
         _editingId = asset.Id;
         _editName = asset.Name;
         _editCategory = asset.Category;
@@ -204,11 +308,59 @@ else
         try
         {
             await AssetRepository.DeleteAsync(id);
+            if (_expandedId == id)
+            {
+                _expandedId = null;
+                _detail = null;
+            }
+
             await LoadAsync();
         }
         catch (Exception ex)
         {
             _errorMessage = $"Failed to delete item: {ex.Message}";
+        }
+    }
+
+    // PA10.1/PA10.2: re-runs the (currently AI-estimated, see #138) valuation
+    // pipeline for this item's existing identification and appends the
+    // result as a new history entry - it never overwrites prior valuations.
+    private async Task RevalueAsync()
+    {
+        if (_detail is null || _expandedId is not { } id)
+        {
+            return;
+        }
+
+        _revalueError = null;
+        _isRevaluing = true;
+
+        try
+        {
+            var valuation = await ValuationService.EstimateAsync(_detail.Name, brand: null, _detail.IdentifiedProductModel);
+
+            var updated = await AssetRepository.AddValuationAsync(
+                id,
+                valuation.EstimatedValueUsd,
+                "AI estimate (not evidence-based - see #148)",
+                valuation.Reasoning);
+
+            if (!updated)
+            {
+                _revalueError = "This item could not be found.";
+                return;
+            }
+
+            _detail = await AssetRepository.GetByIdAsync(id);
+            await LoadAsync();
+        }
+        catch (AssetValuationException ex)
+        {
+            _revalueError = ex.Message;
+        }
+        finally
+        {
+            _isRevaluing = false;
         }
     }
 }
