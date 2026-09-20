@@ -8,6 +8,12 @@ namespace MoneyMirror.HumanCapital;
 /// before #24 (real wage-data retrieval + deterministic aggregation) is
 /// built; see #148 for the swap-out plan.
 /// </summary>
+/// <remarks>
+/// #266: #24's real, BLS-grounded replacement already exists and is
+/// registered in DI - see <see cref="IMarketPotentialPipeline"/> - but
+/// nothing in the UI calls it yet. See that type's remarks for why the
+/// swap hasn't happened.
+/// </remarks>
 public interface ICompensationEstimationService
 {
     /// <exception cref="CompensationEstimationException">
@@ -15,5 +21,6 @@ public interface ICompensationEstimationService
     /// </exception>
     Task<CompensationEstimate> EstimateAsync(
         IReadOnlyList<OccupationMatch> occupations,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }
