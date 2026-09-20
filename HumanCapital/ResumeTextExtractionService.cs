@@ -11,7 +11,7 @@ namespace MoneyMirror.HumanCapital;
 /// </summary>
 public class ResumeTextExtractionService : IResumeTextExtractionService
 {
-    public Task<string> ExtractTextAsync(
+    public async Task<string> ExtractTextAsync(
         Stream fileStream,
         string fileName,
         CancellationToken cancellationToken = default)
@@ -20,12 +20,23 @@ public class ResumeTextExtractionService : IResumeTextExtractionService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (extension is not (".pdf" or ".docx"))
+        {
+            throw new ResumeTextExtractionException(
+                $"Unsupported file type '{extension}'. Only .pdf and .docx are supported.");
+        }
+
+        // Both parsers read synchronously and seek freely: PdfPig jumps to the
+        // cross-reference table at the end of the file, Open XML to the ZIP
+        // central directory. The stream IBrowserFile.OpenReadStream() returns on
+        // Blazor Server supports neither - it is forward-only and throws
+        // NotSupportedException on a synchronous Read - so buffer it first.
+        await using var buffered = await BufferAsync(fileStream, cancellationToken);
+
         var text = extension switch
         {
-            ".pdf" => ExtractFromPdf(fileStream),
-            ".docx" => ExtractFromDocx(fileStream),
-            _ => throw new ResumeTextExtractionException(
-                $"Unsupported file type '{extension}'. Only .pdf and .docx are supported."),
+            ".pdf" => ExtractFromPdf(buffered),
+            _ => ExtractFromDocx(buffered),
         };
 
         if (string.IsNullOrWhiteSpace(text))
@@ -34,7 +45,26 @@ public class ResumeTextExtractionService : IResumeTextExtractionService
                 $"No text could be extracted from '{fileName}'. The document may be empty, image-only, or corrupt.");
         }
 
-        return Task.FromResult(text);
+        return text;
+    }
+
+    private static async Task<MemoryStream> BufferAsync(
+        Stream fileStream,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new MemoryStream();
+        try
+        {
+            await fileStream.CopyToAsync(buffer, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await buffer.DisposeAsync();
+            throw new ResumeTextExtractionException("Failed to read the uploaded file.", ex);
+        }
+
+        buffer.Position = 0;
+        return buffer;
     }
 
     private static string ExtractFromPdf(Stream fileStream)
