@@ -194,6 +194,66 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         Assert.False(updated);
     }
 
+    // #234: comparable listings must round-trip through save/reload, and a
+    // later revalue's evidence must never bleed into an earlier entry's.
+    [Fact]
+    public async Task AddFromScanAsync_WithComparableListings_PersistsAndReloadsEvidence()
+    {
+        IReadOnlyList<AssetValuationEvidence> comps =
+        [
+            new(115m, "eBay", "Fender CD-60S, used", "Good"),
+            new(130m, "eBay", "Fender CD-60S dreadnought", null),
+        ];
+
+        var id = await _repository.AddFromScanAsync(
+            new ScannedAssetInput("Guitar", "Music", "Fender CD-60S", "abc123.jpg", 122.5m, "Median of 2 listings.", "Market evidence", comps));
+
+        var detail = await _repository.GetByIdAsync(id);
+
+        Assert.NotNull(detail);
+        var entry = Assert.Single(detail!.ValuationHistory);
+        Assert.Equal(2, entry.ComparableListings.Count);
+        Assert.Equal(115m, entry.ComparableListings[0].PriceUsd);
+        Assert.Equal("eBay", entry.ComparableListings[0].Source);
+        Assert.Equal("Fender CD-60S, used", entry.ComparableListings[0].ListingTitle);
+        Assert.Equal("Good", entry.ComparableListings[0].Condition);
+        Assert.Null(entry.ComparableListings[1].Condition);
+    }
+
+    [Fact]
+    public async Task AddValuationAsync_RevalueWithNewEvidence_DoesNotAffectPriorEntrysEvidence()
+    {
+        IReadOnlyList<AssetValuationEvidence> firstComps = [new(100m, "eBay", null, null)];
+        IReadOnlyList<AssetValuationEvidence> secondComps = [new(140m, "eBay", null, null), new(160m, "Craigslist", null, null)];
+
+        var id = await _repository.AddFromScanAsync(
+            new ScannedAssetInput("Guitar", null, null, null, 100m, "First estimate.", "Market evidence", firstComps));
+        await _repository.AddValuationAsync(id, 150m, "Market evidence", "Revalued.", secondComps);
+
+        var detail = await _repository.GetByIdAsync(id);
+
+        Assert.NotNull(detail);
+        Assert.Equal(2, detail!.ValuationHistory.Count);
+        Assert.Equal(2, detail.ValuationHistory[0].ComparableListings.Count); // Newest first: the revalue.
+        Assert.Equal(150m, detail.ValuationHistory[0].EstimatedValue);
+        Assert.Single(detail.ValuationHistory[1].ComparableListings); // The original scan's evidence is untouched.
+        Assert.Equal(100m, detail.ValuationHistory[1].EstimatedValue);
+    }
+
+    [Fact]
+    public async Task AddValuationAsync_WithoutComparableListings_LeavesEvidenceEmptyNotNull()
+    {
+        var id = await _repository.AddAsync(new PhysicalAssetInput("Guitar", null, null, null));
+
+        await _repository.AddValuationAsync(id, 100m, "AI estimate", "No comps found.");
+
+        var detail = await _repository.GetByIdAsync(id);
+        Assert.NotNull(detail);
+        var entry = Assert.Single(detail!.ValuationHistory);
+        Assert.Empty(entry.ComparableListings);
+        Assert.Equal(100m, entry.EstimatedValue); // No-evidence never becomes a zero-dollar valuation.
+    }
+
     [Fact]
     public async Task FindPossibleDuplicatesAsync_MatchingProductModel_ReturnsExistingItem()
     {

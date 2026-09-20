@@ -37,6 +37,7 @@ public interface IPhysicalAssetRepository
         decimal value,
         string source,
         string? notes,
+        IReadOnlyList<AssetValuationEvidence>? comparableListings = null,
         CancellationToken cancellationToken = default);
 
     /// <returns>False if no item with <paramref name="id"/> exists.</returns>

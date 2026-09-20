@@ -28,6 +28,7 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
     {
         var asset = await _db
             .PhysicalAssets.Include(a => a.ValuationRecords)
+            .ThenInclude(r => r.Evidence)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         if (asset is null)
@@ -44,7 +45,12 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
             asset.Source == DataEntities.PhysicalAssetSource.Manual,
             asset
                 .ValuationRecords.OrderByDescending(r => r.ValuedAt)
-                .Select(r => new ValuationHistoryEntry(r.EstimatedValue, r.ValuedAt, r.Source, r.Notes))
+                .Select(r => new ValuationHistoryEntry(
+                    r.EstimatedValue,
+                    r.ValuedAt,
+                    r.Source,
+                    r.Notes,
+                    r.Evidence.Select(ToEvidence).ToList()))
                 .ToList()
         );
     }
@@ -94,6 +100,7 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
                 EstimatedValue = input.EstimatedValue,
                 Source = input.ValuationSource,
                 Notes = input.ValuationEvidence,
+                Evidence = ToEvidenceRecords(input.ComparableListings),
             }
         );
 
@@ -138,6 +145,7 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
         decimal value,
         string source,
         string? notes,
+        IReadOnlyList<AssetValuationEvidence>? comparableListings = null,
         CancellationToken cancellationToken = default)
     {
         var asset = await _db.PhysicalAssets.FindAsync([id], cancellationToken);
@@ -153,6 +161,7 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
                 EstimatedValue = value,
                 Source = source,
                 Notes = notes,
+                Evidence = ToEvidenceRecords(comparableListings),
             }
         );
         asset.UpdatedAt = DateTimeOffset.UtcNow;
@@ -188,6 +197,21 @@ public class EfPhysicalAssetRepository : IPhysicalAssetRepository
                 || string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
+
+    private static List<DataEntities.AssetValuationEvidenceRecord> ToEvidenceRecords(
+        IReadOnlyList<AssetValuationEvidence>? comparableListings) =>
+        (comparableListings ?? [])
+            .Select(e => new DataEntities.AssetValuationEvidenceRecord
+            {
+                PriceUsd = e.PriceUsd,
+                Source = e.Source,
+                ListingTitle = e.ListingTitle,
+                Condition = e.Condition,
+            })
+            .ToList();
+
+    private static AssetValuationEvidence ToEvidence(DataEntities.AssetValuationEvidenceRecord record) =>
+        new(record.PriceUsd, record.Source, record.ListingTitle, record.Condition);
 
     private static PhysicalAssetSummary ToSummary(DataEntities.PhysicalAsset asset)
     {

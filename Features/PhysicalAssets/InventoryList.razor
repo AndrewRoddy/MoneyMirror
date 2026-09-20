@@ -136,6 +136,25 @@ else
                                                     {
                                                         <p class="mb-0 mt-1">@entry.Notes</p>
                                                     }
+                                                    @if (entry.ComparableListings.Count > 0)
+                                                    {
+                                                        <ul class="list-unstyled mt-2 mb-0 ps-3 small">
+                                                            @foreach (var listing in entry.ComparableListings)
+                                                            {
+                                                                <li>
+                                                                    $@listing.PriceUsd.ToString("N2") &mdash; @listing.Source
+                                                                    @if (listing.ListingTitle is not null)
+                                                                    {
+                                                                        <text>: @listing.ListingTitle</text>
+                                                                    }
+                                                                    @if (listing.Condition is not null)
+                                                                    {
+                                                                        <span class="text-muted"> (@listing.Condition)</span>
+                                                                    }
+                                                                </li>
+                                                            }
+                                                        </ul>
+                                                    }
                                                 </li>
                                             }
                                         </ul>
@@ -264,7 +283,7 @@ else
 
                 if (valuation.EstimatedValueUsd is { } value)
                 {
-                    await AssetRepository.AddValuationAsync(id, value, valuation.SourceLabel, valuation.Reasoning);
+                    await AssetRepository.AddValuationAsync(id, value, valuation.SourceLabel, valuation.Reasoning, valuation.Evidence);
                 }
                 else
                 {
@@ -373,7 +392,8 @@ else
                 id,
                 value,
                 valuation.SourceLabel,
-                valuation.Reasoning);
+                valuation.Reasoning,
+                valuation.Evidence);
 
             if (!updated)
             {
