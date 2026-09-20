@@ -1,19 +1,21 @@
 {
-  "name": "money-mirror",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Dev tooling for Money Mirror (formatters only — the app itself is ASP.NET Core).",
-  "license": "UNLICENSED",
-  "scripts": {
-    "test:video": "node --test tests/js/video-scan.test.mjs",
-    "format": "npm run format:cs && npm run format:css",
-    "format:cs": "dotnet csharpier format .",
-    "format:css": "prettier --write \"**/*.css\"",
-    "check": "npm run check:cs && npm run check:css",
-    "check:cs": "dotnet csharpier check .",
-    "check:css": "prettier --check \"**/*.css\""
-  },
-  "devDependencies": {
-    "prettier": "3.9.8"
-  }
+    "name": "money-mirror",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Dev tooling for Money Mirror (formatters only — the app itself is ASP.NET Core).",
+    "license": "UNLICENSED",
+    "scripts": {
+        "test": "npm run test:video && npm run test:sam",
+        "test:video": "node --test tests/js/video-scan.test.mjs",
+        "test:sam": "node --test tests/js/mobile-sam.test.mjs",
+        "format": "npm run format:cs && npm run format:css",
+        "format:cs": "dotnet csharpier format .",
+        "format:css": "prettier --write \"**/*.css\"",
+        "check": "npm run check:cs && npm run check:css",
+        "check:cs": "dotnet csharpier check .",
+        "check:css": "prettier --check \"**/*.css\""
+    },
+    "devDependencies": {
+        "prettier": "3.9.8"
+    }
 }
