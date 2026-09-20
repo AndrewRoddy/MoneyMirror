@@ -1,13 +1,13 @@
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Ai;
 using MoneyMirror.Ai.Configuration;
 using MoneyMirror.Components;
-using MoneyMirror.HumanCapital;
-using MoneyMirror.PhysicalAssets;
-using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Data;
 using MoneyMirror.Features.Financial;
+using MoneyMirror.HumanCapital;
 using MoneyMirror.HumanCapital.Configuration;
+using MoneyMirror.PhysicalAssets;
 
 // Containers start with no LANG/LC_ALL, so .NET falls back to the invariant culture
 // and renders currency as "¤" instead of "$". Pin the formatting culture so money
@@ -24,31 +24,42 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
 );
-builder.Services.Configure<BlsOptions>(
-    builder.Configuration.GetSection(BlsOptions.SectionName)
-);
+builder.Services.Configure<BlsOptions>(builder.Configuration.GetSection(BlsOptions.SectionName));
 builder.Services.Configure<VisionModelOptions>(
-    builder.Configuration.GetSection(VisionModelOptions.SectionName));
+    builder.Configuration.GetSection(VisionModelOptions.SectionName)
+);
 builder.Services.Configure<ResumeUploadOptions>(
-    builder.Configuration.GetSection(ResumeUploadOptions.SectionName));
+    builder.Configuration.GetSection(ResumeUploadOptions.SectionName)
+);
 builder.Services.Configure<ImageUploadOptions>(
-    builder.Configuration.GetSection(ImageUploadOptions.SectionName));
+    builder.Configuration.GetSection(ImageUploadOptions.SectionName)
+);
 
 builder.Services.AddTransient<TransientFaultRetryHandler>();
 
 // Both AI clients share NVIDIA's endpoint, which sheds load with a 503 when its
 // workers are saturated - see TransientFaultRetryHandler.
-builder.Services.AddHttpClient<ILlmService, NemotronLlmService>()
+builder
+    .Services.AddHttpClient<ILlmService, NemotronLlmService>()
     .AddHttpMessageHandler<TransientFaultRetryHandler>();
-builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>()
+builder
+    .Services.AddHttpClient<IVisionService, NvidiaVisionService>()
     .AddHttpMessageHandler<TransientFaultRetryHandler>();
 builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>();
-builder.Services.AddScoped<IMarketPotentialExplanationService, NemotronMarketPotentialExplanationService>();
+builder.Services.AddScoped<
+    IMarketPotentialExplanationService,
+    NemotronMarketPotentialExplanationService
+>();
 builder.Services.AddScoped<IMarketPotentialPipeline, MarketPotentialPipeline>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
-builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
+builder.Services.AddScoped<
+    IProfessionalProfileExtractionService,
+    NemotronProfileExtractionService
+>();
 builder.Services.AddScoped<IPhysicalAssetDetectionService, NvidiaAssetDetectionService>();
+builder.Services.AddScoped<ISamSegmentationEngine, BlazorSamSegmentationEngine>();
+
 // Temporary in-memory store; #8 (FC1) swaps this for the EF Core/PostgreSQL implementation.
 builder.Services.AddSingleton<IFinancialEntryStore, InMemoryFinancialEntryStore>();
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
@@ -70,8 +81,7 @@ else
     Console.WriteLine("Default Connection Configured.");
 }
 
-builder.Services.AddDbContext<MoneyMirrorDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<MoneyMirrorDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
@@ -90,23 +100,26 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
-app.MapGet("/api/possession-images/{reference}", async (string reference, IPossessionImageStorage storage) =>
-{
-    var stream = await storage.OpenReadAsync(reference);
-    return stream is null
-        ? Results.NotFound()
-        : Results.File(stream, PossessionImageContentType.FromFileName(reference));
-});
+app.MapGet(
+    "/api/possession-images/{reference}",
+    async (string reference, IPossessionImageStorage storage) =>
+    {
+        var stream = await storage.OpenReadAsync(reference);
+        return stream is null
+            ? Results.NotFound()
+            : Results.File(stream, PossessionImageContentType.FromFileName(reference));
+    }
+);
 
-var shouldApplyMigrations = app.Environment.IsDevelopment()
+var shouldApplyMigrations =
+    app.Environment.IsDevelopment()
     || builder.Configuration.GetValue<bool>("Database:ApplyMigrations");
 
 if (shouldApplyMigrations)
 {
     // automatically apply migrations
     await using var scope = app.Services.CreateAsyncScope();
-    var db = scope.ServiceProvider
-        .GetRequiredService<MoneyMirrorDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<MoneyMirrorDbContext>();
 
     await db.Database.MigrateAsync();
 
@@ -114,34 +127,41 @@ if (shouldApplyMigrations)
     {
         // Dev-only smoke test for the F3 AI seam (#44) - proves ILlmService and
         // IVisionService round-trip against real providers. No feature logic.
-        app.MapGet("/dev/ai-smoke-test", async (ILlmService llm, IVisionService vision) =>
-        {
-            var results = new Dictionary<string, string>();
+        app.MapGet(
+            "/dev/ai-smoke-test",
+            async (ILlmService llm, IVisionService vision) =>
+            {
+                var results = new Dictionary<string, string>();
 
-            try
-            {
-                results["llm"] = await llm.CompleteAsync("Reply with exactly the word: pong");
-            }
-            catch (LlmServiceException ex)
-            {
-                results["llmError"] = ex.Message;
-            }
+                try
+                {
+                    results["llm"] = await llm.CompleteAsync("Reply with exactly the word: pong");
+                }
+                catch (LlmServiceException ex)
+                {
+                    results["llmError"] = ex.Message;
+                }
 
-            try
-            {
-                // 1x1 white pixel PNG - just enough to prove the call round-trips.
-                var pixel = Convert.FromBase64String(
-                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
-                results["vision"] = await vision.DetectAsync(
-                    pixel, "image/png", "Describe this image in one short sentence.");
-            }
-            catch (VisionServiceException ex)
-            {
-                results["visionError"] = ex.Message;
-            }
+                try
+                {
+                    // 1x1 white pixel PNG - just enough to prove the call round-trips.
+                    var pixel = Convert.FromBase64String(
+                        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                    );
+                    results["vision"] = await vision.DetectAsync(
+                        pixel,
+                        "image/png",
+                        "Describe this image in one short sentence."
+                    );
+                }
+                catch (VisionServiceException ex)
+                {
+                    results["visionError"] = ex.Message;
+                }
 
-            return Results.Ok(results);
-        });
+                return Results.Ok(results);
+            }
+        );
     }
 }
 
