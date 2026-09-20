@@ -1,4 +1,6 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using MoneyMirror.PhysicalAssets;
 
@@ -42,6 +44,39 @@ public sealed class SamSegmentationTests : IDisposable
         Assert.Equal("ready", status.State);
         Assert.Equal("wasm", status.Device);
         Assert.True(status.HasEmbeddings);
+    }
+
+    [Fact]
+    public async Task EncodeFrame_InvokesJsWithElementReference_AndReturnsResult()
+    {
+        var element = new ElementReference("video-frame-1");
+        var expected = new SamEncodeResult(32.5, "webgpu", 1920, 1080);
+
+        _module
+            .Setup<SamEncodeResult>(
+                "encodeFrame",
+                args => ((ElementReference)args.Arguments[0]!).Id == element.Id
+            )
+            .SetResult(expected);
+        var result = await _engine.EncodeFrameAsync(element);
+
+        Assert.Equal(32.5, result.ElapsedMs);
+        Assert.Equal("webgpu", result.Device);
+        Assert.Equal(1920, result.Width);
+        Assert.Equal(1080, result.Height);
+    }
+
+    [Fact]
+    public async Task Engine_ResolvesFromDependencyInjection()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(_context.JSInterop.JSRuntime);
+        services.AddScoped<ISamSegmentationEngine, BlazorSamSegmentationEngine>();
+        await using var provider = services.BuildServiceProvider();
+        var engine = provider.GetService<ISamSegmentationEngine>();
+
+        Assert.NotNull(engine);
+        Assert.IsType<BlazorSamSegmentationEngine>(engine);
     }
 
     [Fact]

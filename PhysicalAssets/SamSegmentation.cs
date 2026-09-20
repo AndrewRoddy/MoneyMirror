@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace MoneyMirror.PhysicalAssets;
@@ -29,12 +30,18 @@ public record SamEngineStatus(
     int Height
 );
 
+public record SamEncodeResult(double ElapsedMs, string? Device, int Width, int Height);
+
 public interface ISamSegmentationEngine : IAsyncDisposable
 {
     ValueTask<SamEngineStatus> InitializeAsync(CancellationToken cancellationToken = default);
 
     ValueTask<SamEngineStatus> GetStatusAsync(CancellationToken cancellationToken = default);
 
+    ValueTask<SamEncodeResult> EncodeFrameAsync(
+        ElementReference frameSource,
+        CancellationToken cancellationToken = default
+    );
     ValueTask<SamSegmentationResult> DecodePointAsync(
         double x,
         double y,
@@ -75,6 +82,19 @@ public class BlazorSamSegmentationEngine : ISamSegmentationEngine
     {
         var module = await GetModuleAsync(cancellationToken);
         return await module.InvokeAsync<SamEngineStatus>("getEngineStatus", cancellationToken);
+    }
+
+    public async ValueTask<SamEncodeResult> EncodeFrameAsync(
+        ElementReference frameSource,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var module = await GetModuleAsync(cancellationToken);
+        return await module.InvokeAsync<SamEncodeResult>(
+            "encodeFrame",
+            cancellationToken,
+            frameSource
+        );
     }
 
     public async ValueTask<SamSegmentationResult> DecodePointAsync(
