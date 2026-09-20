@@ -47,7 +47,12 @@ export class CameraDriver {
                 height: video.videoHeight || DEFAULT_IDEAL_HEIGHT,
             };
         } catch (error) {
-            throw new Error(this.#mapErrorMessage(error));
+            // The name is what separates a refusal from a missing device, and the
+            // two want very different advice, so keep it rather than flattening
+            // everything into one sentence.
+            const wrapped = new Error(this.#mapErrorMessage(error));
+            wrapped.code = error?.name || "UnknownError";
+            throw wrapped;
         }
     }
 
@@ -206,6 +211,59 @@ export async function switchCamera(video, currentFacing) {
 
 export function stopCamera(video) {
     defaultDriver.stop(video);
+}
+
+/**
+ * What this browser is willing to do, before anyone taps anything.
+ *
+ * WebKit withholds navigator.mediaDevices entirely outside a secure context, so
+ * over plain http:// on a LAN address there is no camera API to refuse and no
+ * prompt to show - only an undefined property. Knowing that up front lets the
+ * page explain itself instead of offering a button that cannot work.
+ */
+export function describeSupport() {
+    const agent = navigator?.userAgent || "";
+
+    // iPadOS reports itself as a Mac; the touch points are what give it away.
+    const isIos =
+        /iPad|iPhone|iPod/.test(agent) ||
+        (agent.includes("Macintosh") && (navigator?.maxTouchPoints || 0) > 1);
+
+    return {
+        secureContext: typeof isSecureContext === "boolean" ? isSecureContext : true,
+        hasMediaDevices: !!navigator?.mediaDevices?.getUserMedia,
+        isIos,
+    };
+}
+
+/**
+ * Open the camera, reporting a refusal instead of throwing one.
+ *
+ * Interop turns a thrown error into a JSException carrying only its message, so
+ * the DOMException name - the part that says whether the person refused or the
+ * device simply has no camera - would be lost on the way across. Handing back a
+ * result keeps it.
+ */
+export async function openCamera(video, facing = CameraFacing.Environment) {
+    return await attemptCamera(() => defaultDriver.start(video, facing));
+}
+
+export async function flipCamera(video, currentFacing) {
+    return await attemptCamera(() => defaultDriver.switchFacing(video, currentFacing));
+}
+
+async function attemptCamera(run) {
+    try {
+        const result = await run();
+        return { ok: true, facing: result.facing, code: null, message: null };
+    } catch (error) {
+        return {
+            ok: false,
+            facing: null,
+            code: error?.code || "UnknownError",
+            message: error?.message || "Failed to start camera feed.",
+        };
+    }
 }
 
 export function freezeFrame(video, canvas) {

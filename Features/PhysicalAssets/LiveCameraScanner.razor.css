@@ -117,6 +117,32 @@
     text-align: center;
 }
 
+/* Sits on the dark viewfinder stage, so it borrows the placeholder's colour
+   and steps back from it rather than choosing one of its own. */
+.permission-help {
+    max-width: 24rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    opacity: 0.85;
+}
+
+.permission-help code {
+    font-size: 0.9em;
+}
+
+/* Recovery steps live inside the denial alert, which is a light surface - these
+   inherit its colour, not the stage's. */
+.permission-steps {
+    margin: 0.5rem 0 0;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.permission-steps li + li {
+    margin-top: 0.25rem;
+}
+
 .action-bar {
     display: flex;
     flex-wrap: wrap;

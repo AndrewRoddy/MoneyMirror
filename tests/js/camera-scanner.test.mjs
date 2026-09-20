@@ -7,9 +7,9 @@ const camera = await import(`data:text/javascript;base64,${source.toString("base
 
 const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
 
-function setMockNavigator(mediaDevices) {
+function setMockNavigator(mediaDevices, userAgent = "", maxTouchPoints = 0) {
     Object.defineProperty(globalThis, "navigator", {
-        value: { mediaDevices },
+        value: { mediaDevices, userAgent, maxTouchPoints },
         configurable: true,
         writable: true,
     });
@@ -54,6 +54,7 @@ afterEach(() => {
     if (originalDescriptor) {
         Object.defineProperty(globalThis, "navigator", originalDescriptor);
     }
+    delete globalThis.isSecureContext;
 });
 
 test("CameraDriver starts video stream with environment facing mode constraints", async () => {
@@ -218,4 +219,70 @@ test("extractCutout creates cropped canvas with polygon clipping and returns blo
     assert.ok(clipped);
     assert.ok(drawn);
     assert.equal(paths.length, 4);
+});
+
+test("openCamera reports a refusal by name instead of throwing it away", async () => {
+    const denial = new Error("Permission denied");
+    denial.name = "NotAllowedError";
+
+    setMockNavigator({
+        getUserMedia: mock.fn(async () => {
+            throw denial;
+        }),
+    });
+
+    const result = await camera.openCamera(createMockVideo());
+
+    // Interop flattens a thrown error down to its message, and the name is the
+    // part that says the person can grant this back.
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "NotAllowedError");
+    assert.match(result.message, /Camera access was denied/);
+});
+
+test("openCamera reports the facing mode it actually got", async () => {
+    setMockNavigator({ getUserMedia: mock.fn(async () => createMockStream()) });
+
+    const result = await camera.openCamera(createMockVideo(), camera.CameraFacing.User);
+
+    assert.equal(result.ok, true);
+    assert.equal(result.facing, "user");
+    assert.equal(result.code, null);
+});
+
+test("flipCamera reports a refusal rather than leaving a dead stage", async () => {
+    const failure = new Error("Camera is in use");
+    failure.name = "NotReadableError";
+
+    setMockNavigator({
+        getUserMedia: mock.fn(async () => {
+            throw failure;
+        }),
+    });
+
+    const result = await camera.flipCamera(createMockVideo(), camera.CameraFacing.Environment);
+
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "NotReadableError");
+});
+
+test("describeSupport reports a withheld camera API instead of guessing", () => {
+    setMockNavigator(undefined);
+    globalThis.isSecureContext = false;
+
+    const support = camera.describeSupport();
+
+    assert.equal(support.hasMediaDevices, false);
+    assert.equal(support.secureContext, false);
+});
+
+test("describeSupport recognises iOS, including an iPad claiming to be a Mac", () => {
+    setMockNavigator({ getUserMedia: () => {} }, "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)");
+    assert.equal(camera.describeSupport().isIos, true);
+
+    setMockNavigator({ getUserMedia: () => {} }, "Mozilla/5.0 (Macintosh; Intel Mac OS X)", 5);
+    assert.equal(camera.describeSupport().isIos, true);
+
+    setMockNavigator({ getUserMedia: () => {} }, "Mozilla/5.0 (Macintosh; Intel Mac OS X)", 0);
+    assert.equal(camera.describeSupport().isIos, false);
 });

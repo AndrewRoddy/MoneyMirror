@@ -22,9 +22,16 @@ public sealed class LiveCameraScannerTests : IDisposable
         _context.Services.AddSingleton<IPossessionImageStorage>(_storage);
 
         _module = _context.JSInterop.SetupModule("./js/camera-scanner.js");
-        _module.SetupVoid("startCamera", _ => true).SetVoidResult();
+        _module
+            .Setup<CameraSupport>("describeSupport", _ => true)
+            .SetResult(new CameraSupport(SecureContext: true, HasMediaDevices: true, IsIos: true));
+        _module
+            .Setup<CameraStartResult>("openCamera", _ => true)
+            .SetResult(new CameraStartResult(Ok: true, Facing: "environment", null, null));
+        _module
+            .Setup<CameraStartResult>("flipCamera", _ => true)
+            .SetResult(new CameraStartResult(Ok: true, Facing: "user", null, null));
         _module.SetupVoid("stopCamera", _ => true).SetVoidResult();
-        _module.SetupVoid("switchCamera", _ => true).SetVoidResult();
         _module.SetupVoid("freezeFrame", _ => true).SetVoidResult();
         _module.SetupVoid("unfreezeFrame", _ => true).SetVoidResult();
         _module
@@ -50,7 +57,7 @@ public sealed class LiveCameraScannerTests : IDisposable
 
         await cut.Find("button.btn-primary").ClickAsync(new MouseEventArgs());
 
-        _module.VerifyInvoke("startCamera", 1);
+        _module.VerifyInvoke("openCamera", 1);
         Assert.True(_samEngine.InitCalls >= 1);
         Assert.Contains("Camera active", cut.Markup);
     }
@@ -128,7 +135,65 @@ public sealed class LiveCameraScannerTests : IDisposable
             .Single(b => b.TextContent.Contains("Switch camera"));
         await switchButton.ClickAsync(new MouseEventArgs());
 
-        _module.VerifyInvoke("switchCamera", 1);
+        _module.VerifyInvoke("flipCamera", 1);
+    }
+
+    [Fact]
+    public async Task CameraRefused_ExplainsHowToGrantItBack()
+    {
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddSingleton<ISamSegmentationEngine>(new FakeSamEngine());
+        context.Services.AddSingleton<IPossessionImageStorage>(new FakeStorage());
+
+        var module = context.JSInterop.SetupModule("./js/camera-scanner.js");
+        module.SetupVoid("stopCamera", _ => true).SetVoidResult();
+        module
+            .Setup<CameraSupport>("describeSupport", _ => true)
+            .SetResult(new CameraSupport(SecureContext: true, HasMediaDevices: true, IsIos: true));
+        module
+            .Setup<CameraStartResult>("openCamera", _ => true)
+            .SetResult(
+                new CameraStartResult(
+                    Ok: false,
+                    Facing: null,
+                    Code: "NotAllowedError",
+                    Message: "Camera access was denied."
+                )
+            );
+
+        var cut = context.Render<LiveCameraScanner>();
+        await cut.Find("button.btn-primary").ClickAsync(new MouseEventArgs());
+
+        // Safari refuses again without prompting once it has been told no, so a
+        // second tap cannot help and the way back has to be spelled out.
+        Assert.Contains("Camera access was denied.", cut.Markup);
+        Assert.Contains("Website Settings", cut.Markup);
+        Assert.DoesNotContain("Camera active", cut.Markup);
+    }
+
+    [Fact]
+    public void InsecureOrigin_OffersNoCameraButtonAtAll()
+    {
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddSingleton<ISamSegmentationEngine>(new FakeSamEngine());
+        context.Services.AddSingleton<IPossessionImageStorage>(new FakeStorage());
+
+        var module = context.JSInterop.SetupModule("./js/camera-scanner.js");
+        module.SetupVoid("stopCamera", _ => true).SetVoidResult();
+        module
+            .Setup<CameraSupport>("describeSupport", _ => true)
+            .SetResult(
+                new CameraSupport(SecureContext: false, HasMediaDevices: false, IsIos: true)
+            );
+
+        var cut = context.Render<LiveCameraScanner>();
+
+        // There is no camera API on a plain http:// origin, so a button could do
+        // nothing but fail.
+        Assert.DoesNotContain("Start live camera", cut.Markup);
+        Assert.Contains("insecure connection", cut.Markup);
     }
 
     [Fact]
