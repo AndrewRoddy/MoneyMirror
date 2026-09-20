@@ -1,14 +1,17 @@
 @page "/financials"
 @page "/net-worth"
+@attribute [StreamRendering(true)]
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.EntityFrameworkCore
 @using MoneyMirror.Data
 @using MoneyMirror.Data.Entities
 @using MoneyMirror.Financial
+@using MoneyMirror.HumanCapital
 @using MoneyMirror.PhysicalAssets
 @inject MoneyMirrorDbContext DbContext
 @inject IPhysicalAssetRepository AssetRepository
+@inject IMarketPotentialSummaryService MarketPotentialSummaryService
 
 <PageTitle>Net Worth</PageTitle>
 
@@ -58,6 +61,50 @@
                 <dd>@TotalLiabilities.ToString("C0")</dd>
             </div>
         </dl>
+    </section>
+
+    @*
+        Market potential used to live on the Dashboard, which is now the
+        landing page. It belongs here, beside the total rather than inside
+        it: earning power is real but it is not cash, so folding it into
+        the figure above would make that figure a lie.
+    *@
+    <section class="potential-summary" aria-label="Market potential">
+        <div class="potential-head">
+            <p class="potential-label">Market potential</p>
+            <a href="/market-potential">Details &rarr;</a>
+        </div>
+
+        @if (IsLoadingPotential)
+        {
+            <p class="potential-pending"><em>Estimating...</em></p>
+        }
+        else if (PotentialError is not null)
+        {
+            <p class="potential-pending">@PotentialError</p>
+        }
+        else if (!HasProfile)
+        {
+            <p class="potential-pending">
+                No profile on file yet. <a href="/human-capital">Upload a resume</a> to see
+                what the market pays for what you already know.
+            </p>
+        }
+        else if (Compensation is null)
+        {
+            <p class="potential-pending">Not available for this profile.</p>
+        }
+        else
+        {
+            <strong class="potential-amount">
+                $@Compensation.MinUsd.ToString("N0") &ndash; $@Compensation.MaxUsd.ToString("N0")
+            </strong>
+            <p class="potential-note">
+                <span class="badge bg-secondary">AI estimate</span>
+                across @OccupationCount matched occupation@(OccupationCount == 1 ? "" : "s"). Kept
+                out of the net worth above on purpose.
+            </p>
+        }
     </section>
 
     <div class="records-toolbar">
@@ -113,6 +160,29 @@
             </div>
         }
     </section>
+
+    @*
+        The Dashboard's inventory panel, moved here: physical capital is a
+        line in the breakdown above, and this is where you look when you
+        want to know what is behind that line. Closed by default - the
+        financial records are what this page is for.
+    *@
+    <section class="inventory-panel">
+        @* Rendered as a string, not a bool: Blazor omits an attribute whose
+           value is false, which would drop aria-expanded exactly when the
+           panel is collapsed and leave the control unannounced. *@
+        <button type="button" class="inventory-toggle" aria-expanded="@(ShowInventory ? "true" : "false")"
+                aria-controls="financial-inventory" @onclick="() => ShowInventory = !ShowInventory">
+            <span aria-hidden="true">@(ShowInventory ? "▾" : "▸")</span> Your inventory
+        </button>
+        @if (ShowInventory)
+        {
+            <div id="financial-inventory" class="inventory-body">
+                <InventoryList ShowAddForm="false" />
+                <a href="/inventory">Manage inventory &rarr;</a>
+            </div>
+        }
+    </section>
 </div>
 
 @if (IsFormOpen)
@@ -145,6 +215,13 @@
     private bool IsEditing { get; set; }
     private bool IsLoading { get; set; } = true;
     private string? ErrorMessage { get; set; }
+
+    private bool IsLoadingPotential { get; set; } = true;
+    private string? PotentialError { get; set; }
+    private bool HasProfile { get; set; }
+    private CompensationEstimate? Compensation { get; set; }
+    private int OccupationCount { get; set; }
+    private bool ShowInventory { get; set; }
     private FinancialRecord Draft { get; set; } = NewDraft(RecordKind.Asset);
     private FinancialRecord? EditingRecord { get; set; }
 
@@ -175,7 +252,23 @@
     private static DateTimeOffset ToDateTimeOffset(DateTime date) =>
         new(DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified), TimeSpan.Zero);
 
+    // The records and the market-potential estimate fail independently: a
+    // provider outage must never take down the financial records, which are
+    // the point of the page. They run sequentially rather than via
+    // Task.WhenAll because both reach the same scoped DbContext (directly,
+    // and via IPhysicalAssetRepository/IProfessionalProfileRepository),
+    // which EF Core does not allow concurrent operations against.
+    //
+    // Records first, and [StreamRendering] on top: the estimate can take a
+    // minute against a cold cache, and nobody should wait on Nemotron to see
+    // their own balances.
     protected override async Task OnInitializedAsync()
+    {
+        await LoadRecordsAsync();
+        await LoadMarketPotentialAsync();
+    }
+
+    private async Task LoadRecordsAsync()
     {
         try
         {
@@ -212,6 +305,34 @@
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task LoadMarketPotentialAsync()
+    {
+        try
+        {
+            var summary = await MarketPotentialSummaryService.GetSummaryAsync();
+            HasProfile = summary.HasProfile;
+            if (!HasProfile)
+            {
+                return;
+            }
+
+            OccupationCount = summary.Occupations.Count;
+            Compensation = summary.Compensation;
+        }
+        catch (OccupationMatchingException ex)
+        {
+            PotentialError = ex.Message;
+        }
+        catch (CompensationEstimationException ex)
+        {
+            PotentialError = ex.Message;
+        }
+        finally
+        {
+            IsLoadingPotential = false;
         }
     }
 

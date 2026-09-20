@@ -1,69 +1,483 @@
 /*
- * Dashboard.
+ * The landing page.
  *
- * Bootstrap's grid already stacks `.col-md-6` on a phone, so the layout
- * needs no help. What it does need is for the two headline figures to
- * read as figures rather than as body copy, and for the disclosure rows
- * at the bottom to look like the grouped-list rows they behave as.
+ * A long scroll rather than a grid of cards, so it reads on a phone the
+ * way a pitch reads: one idea per screen, each section announcing itself
+ * with an eyebrow before it says anything. Mobile first, widened at the
+ * shared 48rem breakpoint.
+ *
+ * Only the live band and the closing call to action are panes. Everything
+ * between them sits directly on the ambient wash - stacking eight glass
+ * cards down a page turns the blur into noise and flattens the hierarchy
+ * the eyebrows are there to create.
  */
 
-.row {
-    --bs-gutter-x: 0.75rem;
+.landing {
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding: 0.25rem 0 1.5rem;
+    color: var(--text);
 }
 
-/* The numbers are the point of this page. Tight, heavy and tabular, so
-   the net worth and the salary range line up with each other. */
-.display-6 {
+/* ===================================================================
+ * Hero
+ * =================================================================== */
+
+.hero {
+    padding: 1.5rem 0 2rem;
+}
+
+.hero-eyebrow {
+    margin: 0 0 0.75rem;
+    color: var(--accent-text);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* The wordmark, at the largest size the page uses. Serif and light, the
+   way the brand sets it everywhere else. */
+.hero-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 14vw, 4rem);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.hero-lede {
+    margin: 1.25rem 0 0;
+    max-width: 34rem;
+    font-size: 1.125rem;
+    line-height: 1.45;
+    font-weight: 500;
+}
+
+.hero-sub {
+    margin: 0.875rem 0 0;
+    max-width: 34rem;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+/* Full width and stacked on a phone, the way a phone expects its primary
+   actions; back to their own width once there is room for a row. */
+.hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-top: 1.5rem;
+}
+
+.hero-actions .primary-button,
+.hero-actions .secondary-button {
+    width: 100%;
+}
+
+/* ===================================================================
+ * Live band
+ * ===================================================================
+ * The one part of this page that is not copy. It reads the real
+ * database, so a visitor's first impression is the app running rather
+ * than a description of it.
+ */
+
+.live-band {
+    padding: 1.125rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
+}
+
+.live-label {
+    margin: 0 0 1rem;
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.live-figures {
+    display: grid;
+    gap: 1.125rem;
+    margin: 0;
+}
+
+.live-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.live-figure dt {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.live-figure dd {
+    margin: 0;
     font-family: var(--font-numeric);
-    font-size: clamp(1.875rem, 8.5vw, 2.375rem);
+    font-size: clamp(1.75rem, 8vw, 2.125rem);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.03em;
     line-height: 1.05;
 }
 
-/*
- * `.card-title` is small uppercase everywhere else, which is right for
- * the eyebrow over a figure but wrong for the two disclosure buttons -
- * they carry `.h5` as well and are headings in their own right.
+/* A placeholder is not a figure. Drop it to body size so an empty state
+   never out-shouts the real numbers beside it. */
+.live-figure dd.live-pending {
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.live-note {
+    margin: 0.2rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+}
+
+/* ===================================================================
+ * Pitch sections
+ * =================================================================== */
+
+.pitch {
+    padding: 2.5rem 0 0;
+}
+
+.pitch-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--accent-text);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.pitch h2 {
+    margin: 0;
+    max-width: 30rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.625rem, 6.5vw, 2rem);
+    font-weight: 400;
+    line-height: 1.15;
+}
+
+.pitch-lede {
+    margin: 1rem 0 0;
+    max-width: 36rem;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.pitch code,
+.model-line code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-xs);
+    background: var(--brand-surface);
+    color: var(--brand-strong);
+    font-size: 0.875em;
+    /* Long identifiers are the point here, so let them break rather than
+       push the page sideways on a 390px screen. */
+    overflow-wrap: anywhere;
+}
+
+/* ===================================================================
+ * Claim list
+ * ===================================================================
+ * Numbered-feeling without numbers: a hairline rule down the left edge
+ * carries the eye instead of a bullet.
  */
-.card-title.h5 {
+
+.claim-list {
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 1.125rem;
+}
+
+.claim-list li {
+    padding-left: 0.875rem;
+    border-left: 2px solid var(--glass-hairline);
+    max-width: 36rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+}
+
+.claim-list strong {
+    display: block;
     color: var(--text);
+    font-weight: 600;
+}
+
+/* ===================================================================
+ * Formula
+ * =================================================================== */
+
+.formula {
+    margin: 1.25rem 0 0;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    /* The equation is one line and must not wrap mid-term; on a narrow
+       phone it scrolls sideways within its own pane instead. */
+    overflow-x: auto;
+}
+
+.formula code {
+    padding: 0;
+    background: none;
+    color: var(--brand-strong);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+/* ===================================================================
+ * Pillars
+ * =================================================================== */
+
+.pillar-grid {
+    display: grid;
+    gap: 0.875rem;
+    margin-top: 1.25rem;
+}
+
+.pillar {
+    padding: 1.125rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
+}
+
+.pillar h3 {
+    margin: 0 0 0.5rem;
     font-size: 1.0625rem;
     font-weight: 600;
     letter-spacing: -0.01em;
-    text-transform: none;
 }
 
-.card-body .btn-link {
-    width: 100%;
-    justify-content: flex-start;
-    text-align: left;
-}
-
-.card-text {
+.pillar p {
+    margin: 0;
     color: var(--text-muted);
     font-size: 0.9375rem;
+    line-height: 1.55;
 }
 
-/* Full-width actions on a phone; back to their own width once there is
-   room for them to sit side by side. */
-.card-body > .btn,
-.card-body ::deep > .btn {
-    width: 100%;
+.pillar-link {
+    display: inline-block;
+    margin-top: 0.875rem;
+    min-height: 2.75rem;
+    /* A link, not a button, but still a touch target: the padding is what
+       gets it to 44px without making it look like a control. */
+    padding: 0.7rem 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
 }
+
+.pillar-link:hover {
+    text-decoration: underline;
+}
+
+/* ===================================================================
+ * Nemotron's five jobs
+ * =================================================================== */
+
+.job-list {
+    margin: 1.25rem 0 0;
+    display: grid;
+    gap: 0;
+}
+
+/* A grouped list, the iOS idiom: hairlines between rows, none above the
+   first or below the last. */
+.job {
+    padding: 0.875rem 0;
+    border-top: 1px solid var(--glass-hairline);
+}
+
+.job:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+.job dt {
+    color: var(--text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.job dd {
+    margin: 0.2rem 0 0;
+    max-width: 36rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.model-line {
+    margin: 1.25rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+/* ===================================================================
+ * Data sources
+ * =================================================================== */
+
+.source-grid {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 1.25rem;
+}
+
+.source h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.source p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+}
+
+/* ===================================================================
+ * Closing
+ * =================================================================== */
+
+.closing {
+    margin-top: 2.5rem;
+    padding: 1.75rem 1.125rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur-strong);
+    -webkit-backdrop-filter: var(--glass-blur-strong);
+    box-shadow: var(--shadow-2);
+    text-align: center;
+}
+
+.closing h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 6vw, 1.875rem);
+    font-weight: 400;
+    line-height: 1.15;
+}
+
+.closing p {
+    margin: 0.625rem auto 0;
+    max-width: 26rem;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+/* ===================================================================
+ * Desktop
+ * =================================================================== */
 
 @media (min-width: 48rem) {
-    .row {
-        --bs-gutter-x: 1.5rem;
+    .landing {
+        padding-bottom: 2.5rem;
     }
 
-    .display-6 {
-        font-size: clamp(2rem, 3vw, 2.5rem);
+    .hero {
+        padding: 3rem 0 3.5rem;
     }
 
-    .card-body > .btn,
-    .card-body ::deep > .btn {
+    .hero-lede {
+        font-size: 1.375rem;
+    }
+
+    .hero-sub {
+        font-size: 1.0625rem;
+    }
+
+    .hero-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+    }
+
+    .hero-actions .primary-button,
+    .hero-actions .secondary-button {
         width: auto;
+    }
+
+    .live-band {
+        padding: 1.5rem;
+    }
+
+    .live-figures {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .live-figure dd {
+        font-size: 2rem;
+    }
+
+    .pitch {
+        padding-top: 4rem;
+    }
+
+    .pitch h2 {
+        max-width: 34rem;
+    }
+
+    .claim-list {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    /* Four claims here, not three: two columns divide evenly where three
+       would leave the fourth stranded on a row of its own. */
+    .honesty-block .claim-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pillar-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem;
+    }
+
+    .source-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.75rem 2rem;
+    }
+
+    .closing {
+        margin-top: 4rem;
+        padding: 3rem 2rem;
+    }
+
+    .closing .hero-actions {
+        justify-content: center;
     }
 }
