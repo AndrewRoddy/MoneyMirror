@@ -7,8 +7,7 @@ namespace MoneyMirror.HumanCapital;
 /// <summary>
 /// <see cref="IOccupationMatchingService"/> implementation that asks the
 /// LLM to suggest plausible occupation matches directly. MVP placeholder
-/// (#142) - not grounded in a real labor-market data source. See #142 for
-/// the plan to replace this with #23's ILaborMarketService pipeline.
+/// (#142) - not grounded in a real labor-market data source.
 /// </summary>
 public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 {
