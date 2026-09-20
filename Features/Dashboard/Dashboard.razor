@@ -106,6 +106,68 @@
             </div>
         </div>
     </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <button type="button" class="btn btn-link p-0 card-title h5 text-decoration-none" @onclick="() => _showInventory = !_showInventory">
+                @(_showInventory ? "▾" : "▸") Your Inventory
+            </button>
+            @if (_showInventory)
+            {
+                <div class="mt-3">
+                    <InventoryList ShowAddForm="false" />
+                    <a href="/inventory">Manage inventory &rarr;</a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <button type="button" class="btn btn-link p-0 card-title h5 text-decoration-none" @onclick="() => _showProfile = !_showProfile">
+                @(_showProfile ? "▾" : "▸") Your Profile
+            </button>
+            @if (_showProfile)
+            {
+                <div class="mt-3">
+                    @if (_isLoadingMarketPotential)
+                    {
+                        <p class="text-muted"><em>Loading...</em></p>
+                    }
+                    else if (_hasNoProfile || _profile is null)
+                    {
+                        <p class="text-muted">No profile on file yet. <a href="/human-capital">Upload a resume</a> to get started.</p>
+                    }
+                    else
+                    {
+                        <dl class="row mb-2">
+                            <dt class="col-sm-3">Education</dt>
+                            <dd class="col-sm-9">@(_profile.Education.Count == 0 ? "—" : string.Join(", ", _profile.Education.Select(e => e.Institution)))</dd>
+
+                            <dt class="col-sm-3">Experience</dt>
+                            <dd class="col-sm-9">@(_profile.Experience.Count == 0 ? "—" : string.Join(", ", _profile.Experience.Select(e => e.Organization)))</dd>
+
+                            <dt class="col-sm-3">Skills</dt>
+                            <dd class="col-sm-9">
+                                @if (_profile.Skills.Count == 0)
+                                {
+                                    <text>—</text>
+                                }
+                                else
+                                {
+                                    @foreach (var skill in _profile.Skills)
+                                    {
+                                        <span class="badge bg-secondary me-1">@skill.Name</span>
+                                    }
+                                }
+                            </dd>
+                        </dl>
+                        <a href="/human-capital">Edit profile / upload a new resume &rarr;</a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
 @code {
@@ -116,8 +178,12 @@
     private bool _isLoadingMarketPotential = true;
     private string? _marketPotentialError;
     private bool _hasNoProfile;
+    private ProfessionalProfile? _profile;
     private CompensationEstimate? _compensation;
     private int _occupationCount;
+
+    private bool _showInventory;
+    private bool _showProfile;
 
     // The two summaries fail independently (separate try/catch below) - a
     // problem estimating Market Potential should never take down the Net
@@ -158,6 +224,7 @@
         try
         {
             var profile = await ProfileRepository.GetAsync();
+            _profile = profile;
             if (profile.Education.Count == 0 && profile.Experience.Count == 0 && profile.Skills.Count == 0)
             {
                 _hasNoProfile = true;
