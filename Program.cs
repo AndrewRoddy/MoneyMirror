@@ -36,16 +36,31 @@ builder.Services.Configure<ImageUploadOptions>(
 );
 
 builder.Services.AddTransient<TransientFaultRetryHandler>();
+builder.Services.AddMemoryCache();
 
 // Both AI clients share NVIDIA's endpoint, which sheds load with a 503 when its
-// workers are saturated - see TransientFaultRetryHandler.
+// workers are saturated - see TransientFaultRetryHandler. HttpClient.Timeout
+// wraps the whole SendAsync pipeline, including TransientFaultRetryHandler's
+// retries, so this is a hard ceiling on total time spent per call, not just
+// the first attempt. #261: previously unset (100s .NET default), so a stuck
+// request had no clear bound and no chance to surface the app's own
+// "could not be loaded" error UI. 90s for the LLM because Nemotron is a
+// reasoning model that has been observed taking upwards of 60s for a
+// legitimate (non-error) response; the vision model and the plain BLS REST
+// API are comparatively fast, so they get tighter budgets.
 builder
-    .Services.AddHttpClient<ILlmService, NemotronLlmService>()
+    .Services.AddHttpClient<ILlmService, NemotronLlmService>(client =>
+        client.Timeout = TimeSpan.FromSeconds(90)
+    )
     .AddHttpMessageHandler<TransientFaultRetryHandler>();
 builder
-    .Services.AddHttpClient<IVisionService, NvidiaVisionService>()
+    .Services.AddHttpClient<IVisionService, NvidiaVisionService>(client =>
+        client.Timeout = TimeSpan.FromSeconds(60)
+    )
     .AddHttpMessageHandler<TransientFaultRetryHandler>();
-builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>();
+builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>(client =>
+    client.Timeout = TimeSpan.FromSeconds(15)
+);
 builder.Services.AddScoped<
     IMarketPotentialExplanationService,
     NemotronMarketPotentialExplanationService
@@ -67,6 +82,7 @@ builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImage
 builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
 builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 builder.Services.AddScoped<ICompensationEstimationService, AiEstimatedCompensationService>();
+builder.Services.AddScoped<IMarketPotentialSummaryService, CachedMarketPotentialSummaryService>();
 builder.Services.AddScoped<IProfessionalProfileRepository, EfProfessionalProfileRepository>();
 builder.Services.AddScoped<IPhysicalAssetRepository, EfPhysicalAssetRepository>();
 

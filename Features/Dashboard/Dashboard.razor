@@ -1,4 +1,5 @@
 @page "/"
+@attribute [StreamRendering(true)]
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using MoneyMirror.Data
@@ -7,9 +8,7 @@
 @using MoneyMirror.PhysicalAssets
 @inject MoneyMirrorDbContext DbContext
 @inject IPhysicalAssetRepository AssetRepository
-@inject IProfessionalProfileRepository ProfileRepository
-@inject IOccupationMatchingService OccupationMatchingService
-@inject ICompensationEstimationService CompensationService
+@inject IMarketPotentialSummaryService MarketPotentialSummaryService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -219,17 +218,16 @@
     {
         try
         {
-            var profile = await ProfileRepository.GetAsync();
-            _profile = profile;
-            if (profile.Education.Count == 0 && profile.Experience.Count == 0 && profile.Skills.Count == 0)
+            var summary = await MarketPotentialSummaryService.GetSummaryAsync();
+            _profile = summary.Profile;
+            if (!summary.HasProfile)
             {
                 _hasNoProfile = true;
                 return;
             }
 
-            var occupations = await OccupationMatchingService.MatchAsync(profile);
-            _occupationCount = occupations.Count;
-            _compensation = await CompensationService.EstimateAsync(occupations);
+            _occupationCount = summary.Occupations.Count;
+            _compensation = summary.Compensation;
         }
         catch (OccupationMatchingException ex)
         {
