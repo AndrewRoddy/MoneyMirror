@@ -6,10 +6,19 @@
 
 main {
     flex: 1;
+    /* Without this, a page whose content has a wide intrinsic minimum
+       width (e.g. Financials' summary grid/tables) refuses to shrink
+       below that width by default, forcing .page wider than the
+       viewport and squeezing .sidebar - "crushing" the nav text (#196). */
+    min-width: 0;
 }
 
 .sidebar {
     background-image: linear-gradient(180deg, var(--sidebar-from) 0%, var(--sidebar-to) 70%);
+    /* Keep the sidebar at its intended width regardless of how wide any
+       page's content gets - main should scroll internally, not compress
+       the nav (#196). */
+    flex-shrink: 0;
 }
 
 .top-row {
