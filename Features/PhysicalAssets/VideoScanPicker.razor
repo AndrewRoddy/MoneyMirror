@@ -26,9 +26,9 @@
             <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
         }
     </div>
-    @if (Disabled && !_busy)
+    @if (_busy || Disabled)
     {
-        <p class="text-muted small" role="status">Finish the current photo review before starting a video scan.</p>
+        <p class="text-muted small" role="status">@DisabledReason</p>
     }
     <p role="status" aria-live="polite">@_status</p>
     @if (_error is not null)
@@ -107,6 +107,9 @@
     private int _frameIndex;
     private VideoScanCandidates _candidates = new();
     private readonly List<(double Seconds, string Url)> _frames = [];
+    private string DisabledReason => _busy
+        ? "The video scan is in progress. You can use the button again when it finishes or is cancelled."
+        : "The video scan is unavailable while the current photo review is being processed.";
     private IEnumerable<(VideoCandidate Candidate, VideoObservation Observation)> CurrentObservations =>
         _candidates.Items.SelectMany(c => c.Observations.Where(o => o.FrameIndex == _frameIndex).Select(o => (c, o))).ToList();
 
