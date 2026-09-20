@@ -1,8 +1,10 @@
 namespace MoneyMirror.Ai;
 
 /// <summary>
-/// Thin seam over the LLM provider (NVIDIA Nemotron): a prompt in, a completion out.
-/// Feature code should depend on this interface, never on the concrete provider.
+/// Thin seam over the LLM provider: a prompt in, a completion out. Feature code
+/// should depend on this interface, never on a concrete provider. The registered
+/// implementation is <see cref="FallbackLlmService"/>, which tries NVIDIA Nemotron
+/// first and falls back to Anthropic Claude.
 /// </summary>
 public interface ILlmService
 {

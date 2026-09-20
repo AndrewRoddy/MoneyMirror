@@ -29,6 +29,9 @@ builder.Services.Configure<Microsoft.AspNetCore.SignalR.HubOptions>(options =>
 builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
 );
+builder.Services.Configure<ClaudeOptions>(
+    builder.Configuration.GetSection(ClaudeOptions.SectionName)
+);
 builder.Services.Configure<BlsOptions>(builder.Configuration.GetSection(BlsOptions.SectionName));
 builder.Services.Configure<EbayOptions>(
     builder.Configuration.GetSection(EbayOptions.SectionName)
@@ -55,21 +58,31 @@ builder.Services.AddSingleton(sp =>
     return new MarketDataSearchCache(cacheDirectory);
 });
 
-// Both AI clients share NVIDIA's endpoint, which sheds load with a 503 when its
-// workers are saturated - see TransientFaultRetryHandler. HttpClient.Timeout
+// The vision client shares NVIDIA's endpoint with Nemotron, which sheds load with a
+// 503 when its workers are saturated - see TransientFaultRetryHandler. HttpClient.Timeout
 // wraps the whole SendAsync pipeline, including TransientFaultRetryHandler's
 // retries, so this is a hard ceiling on total time spent per call, not just
 // the first attempt. #261: previously unset (100s .NET default), so a stuck
 // request had no clear bound and no chance to surface the app's own
-// "could not be loaded" error UI. 90s for the LLM because Nemotron is a
-// reasoning model that has been observed taking upwards of 60s for a
+// "could not be loaded" error UI. 90s for the LLM because Nemotron and Claude are
+// both reasoning models that have been observed taking upwards of 60s for a
 // legitimate (non-error) response; the vision model and the plain BLS REST
 // API are comparatively fast, so they get tighter budgets.
+//
+// Registered as themselves, not as ILlmService, so FallbackLlmService can depend on
+// both concretely and be the sole ILlmService registration - see its remarks for why
+// Claude exists at all.
 builder
-    .Services.AddHttpClient<ILlmService, NemotronLlmService>(client =>
+    .Services.AddHttpClient<NemotronLlmService>(client =>
         client.Timeout = TimeSpan.FromSeconds(90)
     )
     .AddHttpMessageHandler<TransientFaultRetryHandler>();
+builder
+    .Services.AddHttpClient<ClaudeLlmService>(client =>
+        client.Timeout = TimeSpan.FromSeconds(90)
+    )
+    .AddHttpMessageHandler<TransientFaultRetryHandler>();
+builder.Services.AddScoped<ILlmService, FallbackLlmService>();
 builder
     .Services.AddHttpClient<IVisionService, NvidiaVisionService>(client =>
         client.Timeout = TimeSpan.FromSeconds(60)
