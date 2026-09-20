@@ -103,6 +103,53 @@ public sealed class VideoScanPickerTests : IDisposable
     }
 
     [Fact]
+    public void SelectHighConfidence_SelectsItemsAboveThreshold_AndDeselectAllClears()
+    {
+        _detector.Detect = (_, _) => Task.FromResult<IReadOnlyList<DetectedAsset>>([
+            new("Chair", 0.9, new(0.1, 0.1, 0.3, 0.3), null, []),
+            new("Pillow", 0.5, new(0.6, 0.1, 0.2, 0.4), null, [])]);
+
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Equal(2, picker.FindAll(".item-region").Count));
+
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Select high-confidence items").Click();
+        Assert.Contains(picker.FindAll(".item-region")[0].ClassList, c => c == "selected");
+        Assert.DoesNotContain(picker.FindAll(".item-region")[1].ClassList, c => c == "selected");
+
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Deselect all").Click();
+        Assert.DoesNotContain(picker.FindAll(".item-region")[0].ClassList, c => c == "selected");
+        Assert.DoesNotContain(picker.FindAll(".item-region")[1].ClassList, c => c == "selected");
+    }
+
+    [Fact]
+    public void SegmentedItem_RendersPolygonOverlay_AndPassesMaskToCropStream()
+    {
+        IReadOnlyList<NormalizedPoint> mask = [new(0.1, 0.1), new(0.4, 0.1), new(0.4, 0.4), new(0.1, 0.4)];
+        _detector.Detect = (_, _) => Task.FromResult<IReadOnlyList<DetectedAsset>>([
+            new("Chair", 0.9, new(0.1, 0.1, 0.3, 0.3), null, [], mask)]);
+
+        var picker = _context.Render<VideoScanPicker>();
+        picker.Find("#room-video").Change("room.mp4");
+        picker.Find("button").Click();
+        picker.WaitForAssertion(() => Assert.Single(picker.FindAll("polygon.item-polygon")));
+
+        var polygon = picker.Find("polygon.item-polygon");
+        Assert.Contains("10.0,10.0 40.0,10.0", polygon.GetAttribute("points"));
+        Assert.Contains("Segmented", picker.Markup);
+
+        polygon.Click();
+        Assert.Contains("selected", polygon.ClassList);
+
+        picker.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").Click();
+        picker.WaitForAssertion(() => Assert.Single(_storage.References));
+
+        var crop = Assert.Single(_module.Invocations, i => i.Identifier == "cropStream");
+        Assert.NotNull(crop.Arguments[3]);
+    }
+
+    [Fact]
     public void MissingBoxes_UseCheckbox_AndFailedFramesDoNotDiscardSuccessfulOnes()
     {
         _detector.Detect = (call, _) => call == 1

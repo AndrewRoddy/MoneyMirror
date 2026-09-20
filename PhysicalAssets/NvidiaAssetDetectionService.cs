@@ -226,16 +226,16 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
               "label": string,
               "confidence": number between 0 and 1,
               "region": {"x": number, "y": number, "width": number, "height": number} | null,
+              "mask": [{"x": number, "y": number}] | null,
               "identification": {"brand": string|null, "model": string|null, "confidence": number between 0 and 1} | null,
               "tags": [string]
-            }
           ]
         }
 
         Rules:
         - One entry per distinct object found. A single-item photo still returns an array with one entry.
         - "region" gives the object's bounding box as fractions of image width/height (0-1); use null if you can't estimate it.
-        - Only include "identification" when you can infer a specific brand or model with reasonable confidence.
+        - "mask" is an optional polygon outline of the object as 3 to 20 normalized points (0-1); set to null if unavailable.
           If you can't, set "identification" to null - never invent a specific product.
         - "tags" contains short, visible descriptors useful for lookup and filtering, such as color,
           material, pattern, or texture (for example: ["blue", "metal", "fuzzy"]). Do not use tags

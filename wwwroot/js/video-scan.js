@@ -110,38 +110,63 @@ export function frameStream(video, index) {
     }
     return blob;
 }
-export async function cropStream(video, index, region) {
+export async function cropStream(video, index, region, mask) {
     const source = requireFrame(video, index);
-    if (!region) {
+    if (!region && (!mask || mask.length < 3)) {
         if (!(source.blob instanceof Blob)) {
             throw new Error("This frame could not be read. Try scanning again.");
         }
         return source.blob;
     }
+
+    let effectiveRegion = region;
+    if (!effectiveRegion && mask && mask.length >= 3) {
+        const xs = mask.map((p) => p.x);
+        const ys = mask.map((p) => p.y);
+        const minX = Math.max(0, Math.min(...xs));
+        const minY = Math.max(0, Math.min(...ys));
+        const maxX = Math.min(1, Math.max(...xs));
+        const maxY = Math.min(1, Math.max(...ys));
+        effectiveRegion = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    }
+
     const canvas = document.createElement("canvas");
-    const x = Math.floor(region.x * source.canvas.width);
-    const y = Math.floor(region.y * source.canvas.height);
+    const x = Math.floor(effectiveRegion.x * source.canvas.width);
+    const y = Math.floor(effectiveRegion.y * source.canvas.height);
     canvas.width = Math.max(
         1,
-        Math.min(source.canvas.width - x, Math.ceil(region.width * source.canvas.width)),
+        Math.min(source.canvas.width - x, Math.ceil(effectiveRegion.width * source.canvas.width)),
     );
     canvas.height = Math.max(
         1,
-        Math.min(source.canvas.height - y, Math.ceil(region.height * source.canvas.height)),
+        Math.min(source.canvas.height - y, Math.ceil(effectiveRegion.height * source.canvas.height)),
     );
-    canvas
-        .getContext("2d")
-        .drawImage(
-            source.canvas,
-            x,
-            y,
-            canvas.width,
-            canvas.height,
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-        );
+
+    const ctx = canvas.getContext("2d");
+
+    if (mask && mask.length >= 3) {
+        ctx.beginPath();
+        const startX = mask[0].x * source.canvas.width - x;
+        const startY = mask[0].y * source.canvas.height - y;
+        ctx.moveTo(startX, startY);
+        for (let i = 1; i < mask.length; i++) {
+            ctx.lineTo(mask[i].x * source.canvas.width - x, mask[i].y * source.canvas.height - y);
+        }
+        ctx.closePath();
+        ctx.clip();
+    }
+
+    ctx.drawImage(
+        source.canvas,
+        x,
+        y,
+        canvas.width,
+        canvas.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+    );
     return await blobFromCanvas(canvas);
 }
 
