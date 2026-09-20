@@ -1,0 +1,410 @@
+@using MoneyMirror.PhysicalAssets
+@using System.Globalization
+@using System.Text
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject ISamSegmentationEngine SamEngine
+@inject IPossessionImageStorage ImageStorage
+@inject ILogger<LiveCameraScanner> Logger
+
+<section class="camera-scanner" aria-labelledby="live-scanner-title">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 id="live-scanner-title" class="page-section-title mb-0">Live camera scanner</h2>
+        @if (_isStreaming)
+        {
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-success">Camera active</span>
+                @if (_isModelReady)
+                {
+                    <span class="badge @(_engineDevice == "webgpu" ? "bg-info" : "bg-warning text-dark")">
+                        @(_engineDevice == "webgpu" ? "WebGPU" : "WASM fallback")
+                    </span>
+                }
+            </div>
+        }
+    </div>
+
+    <p class="text-muted">Point your camera at an item and tap it to snap an outline in real time.</p>
+
+    <div @ref="_viewfinder" class="viewfinder-stage @(Disabled ? "disabled" : "")" @onclick="HandleTapAsync">
+        @if (!_isStreaming && !_isFrozen)
+        {
+            <div class="viewfinder-placeholder">
+                <p class="mb-3">Camera is inactive.</p>
+                <button type="button" class="btn btn-primary" disabled="@Disabled" @onclick="StartCameraAsync" @onclick:stopPropagation="true">
+                    Start live camera
+                </button>
+            </div>
+        }
+
+        <video @ref="_video" class="camera-video @(_isFrozen ? "d-none" : "")" playsinline muted autoplay aria-label="Live camera feed"></video>
+        <canvas @ref="_canvas" class="freeze-canvas @(!_isFrozen ? "d-none" : "")" aria-label="Frozen frame buffer"></canvas>
+
+        @if (_lastResult?.Polygon is { Count: >= 3 } polygon)
+        {
+            <svg class="contour-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polygon points="@PolygonPoints(polygon)"
+                         class="glowing-contour"
+                         fill="rgba(0, 220, 255, 0.25)"
+                         stroke="#00dcff"
+                         stroke-width="0.8"
+                         stroke-linejoin="round"
+                         stroke-linecap="round" />
+                @foreach (var prompt in _prompts)
+                {
+                    <circle cx="@((prompt.X * 100).ToString("F2", CultureInfo.InvariantCulture))"
+                            cy="@((prompt.Y * 100).ToString("F2", CultureInfo.InvariantCulture))"
+                            r="1.5"
+                            class="prompt-marker @(prompt.Type == SamPromptType.Positive ? "positive" : "negative")"
+                            fill="@(prompt.Type == SamPromptType.Positive ? "#10b981" : "#ef4444")"
+                            stroke="#ffffff"
+                            stroke-width="0.4" />
+                }
+            </svg>
+        }
+        @if (_isStreaming && !_isFrozen && _statusHint is null)
+        {
+            <div class="viewfinder-hint">Tap any item to segment</div>
+        }
+        else if (_statusHint is not null)
+        {
+            <div class="viewfinder-hint">@_statusHint</div>
+        }
+        else if (_isFrozen && _isSegmenting)
+        {
+            <div class="viewfinder-hint">Segmenting...</div>
+        }
+        else if (_isFrozen)
+        {
+            <div class="viewfinder-hint">Tap to refine (+/-) or accept item below</div>
+        }
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="alert alert-danger mt-2" role="alert">@_errorMessage</div>
+    }
+
+    <div class="action-bar">
+        @if (_isStreaming || _isFrozen)
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled="@(Disabled || _isWorking)" @onclick="SwitchCameraAsync">
+                Switch camera
+            </button>
+        }
+
+        @if (_isFrozen)
+        {
+            <div class="mode-toggle me-2" role="group" aria-label="Prompt refinement mode">
+                <button type="button" class="mode-btn @(_currentPromptMode == SamPromptType.Positive ? "active positive" : "")"
+                        @onclick="() => SetPromptMode(SamPromptType.Positive)">
+                    + Include
+                </button>
+                <button type="button" class="mode-btn @(_currentPromptMode == SamPromptType.Negative ? "active negative" : "")"
+                        @onclick="() => SetPromptMode(SamPromptType.Negative)">
+                    - Exclude
+                </button>
+            </div>
+
+            <button type="button" class="btn btn-outline-danger" disabled="@(Disabled || _isWorking)" @onclick="RetapAsync">
+                Retap / Cancel
+            </button>
+
+            <button type="button" class="btn btn-success" disabled="@(Disabled || _isWorking || _lastResult?.Polygon is not { Count: >= 3 })" @onclick="AcceptItemAsync">
+                Accept item
+            </button>
+        }
+        else if (_isStreaming)
+        {
+            <button type="button" class="btn btn-outline-secondary" disabled="@(Disabled || _isWorking)" @onclick="StopCameraAsync">
+                Stop camera
+            </button>
+        }
+    </div>
+
+    @if (_engineDevice == "wasm")
+    {
+        <p class="text-muted small mt-2 mb-0">
+            Note: Running on CPU WASM. WebGPU requires HTTPS or localhost (127.0.0.1).
+        </p>
+    }
+</section>
+
+@code {
+    private const string CameraModulePath = "./js/camera-scanner.js";
+    private const string FacingEnvironment = "environment";
+    private const string FacingUser = "user";
+
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<LiveScannedItem> OnItemAccepted { get; set; }
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+
+    private ElementReference _viewfinder;
+    private ElementReference _video;
+    private ElementReference _canvas;
+
+    private IJSObjectReference? _cameraModule;
+    private bool _isStreaming;
+    private bool _isFrozen;
+    private bool _isSegmenting;
+    private bool _isWorking;
+    private bool _isModelReady;
+    private string? _engineDevice;
+    private string? _errorMessage;
+    private string? _statusHint;
+    private SamSegmentationResult? _lastResult;
+    private string _cameraFacing = FacingEnvironment;
+    private SamPromptType _currentPromptMode = SamPromptType.Positive;
+    private readonly List<SamPointPrompt> _prompts = new();
+    public async Task StartCameraAsync()
+    {
+        _errorMessage = null;
+
+        try
+        {
+            _cameraModule ??= await JS.InvokeAsync<IJSObjectReference>("import", CameraModulePath);
+            await _cameraModule.InvokeVoidAsync("startCamera", _video, _cameraFacing);
+            _isStreaming = true;
+            _isFrozen = false;
+
+            _statusHint = "Downloading MobileSAM model (~40 MB)...";
+            StateHasChanged();
+
+            var status = await SamEngine.InitializeAsync();
+            _engineDevice = status.Device;
+            _isModelReady = true;
+            _statusHint = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _statusHint = null;
+            Logger.LogError(ex, "Failed to start camera stream.");
+        }
+    }
+
+    public async Task StopCameraAsync()
+    {
+        if (_cameraModule is not null)
+        {
+            await _cameraModule.InvokeVoidAsync("stopCamera", _video);
+        }
+
+        _isStreaming = false;
+        _isFrozen = false;
+    }
+
+    public async Task SwitchCameraAsync()
+    {
+        _errorMessage = null;
+
+        if (_cameraModule is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var nextFacing = _cameraFacing == FacingEnvironment ? FacingUser : FacingEnvironment;
+            await _cameraModule.InvokeVoidAsync("switchCamera", _video, _cameraFacing);
+            _cameraFacing = nextFacing;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    public async Task HandleTapAsync(MouseEventArgs e)
+    {
+        if (!_isStreaming && !_isFrozen)
+        {
+            return;
+        }
+        if (_isWorking || _isSegmenting || _cameraModule is null)
+        {
+            return;
+        }
+
+        if (!_isModelReady)
+        {
+            _errorMessage = "MobileSAM model is downloading (~40 MB). Please wait a moment.";
+            return;
+        }
+        var coords = await _cameraModule.InvokeAsync<NormalizedPoint>(
+            "normalizePoint",
+            e.ClientX,
+            e.ClientY,
+            _viewfinder,
+            _video
+        );
+        if (coords.X < 0 || coords.X > 1 || coords.Y < 0 || coords.Y > 1)
+        {
+            return;
+        }
+
+        _isSegmenting = true;
+        await BusyChanged.InvokeAsync(true);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+
+        try
+        {
+            if (!_isFrozen)
+            {
+                await _cameraModule.InvokeVoidAsync("freezeFrame", _video, _canvas);
+
+                _statusHint = _engineDevice == "webgpu"
+                    ? "Encoding frame (WebGPU)..."
+                    : "Encoding frame (CPU WASM fallback)...";
+                StateHasChanged();
+
+                await SamEngine.EncodeFrameAsync(_canvas, cts.Token);
+                _isFrozen = true;
+                _prompts.Clear();
+                var prompt = new SamPointPrompt(coords.X, coords.Y, SamPromptType.Positive);
+                _prompts.Add(prompt);
+
+                _statusHint = "Snapping outline...";
+                StateHasChanged();
+
+                _lastResult = await SamEngine.DecodePointAsync(prompt.X, prompt.Y, prompt.Type, cts.Token);
+                _statusHint = null;
+            }
+            else
+            {
+                _statusHint = "Refining outline...";
+                StateHasChanged();
+
+                var prompt = new SamPointPrompt(coords.X, coords.Y, _currentPromptMode);
+                _prompts.Add(prompt);
+
+                _lastResult = await SamEngine.DecodePointsAsync(_prompts, cts.Token);
+                _statusHint = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _errorMessage = "Segmentation timed out. Please try tapping again.";
+            _statusHint = null;
+            if (_cameraModule is not null)
+            {
+                await _cameraModule.InvokeVoidAsync("unfreezeFrame", _video);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _statusHint = null;
+            if (_cameraModule is not null)
+            {
+                await _cameraModule.InvokeVoidAsync("unfreezeFrame", _video);
+            }
+            Logger.LogError(ex, "Tap segmentation failed.");
+        }
+        finally
+        {
+            _isSegmenting = false;
+            _statusHint = null;
+            await BusyChanged.InvokeAsync(false);
+        }
+    }
+
+    public void SetPromptMode(SamPromptType mode)
+    {
+        _currentPromptMode = mode;
+    }
+
+    public async Task RetapAsync()
+    {
+        _prompts.Clear();
+        _lastResult = null;
+        _isFrozen = false;
+        _errorMessage = null;
+
+        await SamEngine.ResetPriorAsync();
+
+        if (_cameraModule is not null)
+        {
+            await _cameraModule.InvokeVoidAsync("unfreezeFrame", _video);
+        }
+    }
+
+    public async Task AcceptItemAsync()
+    {
+        if (_lastResult?.Polygon is not { Count: >= 3 } polygon || _cameraModule is null)
+        {
+            return;
+        }
+
+        _isWorking = true;
+        await BusyChanged.InvokeAsync(true);
+
+        try
+        {
+            await using var streamRef = await _cameraModule.InvokeAsync<IJSStreamReference>("getCanvasBlob", _canvas);
+            await using var stream = await streamRef.OpenReadStreamAsync(10 * 1024 * 1024);
+
+            var imageReference = await ImageStorage.SaveAsync(stream, "live-scan.jpg");
+
+            var item = new LiveScannedItem(
+                polygon,
+                _lastResult.Bounds,
+                _lastResult.Confidence,
+                _lastResult.MaskWidth,
+                _lastResult.MaskHeight,
+                imageReference
+            );
+
+            await OnItemAccepted.InvokeAsync(item);
+            await RetapAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to accept segmented item.");
+        }
+        finally
+        {
+            _isWorking = false;
+            await BusyChanged.InvokeAsync(false);
+        }
+    }
+
+    private string PolygonPoints(IReadOnlyList<NormalizedPoint> points)
+    {
+        var builder = new StringBuilder();
+
+        for (var i = 0; i < points.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append((points[i].X * 100).ToString("F2", CultureInfo.InvariantCulture));
+            builder.Append(',');
+            builder.Append((points[i].Y * 100).ToString("F2", CultureInfo.InvariantCulture));
+        }
+
+        return builder.ToString();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_cameraModule is not null)
+        {
+            try
+            {
+                await _cameraModule.InvokeVoidAsync("stopCamera", _video);
+                await _cameraModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            finally
+            {
+                _cameraModule = null;
+            }
+        }
+    }
+}

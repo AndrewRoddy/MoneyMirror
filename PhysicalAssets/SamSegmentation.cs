@@ -32,6 +32,15 @@ public record SamEngineStatus(
 
 public record SamEncodeResult(double ElapsedMs, string? Device, int Width, int Height);
 
+public record LiveScannedItem(
+    IReadOnlyList<NormalizedPoint> Mask,
+    BoundingBox Region,
+    double Confidence,
+    int Width,
+    int Height,
+    string? ImageReference = null
+);
+
 public interface ISamSegmentationEngine : IAsyncDisposable
 {
     ValueTask<SamEngineStatus> InitializeAsync(CancellationToken cancellationToken = default);
@@ -132,7 +141,7 @@ public class BlazorSamSegmentationEngine : ISamSegmentationEngine
         return await module.InvokeAsync<SamSegmentationResult>(
             "decodeMultiPoints",
             cancellationToken,
-            jsPoints
+            new object[] { jsPoints }
         );
     }
 
