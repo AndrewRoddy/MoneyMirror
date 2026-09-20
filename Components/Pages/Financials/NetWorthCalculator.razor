@@ -37,25 +37,27 @@
         <div class="alert alert-danger" role="alert">@ErrorMessage</div>
     }
 
-    <section class="finance-summary" aria-label="Net worth summary">
-        <div class="summary-card summary-assets">
-            <div class="summary-card-top"><span class="summary-label">Net Worth</span></div>
-            <strong>@NetWorth.ToString("C0")</strong>
-            <span class="summary-foot">Financial assets + physical capital − liabilities</span>
+    <section class="net-worth-summary" aria-label="Net worth summary">
+        <div class="headline-figure">
+            <span class="finance-eyebrow">Net Worth<span class="eyebrow-line"></span></span>
+            <strong class="headline-amount">@NetWorth.ToString("C0")</strong>
+            <p class="headline-note">Financial assets + physical capital &minus; liabilities</p>
         </div>
-        <div class="summary-card summary-assets">
-            <div class="summary-card-top"><span class="summary-label">Financial assets</span></div>
-            <strong>@TotalFinancialAssets.ToString("C0")</strong>
-        </div>
-        <div class="summary-card summary-assets">
-            <div class="summary-card-top"><span class="summary-label">Physical capital</span></div>
-            <strong>@TotalPhysicalCapital.ToString("C0")</strong>
-            <span class="summary-foot"><a href="/inventory">View inventory</a></span>
-        </div>
-        <div class="summary-card summary-liabilities">
-            <div class="summary-card-top"><span class="summary-label">Total liabilities</span></div>
-            <strong>@TotalLiabilities.ToString("C0")</strong>
-        </div>
+
+        <dl class="breakdown-row">
+            <div class="breakdown-item">
+                <dt>Financial assets</dt>
+                <dd>@TotalFinancialAssets.ToString("C0")</dd>
+            </div>
+            <div class="breakdown-item">
+                <dt>Physical capital</dt>
+                <dd>@TotalPhysicalCapital.ToString("C0") <a href="/inventory">View inventory</a></dd>
+            </div>
+            <div class="breakdown-item breakdown-liability">
+                <dt>Total liabilities</dt>
+                <dd>@TotalLiabilities.ToString("C0")</dd>
+            </div>
+        </dl>
     </section>
 
     <div class="records-toolbar">
