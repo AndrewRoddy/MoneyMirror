@@ -10,182 +10,339 @@
 @inject IPhysicalAssetRepository AssetRepository
 @inject IMarketPotentialSummaryService MarketPotentialSummaryService
 
-<PageTitle>Dashboard</PageTitle>
+<PageTitle>Money Mirror</PageTitle>
 
-<div class="standard-page">
-    <header class="page-header">
-        <div>
-            <h1>Dashboard</h1>
+@*
+    The landing page.
+
+    This used to be a dashboard: two figures and a pair of disclosure
+    panels duplicating what Financial and Human Capital already showed.
+    Those figures now live on Financial, next to the records they are
+    computed from, and this page does the job the app actually lacked -
+    explaining, to someone arriving cold, what Money Mirror does and why
+    it is built the way it is.
+
+    It is a pitch, but not a brochure: the band below the hero reads the
+    live database, so the first thing a visitor sees is the real app
+    working rather than a screenshot of it.
+*@
+
+<div class="landing">
+
+    <header class="hero">
+        <p class="hero-eyebrow">Powered by NVIDIA Nemotron</p>
+        <h1 class="hero-title">Money Mirror</h1>
+        <p class="hero-lede">
+            Plenty of apps will tell you a net worth number. Very few will tell you
+            where it came from, and almost none teach you anything you can act on
+            afterwards.
+        </p>
+        <p class="hero-sub">
+            Money Mirror counts everything you own: the cash, the furniture in your
+            apartment, and what the labor market will pay for what you know. Every
+            figure arrives with its reasoning attached.
+        </p>
+        <div class="hero-actions">
+            <a href="physical-assets" class="primary-button">Scan a possession</a>
+            <a href="human-capital" class="secondary-button">Upload a resume</a>
+            <a href="financials" class="secondary-button">Open your net worth</a>
         </div>
     </header>
 
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="card h-100 border-primary">
-                <div class="card-body">
-                    <h5 class="card-title">Net Worth</h5>
-                    @if (_isLoadingNetWorth)
-                    {
-                        <p class="text-muted"><em>Loading...</em></p>
-                    }
-                    else if (_netWorthError is not null)
-                    {
-                        <p class="text-danger">@_netWorthError</p>
-                    }
-                    else
-                    {
-                        <p class="display-6 mb-1">@_netWorth.ToString("C0")</p>
-                        <p class="text-muted small mb-3">Financial assets + physical capital &minus; liabilities</p>
-                    }
-                    <a href="/financials" class="btn btn-outline-primary">View Net Worth</a>
-                </div>
+    <section class="live-band" aria-label="Your current figures">
+        <p class="live-label">Your mirror, right now</p>
+        <dl class="live-figures">
+            <div class="live-figure">
+                <dt>Net worth</dt>
+                @if (_isLoadingNetWorth)
+                {
+                    <dd class="live-pending">Loading&hellip;</dd>
+                }
+                else if (_netWorthError is not null)
+                {
+                    <dd class="live-pending">Unavailable</dd>
+                }
+                else
+                {
+                    <dd>@_netWorth.ToString("C0")</dd>
+                    <p class="live-note">Financial assets + physical capital &minus; liabilities</p>
+                }
             </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card h-100 border-success">
-                <div class="card-body">
-                    <h5 class="card-title">Market Potential</h5>
-                    @if (_isLoadingMarketPotential)
-                    {
-                        <p class="text-muted"><em>Loading...</em></p>
-                    }
-                    else if (_marketPotentialError is not null)
-                    {
-                        <p class="text-danger">@_marketPotentialError</p>
-                    }
-                    else if (_hasNoProfile)
-                    {
-                        <p class="text-muted">No profile on file yet.</p>
-                    }
-                    else if (_compensation is null)
-                    {
-                        <p class="text-muted"><em>Not available.</em></p>
-                    }
-                    else
-                    {
-                        <p class="display-6 mb-1">
-                            $@_compensation.MinUsd.ToString("N0") &ndash; $@_compensation.MaxUsd.ToString("N0")
-                        </p>
-                        <p class="text-muted small mb-3">
-                            Based on @_occupationCount matched occupation@(_occupationCount == 1 ? "" : "s")
-                        </p>
-                    }
-                    <NavLink href="/human-capital" class="btn btn-outline-success">View Market Potential</NavLink>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row mt-1">
-        <div class="col-md-6 mb-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Scan a Possession</h5>
-                    <p class="card-text">
-                        Photograph something you own to detect, identify, and value it.
+            <div class="live-figure">
+                <dt>Market potential</dt>
+                @if (_isLoadingMarketPotential)
+                {
+                    <dd class="live-pending">Loading&hellip;</dd>
+                }
+                else if (_marketPotentialError is not null || _hasNoProfile || _compensation is null)
+                {
+                    <dd class="live-pending">No resume yet</dd>
+                    <p class="live-note">Upload one and Nemotron reads it in about a minute.</p>
+                }
+                else
+                {
+                    <dd>$@_compensation.MinUsd.ToString("N0")&ndash;$@_compensation.MaxUsd.ToString("N0")</dd>
+                    <p class="live-note">
+                        Across @_occupationCount matched occupation@(_occupationCount == 1 ? "" : "s")
                     </p>
-                    <a href="physical-assets" class="btn btn-primary">Scan a Possession</a>
-                </div>
+                }
             </div>
-        </div>
 
-        <div class="col-md-6 mb-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">Upload a Resume</h5>
-                    <p class="card-text">
-                        Upload your resume to see your estimated Market Potential.
-                    </p>
-                    <a href="human-capital" class="btn btn-primary">Upload a Resume</a>
-                </div>
+            <div class="live-figure">
+                <dt>Items scanned</dt>
+                @if (_isLoadingNetWorth)
+                {
+                    <dd class="live-pending">Loading&hellip;</dd>
+                }
+                else
+                {
+                    <dd>@_inventoryCount</dd>
+                    <p class="live-note">Detected, valued and kept in your inventory</p>
+                }
             </div>
+        </dl>
+    </section>
+
+    <section class="pitch">
+        <p class="pitch-eyebrow">The problem</p>
+        <h2>A number you can't explain is a number you can't decide with</h2>
+        <p class="pitch-lede">
+            Financial literacy doesn't fail because people can't add. It fails
+            because the tools hand over a total and stop, so nobody learns which
+            inputs moved it or what to do next.
+        </p>
+        <ul class="claim-list">
+            <li>
+                <strong>Budgeting apps end at the balance.</strong>
+                They categorize what already happened. They never explain what a
+                figure is made of, so there is nothing to learn from.
+            </li>
+            <li>
+                <strong>Most of what people own is never counted.</strong>
+                A laptop, a bike, a couch. Real resale value, invisible to every
+                account-linking tool because it isn't in an account.
+            </li>
+            <li>
+                <strong>Earning power is the largest asset most people under thirty have.</strong>
+                It's also the only one no personal finance app tracks, priced,
+                or tells you how to grow.
+            </li>
+        </ul>
+    </section>
+
+    <section class="pitch">
+        <p class="pitch-eyebrow">The math</p>
+        <h2>Transparent on purpose</h2>
+        <pre class="formula"><code>financial assets + physical assets &minus; liabilities = estimated net worth</code></pre>
+        <p class="pitch-lede">
+            Market potential sits beside that number rather than inside it. Your
+            earning power is real, but it isn't cash, and folding it in would make
+            the total a lie.
+        </p>
+    </section>
+
+    <section class="pitch">
+        <p class="pitch-eyebrow">What it does</p>
+        <h2>Three kinds of capital, one mirror</h2>
+        <div class="pillar-grid">
+            <article class="pillar">
+                <h3>Financial</h3>
+                <p>
+                    Accounts, investments and property tracked against loans, credit
+                    and other liabilities. The arithmetic is ordinary and deliberately
+                    boring: no model touches it.
+                </p>
+                <a href="financials" class="pillar-link">Open Financial &rarr;</a>
+            </article>
+
+            <article class="pillar">
+                <h3>Physical assets</h3>
+                <p>
+                    Photograph something, or pan a short video around a room. A vision
+                    model picks out the items, you tap one to isolate it, and it is
+                    priced against real eBay comparables with Nemotron explaining the
+                    result. Anything you confirm joins your inventory and rolls into
+                    net worth.
+                </p>
+                <a href="physical-assets" class="pillar-link">Scan a possession &rarr;</a>
+            </article>
+
+            <article class="pillar">
+                <h3>Human capital</h3>
+                <p>
+                    Upload a resume. Nemotron reads it into a structured profile,
+                    matches it to occupations, and pairs it with real Bureau of Labor
+                    Statistics wage data. You get a compensation range, the skills the
+                    market is asking for, the ones you're missing, and the better
+                    paying roles already within reach.
+                </p>
+                <a href="human-capital" class="pillar-link">Upload a resume &rarr;</a>
+            </article>
         </div>
-    </div>
+    </section>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <button type="button" class="btn btn-link p-0 card-title h5 text-decoration-none" @onclick="() => _showInventory = !_showInventory">
-                @(_showInventory ? "▾" : "▸") Your Inventory
-            </button>
-            @if (_showInventory)
-            {
-                <div class="mt-3">
-                    <InventoryList ShowAddForm="false" />
-                    <a href="/inventory">Manage inventory &rarr;</a>
-                </div>
-            }
+    <section class="pitch">
+        <p class="pitch-eyebrow">The model</p>
+        <h2>Nemotron does five different jobs here</h2>
+        <p class="pitch-lede">
+            Not one job five times. Each is a separate prompt with its own schema,
+            its own failure handling, and its own re-prompt when the reply doesn't
+            parse.
+        </p>
+        <dl class="job-list">
+            <div class="job">
+                <dt>Profile extraction</dt>
+                <dd>Unstructured resume text into a typed profile: roles, dates, skills, education, publications.</dd>
+            </div>
+            <div class="job">
+                <dt>Occupation matching</dt>
+                <dd>That profile into candidate occupations, each with the key skills it asks for.</dd>
+            </div>
+            <div class="job">
+                <dt>Compensation estimation</dt>
+                <dd>A structured salary estimate for roles where BLS publishes no series.</dd>
+            </div>
+            <div class="job">
+                <dt>Asset valuation</dt>
+                <dd>A resale price for a detected object, with written reasoning you can read and disagree with.</dd>
+            </div>
+            <div class="job">
+                <dt>Explanation</dt>
+                <dd>Plain language prose explaining what a computed range means and why it varies.</dd>
+            </div>
+        </dl>
+        <p class="model-line">
+            <code>nvidia/nemotron-3-nano-omni-30b-a3b-reasoning</code>, served from
+            NVIDIA NIM.
+        </p>
+    </section>
+
+    <section class="pitch">
+        <p class="pitch-eyebrow">The design rule</p>
+        <h2>Nemotron supplies judgment. C# does the arithmetic.</h2>
+        <p class="pitch-lede">
+            The model is never asked to add up your net worth.
+            <code>FinancialNetWorthCalculator</code>, <code>BlsCompensationAggregator</code>,
+            <code>SkillGapAnalyzer</code>, <code>OpportunityFinder</code> and
+            <code>MarketValuationCalculator</code> are plain deterministic code, and
+            they own every number on the screen.
+        </p>
+        <p class="pitch-lede">
+            The explanation prompt is the clearest case. It hands Nemotron a range
+            already computed from real BLS observations and tells it, in so many
+            words, not to propose numbers of its own, only to explain the evidence it
+            was given. That keeps the prose educational instead of confidently
+            invented.
+        </p>
+    </section>
+
+    <section class="pitch">
+        <p class="pitch-eyebrow">Where the numbers come from</p>
+        <h2>Real sources, named on the page</h2>
+        <div class="source-grid">
+            <article class="source">
+                <h3>Bureau of Labor Statistics</h3>
+                <p>
+                    The Public Data API v2 time series endpoint, queried directly for
+                    occupational wage observations. Suppressed values are dropped
+                    rather than guessed at, and if nothing usable comes back the app
+                    reports insufficient data instead of inventing a range.
+                </p>
+            </article>
+            <article class="source">
+                <h3>eBay comparable listings</h3>
+                <p>
+                    Real eBay listings for the same item are the evidence behind a
+                    resale figure. Every comp is kept with its price, title and
+                    condition, and <code>MarketValuationCalculator</code> takes their
+                    median rather than asking a model to pick one. Under three usable
+                    comps the figure is flagged low confidence instead of quietly
+                    presented as fact.
+                </p>
+            </article>
+            <article class="source">
+                <h3>NVIDIA vision</h3>
+                <p>
+                    <code>meta/llama-3.2-11b-vision-instruct</code> finds the objects
+                    in a photo or a video frame. Non-JSON replies are re-prompted, and
+                    a saturated endpoint retries with backoff instead of failing the
+                    scan.
+                </p>
+            </article>
+            <article class="source">
+                <h3>MobileSAM, on your device</h3>
+                <p>
+                    Tap an object in the camera view and the cutout mask is computed in
+                    your browser on WebGPU, with a WASM fallback. Nothing but the crop
+                    you chose is ever uploaded.
+                </p>
+            </article>
         </div>
-    </div>
+    </section>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <button type="button" class="btn btn-link p-0 card-title h5 text-decoration-none" @onclick="() => _showProfile = !_showProfile">
-                @(_showProfile ? "▾" : "▸") Your Profile
-            </button>
-            @if (_showProfile)
-            {
-                <div class="mt-3">
-                    @if (_isLoadingMarketPotential)
-                    {
-                        <p class="text-muted"><em>Loading...</em></p>
-                    }
-                    else if (_hasNoProfile || _profile is null)
-                    {
-                        <p class="text-muted">No profile on file yet. <a href="/human-capital">Upload a resume</a> to get started.</p>
-                    }
-                    else
-                    {
-                        <dl class="row mb-2">
-                            <dt class="col-sm-3">Education</dt>
-                            <dd class="col-sm-9">@(_profile.Education.Count == 0 ? "—" : string.Join(", ", _profile.Education.Select(e => e.Institution)))</dd>
+    <section class="pitch honesty-block">
+        <p class="pitch-eyebrow">Built to be honest</p>
+        <h2>When it isn't confident, it says so</h2>
+        <ul class="claim-list">
+            <li>
+                <strong>No fabricated ranges.</strong>
+                Insufficient evidence is an explicit result everywhere it can happen,
+                on both the wage side and the valuation side.
+            </li>
+            <li>
+                <strong>AI estimates are labeled AI estimates.</strong>
+                Low confidence figures carry the warning on the figure itself, not in
+                a footnote.
+            </li>
+            <li>
+                <strong>Every provider failure is inspectable.</strong>
+                Errors come with a <em>Show provider response</em> button, so you can
+                see what actually came back.
+            </li>
+            <li>
+                <strong>It runs on your machine.</strong>
+                One Docker command brings up the app and its database. There is no
+                account, and your resume and photos never leave it except to reach the
+                model endpoint.
+            </li>
+        </ul>
+    </section>
 
-                            <dt class="col-sm-3">Experience</dt>
-                            <dd class="col-sm-9">@(_profile.Experience.Count == 0 ? "—" : string.Join(", ", _profile.Experience.Select(e => e.Organization)))</dd>
-
-                            <dt class="col-sm-3">Skills</dt>
-                            <dd class="col-sm-9">
-                                @if (_profile.Skills.Count == 0)
-                                {
-                                    <text>—</text>
-                                }
-                                else
-                                {
-                                    @foreach (var skill in _profile.Skills)
-                                    {
-                                        <span class="badge bg-secondary me-1">@skill.Name</span>
-                                    }
-                                }
-                            </dd>
-                        </dl>
-                        <a href="/human-capital">Edit profile / upload a new resume &rarr;</a>
-                    }
-                </div>
-            }
+    <section class="closing">
+        <h2>See what you're actually worth</h2>
+        <p>
+            Start with whichever you have on hand. Both take about a minute.
+        </p>
+        <div class="hero-actions">
+            <a href="physical-assets" class="primary-button">Scan a possession</a>
+            <a href="human-capital" class="secondary-button">Upload a resume</a>
         </div>
-    </div>
+    </section>
+
 </div>
 
 @code {
     private bool _isLoadingNetWorth = true;
     private string? _netWorthError;
     private decimal _netWorth;
+    private int _inventoryCount;
 
     private bool _isLoadingMarketPotential = true;
     private string? _marketPotentialError;
     private bool _hasNoProfile;
-    private ProfessionalProfile? _profile;
     private CompensationEstimate? _compensation;
     private int _occupationCount;
 
-    private bool _showInventory;
-    private bool _showProfile;
-
     // The two summaries fail independently (separate try/catch below) - a
     // problem estimating Market Potential should never take down the Net
-    // Worth summary, or vice versa. They run sequentially rather than via
+    // Worth figure, or vice versa. They run sequentially rather than via
     // Task.WhenAll because both share the same scoped DbContext (directly,
     // and via IPhysicalAssetRepository/IProfessionalProfileRepository),
     // which EF Core does not allow concurrent operations against.
+    //
+    // Neither is allowed to hold up the pitch below: StreamRendering means
+    // the copy paints immediately and the live band fills in behind it.
     protected override async Task OnInitializedAsync()
     {
         await LoadNetWorthAsync();
@@ -200,6 +357,7 @@
             var liabilityAmounts = await DbContext.Liabilities.AsNoTracking().Select(l => l.OutstandingBalance).ToListAsync();
             var physicalAssets = await AssetRepository.GetAllAsync();
 
+            _inventoryCount = physicalAssets.Count;
             _netWorth = FinancialNetWorthCalculator.Calculate(
                 assetAmounts.Concat(physicalAssets.Select(a => a.CurrentValuation ?? 0m)),
                 liabilityAmounts);
@@ -219,7 +377,6 @@
         try
         {
             var summary = await MarketPotentialSummaryService.GetSummaryAsync();
-            _profile = summary.Profile;
             if (!summary.HasProfile)
             {
                 _hasNoProfile = true;

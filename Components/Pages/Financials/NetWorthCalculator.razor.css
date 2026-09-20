@@ -160,6 +160,82 @@ button {
 }
 
 /* ===================================================================
+ * Market potential
+ * ===================================================================
+ * A quieter pane than the net worth one above it. That is the point:
+ * this figure deliberately does not join the total, so it must not
+ * compete with it for attention.
+ */
+
+.potential-summary {
+    margin-bottom: 1.25rem;
+    padding: 1.125rem;
+    border: 1px solid var(--glass-hairline);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-1);
+}
+
+.potential-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.potential-label {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.potential-head a {
+    color: var(--brand);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.potential-head a:hover {
+    text-decoration: underline;
+}
+
+/* Smaller than .headline-amount by design, and it wraps rather than
+   shrinking: "$78,000 - $104,000" does not fit one line on a 390px
+   screen at any size worth reading. */
+.potential-amount {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--text);
+    font-family: var(--font-numeric);
+    font-size: clamp(1.5rem, 7vw, 1.875rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.potential-note {
+    margin: 0.5rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.potential-pending {
+    margin: 0.5rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+/* ===================================================================
  * Segmented control
  * =================================================================== */
 
@@ -751,6 +827,15 @@ button {
 
     .breakdown-row {
         gap: 0.75rem;
+    }
+
+    .potential-summary {
+        margin-bottom: 1.75rem;
+        padding: 1.5rem;
+    }
+
+    .potential-amount {
+        font-size: 2rem;
     }
 
     .record-tabs {
