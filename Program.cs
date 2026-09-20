@@ -44,6 +44,7 @@ builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>();
 builder.Services.AddScoped<IMarketPotentialExplanationService, NemotronMarketPotentialExplanationService>();
 builder.Services.AddScoped<IMarketPotentialPipeline, MarketPotentialPipeline>();
 builder.Services.AddHttpClient<IOnetOccupationDataService, OnetOccupationDataService>();
+builder.Services.AddScoped<ILaborMarketService, OnetLaborMarketService>();
 builder.Services.AddScoped<IResumeTextExtractionService, ResumeTextExtractionService>();
 builder.Services.AddSingleton<IResumeUploadValidator, ResumeUploadValidator>();
 builder.Services.AddScoped<IProfessionalProfileExtractionService, NemotronProfileExtractionService>();
