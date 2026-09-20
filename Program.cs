@@ -1,3 +1,4 @@
+using System.Globalization;
 using MoneyMirror.Ai;
 using MoneyMirror.Ai.Configuration;
 using MoneyMirror.Components;
@@ -7,6 +8,13 @@ using Microsoft.EntityFrameworkCore;
 using MoneyMirror.Data;
 using MoneyMirror.Features.Financial;
 using MoneyMirror.HumanCapital.Configuration;
+
+// Containers start with no LANG/LC_ALL, so .NET falls back to the invariant culture
+// and renders currency as "¤" instead of "$". Pin the formatting culture so money
+// looks the same in Docker as it does on a dev machine.
+var appCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentCulture = appCulture;
+CultureInfo.DefaultThreadCurrentUICulture = appCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
