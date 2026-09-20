@@ -9,7 +9,6 @@ function waitFor(target, success, action) {
             clearTimeout(timer);
             target.removeEventListener(success, ok);
             target.removeEventListener("error", fail);
-            target.removeEventListener("abort", abort);
             error ? reject(error) : resolve();
         };
         const ok = () => finish();
@@ -19,15 +18,12 @@ function waitFor(target, success, action) {
                     "This browser could not decode the video. Try an MP4 (H.264) or WebM recording.",
                 ),
             );
-        const abort = () =>
-            finish(new Error("Video loading was interrupted. Please try again."));
         const timer = setTimeout(
             () => finish(new Error("Video decoding timed out. Try a shorter clip.")),
             15000,
         );
         target.addEventListener(success, ok, { once: true });
         target.addEventListener("error", fail, { once: true });
-        target.addEventListener("abort", abort, { once: true });
         try {
             action();
         } catch (error) {
@@ -46,6 +42,14 @@ function blobFromCanvas(canvas) {
     );
 }
 
+function requireFrame(video, index) {
+    const session = sessions.get(video);
+    if (!session) throw new Error("No active video session. Try scanning again.");
+    const frame = session.frames[index];
+    if (!frame) throw new Error("This frame is no longer available. Try scanning again.");
+    return frame;
+}
+
 export async function prepare(input, video) {
     dispose(video);
     const file = input.files?.[0];
@@ -56,9 +60,9 @@ export async function prepare(input, video) {
     const session = { url: URL.createObjectURL(file), frames: [], cancelled: false };
     sessions.set(video, session);
     try {
+        video.pause();
         await waitFor(video, "loadeddata", () => {
             video.src = session.url;
-            video.load();
         });
         if (
             !Number.isFinite(video.duration) ||
@@ -88,30 +92,33 @@ export async function prepare(input, video) {
         }
         video.pause();
         return timestamps;
-  } catch (error) {
-    // An older decoding task must not dispose a replacement video's session.
-    if (sessions.get(video) === session) dispose(video);
+    } catch (error) {
+        // An older decoding task must not dispose a replacement video's session.
+        if (sessions.get(video) === session) dispose(video);
         throw error;
     }
 }
 
 export function frameUrl(video, index) {
-    const session = sessions.get(video);
-    if (!session) throw new Error("No active video session.");
-    return session.frames[index].url;
+    return requireFrame(video, index).url;
 }
 
 export function frameStream(video, index) {
-    const session = sessions.get(video);
-    if (!session) throw new Error("No active video session.");
-    return DotNet.createJSStreamReference(session.frames[index].blob);
+    const { blob } = requireFrame(video, index);
+    if (!(blob instanceof Blob)) {
+        throw new Error("This frame could not be read. Try scanning again.");
+    }
+    return DotNet.createJSStreamReference(blob);
 }
 
 export async function cropStream(video, index, region) {
-    const session = sessions.get(video);
-    if (!session) throw new Error("No active video session.");
-    const source = session.frames[index];
-    if (!region) return DotNet.createJSStreamReference(source.blob);
+    const source = requireFrame(video, index);
+    if (!region) {
+        if (!(source.blob instanceof Blob)) {
+            throw new Error("This frame could not be read. Try scanning again.");
+        }
+        return DotNet.createJSStreamReference(source.blob);
+    }
     const canvas = document.createElement("canvas");
     const x = Math.floor(region.x * source.canvas.width);
     const y = Math.floor(region.y * source.canvas.height);
@@ -148,4 +155,5 @@ export function dispose(video) {
     sessions.delete(video);
     video.pause();
     video.removeAttribute("src");
+    video.load();
 }
