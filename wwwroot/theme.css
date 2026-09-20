@@ -128,3 +128,113 @@
     --error-boundary-text: var(--pitt-white);
     --error-toast-bg: var(--accent-surface);
 }
+
+/*
+ * ===================================================================
+ * Surface system - iOS-style glass
+ * ===================================================================
+ * Added for the mobile-first reskin. Everything below is presentation
+ * only: tokens for type, radius, glass, elevation and motion, plus the
+ * handful of chrome tokens the nav needed once it became a frosted
+ * light surface instead of a solid navy one.
+ *
+ * The role tokens above are unchanged and still the thing components
+ * should reach for. These sit beside them.
+ */
+
+:root {
+    /* Type. The Apple system stack first so iOS and macOS get SF, with
+     * the app's previous Helvetica Neue fallbacks kept behind it. */
+    --font-ui:
+        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI",
+        Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    /* The serif wordmark and page titles the brand already used. */
+    --font-display: "Times New Roman", Times, serif;
+    /* Tabular figures keep currency columns from shifting as they change. */
+    --font-numeric: ui-rounded, "SF Pro Rounded", var(--font-ui);
+
+    /* Corner radii. Continuous-ish curvature: containers round harder
+     * than the controls inside them. */
+    --radius-xs: 0.5rem;
+    --radius-sm: 0.75rem;
+    --radius-md: 1.125rem;
+    --radius-lg: 1.5rem;
+    --radius-pill: 999px;
+
+    /* Glass. A backdrop blur is only convincing over something worth
+     * blurring, which is what the ambient wash on <body> is for. */
+    --glass-blur: saturate(180%) blur(20px);
+    --glass-blur-strong: saturate(190%) blur(30px);
+    --glass-bg: color-mix(in srgb, var(--pitt-white) 70%, transparent);
+    --glass-bg-strong: color-mix(in srgb, var(--pitt-white) 85%, transparent);
+    --glass-bg-solid: color-mix(in srgb, var(--pitt-white) 96%, var(--pitt-royal));
+    --glass-border: color-mix(in srgb, var(--pitt-white) 60%, transparent);
+    --glass-hairline: color-mix(in srgb, var(--pitt-royal) 14%, transparent);
+    /* The bright top edge that sells a pane as glass rather than paper. */
+    --glass-highlight: color-mix(in srgb, var(--pitt-white) 80%, transparent);
+
+    /* Elevation. Tinted toward Medium Blue rather than neutral black so
+     * shadows sit in the same color family as everything else. */
+    --shadow-1: 0 1px 2px color-mix(in srgb, var(--pitt-medium-blue) 8%, transparent);
+    --shadow-2:
+        0 1px 2px color-mix(in srgb, var(--pitt-medium-blue) 6%, transparent),
+        0 6px 20px color-mix(in srgb, var(--pitt-medium-blue) 10%, transparent);
+    --shadow-3:
+        0 2px 4px color-mix(in srgb, var(--pitt-medium-blue) 6%, transparent),
+        0 16px 48px color-mix(in srgb, var(--pitt-medium-blue) 16%, transparent);
+    --shadow-bar: 0 -8px 32px color-mix(in srgb, var(--pitt-medium-blue) 10%, transparent);
+
+    /* Motion. The spring curve is the one Apple uses for sheets and
+     * pushes: quick to leave, slow to settle. */
+    --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --dur-fast: 120ms;
+    --dur: 220ms;
+    --dur-slow: 360ms;
+
+    /* Shell metrics. The safe-area insets are what keep the tab bar off
+     * the home indicator on a notched phone. */
+    --tab-bar-height: 3.25rem;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --nav-rail-width: 15.5rem;
+    --content-max: 60rem;
+    --header-height: 3.25rem;
+
+    /* Ambient background. Drawn as a fixed layer behind everything so
+     * the glass has something to refract. */
+    --app-bg: color-mix(in srgb, var(--pitt-new-sky) 28%, var(--pitt-white));
+    --wash-royal: color-mix(in srgb, var(--pitt-royal) 20%, transparent);
+    --wash-gold: color-mix(in srgb, var(--pitt-gold) 20%, transparent);
+    --wash-sky: color-mix(in srgb, var(--pitt-light-blue) 22%, transparent);
+
+    /* ===============================================================
+     * Chrome overrides
+     * ===============================================================
+     * The nav used to be a navy gradient with white type. It is now a
+     * frosted light surface in both layouts (bottom tab bar on a phone,
+     * side rail on a desktop), so these are re-pointed at ink-on-light
+     * values. Nothing outside the two layout stylesheets reads them.
+     */
+    --nav-scrim: transparent;
+    --nav-link: var(--text-muted);
+    --nav-link-hover: var(--brand);
+    --nav-link-active: var(--brand);
+    --nav-surface-hover: color-mix(in srgb, var(--pitt-royal) 7%, transparent);
+    --nav-surface-pressed: color-mix(in srgb, var(--pitt-royal) 12%, transparent);
+    --nav-surface-active: color-mix(in srgb, var(--pitt-royal) 11%, transparent);
+    --nav-surface-active-hover: color-mix(in srgb, var(--pitt-royal) 15%, transparent);
+    --nav-surface-active-pressed: color-mix(in srgb, var(--pitt-royal) 19%, transparent);
+    /* The gold pip under a selected tab, the one spot of accent in the bar. */
+    --nav-indicator: var(--pitt-gold);
+
+    --topbar-bg: var(--glass-bg);
+    --topbar-border: var(--glass-hairline);
+
+    /* Drawers present as iOS sheets now: they rise from the bottom on a
+     * phone and slide in from the right on a desktop. */
+    --overlay: color-mix(in srgb, var(--pitt-medium-blue) 40%, transparent);
+    --shadow-drawer: 0 -16px 48px color-mix(in srgb, var(--pitt-medium-blue) 22%, transparent);
+}

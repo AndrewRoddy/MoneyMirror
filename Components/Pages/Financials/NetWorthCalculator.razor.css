@@ -1,249 +1,354 @@
+/*
+ * Financials.
+ *
+ * Mobile first, and ordered the way you would read it on a phone: title,
+ * then the headline number on a glass pane of its own, then the three
+ * components that make it up, then the records themselves.
+ *
+ * The records are a <table> on a desktop and a stack of cards on a phone.
+ * Same markup either way - the cells are re-placed with grid-template-
+ * areas rather than duplicated - because a five-column table on a 390px
+ * screen can only be read by dragging it sideways.
+ */
+
 .finance-page {
-    max-width: 1100px;
+    max-width: var(--content-max);
     margin: 0 auto;
-    padding: 2.5rem 2rem 4rem;
+    padding: 0.25rem 0 1rem;
     color: var(--text);
 }
 
-.finance-header,
-.records-toolbar,
-.records-heading,
-.drawer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
+/* ===================================================================
+ * Header
+ * =================================================================== */
 
 .finance-header {
-    align-items: flex-end;
-    margin-bottom: 2rem;
-}
-
-.finance-header h1,
-.records-heading h2,
-.drawer-header h2 {
-    margin: 0;
-    font-family:
-        Times New Roman,
-        serif;
-    font-weight: 400;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.875rem;
+    margin-bottom: 1.25rem;
 }
 
 .finance-header h1 {
-    margin-top: 0.5rem;
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 8vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.1;
 }
-.finance-subtitle,
-.records-heading p,
-.drawer-copy {
-    color: var(--text-muted);
-}
+
 .finance-subtitle {
-    margin: 0.5rem 0 0;
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9375rem;
 }
+
 .finance-eyebrow {
     color: var(--accent-text);
-    font-size: 0.7rem;
+    font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.12em;
 }
-.eyebrow-line {
-    display: inline-block;
-    width: 1.5rem;
-    height: 1px;
-    margin-left: 0.4rem;
-    vertical-align: middle;
-    background: var(--accent);
-}
 
-.header-actions,
-.drawer-actions {
-    display: flex;
-    gap: 0.6rem;
-}
 button {
     cursor: pointer;
 }
-.primary-button,
-.secondary-button {
-    padding: 0.7rem 1rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-}
-.primary-button {
-    border: 1px solid var(--brand);
-    color: var(--text-inverse);
-    background: var(--brand);
-}
-.secondary-button {
-    border: 1px solid var(--border);
-    color: var(--brand);
-    background: var(--surface);
+
+/* Full width and side by side, the way a phone expects its primary
+   actions. They shrink back to their content on a desktop. */
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
 }
 
+.header-actions button {
+    flex: 1;
+}
+
+/* ===================================================================
+ * The headline number
+ * =================================================================== */
+
 .net-worth-summary {
-    margin-bottom: 2.5rem;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid var(--border-subtle);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--glass-bg);
+    /* A wash of the brand's gold in the top corner, so the most
+       important pane on the page is also the warmest one. */
+    background-image: radial-gradient(
+        20rem 11rem at 88% -25%,
+        color-mix(in srgb, var(--accent) 24%, transparent),
+        transparent 70%
+    );
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-3);
 }
+
 .headline-figure {
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.25rem;
 }
+
+.headline-figure dt {
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
 .headline-amount {
     display: block;
-    margin-top: 0.5rem;
-    font-family:
-        Times New Roman,
-        serif;
-    font-weight: 400;
-    font-size: clamp(2.25rem, 6vw, 3.75rem);
+    margin-top: 0.25rem;
     color: var(--text);
+    font-family: var(--font-numeric);
+    font-size: clamp(2.5rem, 13vw, 3.25rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
 }
+
 .headline-note {
-    margin: 0.4rem 0 0;
+    margin: 0.5rem 0 0;
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.8125rem;
 }
+
+/* Three tiles that reflow to whatever the screen can hold. */
 .breakdown-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 0.5rem;
     margin: 0;
 }
+
 .breakdown-item {
-    padding-left: 1.5rem;
-    border-left: 1px solid var(--border-subtle);
+    min-width: 0;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--glass-hairline);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface) 55%, transparent);
 }
-.breakdown-item:first-child {
-    padding-left: 0;
-    border-left: 0;
-}
+
 .breakdown-item dt {
     margin: 0;
     color: var(--text-muted);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-.breakdown-item dd {
-    margin: 0.35rem 0 0;
-    font-size: 1.35rem;
+    font-size: 0.6875rem;
     font-weight: 600;
-    color: var(--text);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
+
+.breakdown-item dd {
+    margin: 0.25rem 0 0;
+    color: var(--text);
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+}
+
 .breakdown-liability dd {
     color: var(--negative-text);
 }
+
 .breakdown-item a {
-    margin-left: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 400;
+    display: block;
+    margin: 0.15rem 0 0;
     color: var(--brand);
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
+/* ===================================================================
+ * Segmented control
+ * =================================================================== */
+
 .records-toolbar {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.875rem;
 }
+
 .record-tabs {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.1875rem;
+    padding: 0.1875rem;
+    border: 1px solid var(--glass-hairline);
+    border-radius: var(--radius-pill);
+    background: var(--surface-muted);
 }
+
 .record-tab {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.25rem;
     border: 0;
-    border-radius: 0.4rem;
-    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius-pill);
     color: var(--text-muted);
     background: transparent;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition:
+        color var(--dur-fast) var(--ease-standard),
+        background-color var(--dur) var(--ease-spring);
 }
+
+/* The selected segment is a raised white lozenge, the iOS pattern. */
 .record-tab.selected {
     color: var(--brand);
-    background: var(--brand-surface);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
 }
+
 .record-tab span {
     margin-left: 0.25rem;
     color: var(--text-muted);
     font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
 }
-.view-note {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-}
-.status-dot {
-    display: inline-block;
-    width: 0.4rem;
-    height: 0.4rem;
-    margin-right: 0.25rem;
-    border-radius: 50%;
-    background: var(--positive);
-}
+
+/* ===================================================================
+ * Records
+ * =================================================================== */
 
 .records-card {
     overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 0.7rem;
-    background: var(--surface);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
 }
+
 .records-heading {
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--glass-hairline);
 }
+
 .records-heading h2 {
-    font-size: 1.35rem;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 400;
 }
+
 .records-heading p {
     margin: 0.3rem 0 0;
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
+
 .record-count {
     color: var(--text-muted);
     font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
+
+/* Left over from when the table scrolled sideways. Kept as a safety net
+   for a narrow desktop window, where five columns can still outgrow the
+   card. */
 .records-table-wrap {
     overflow-x: auto;
 }
+
 .records-table {
+    display: block;
     width: 100%;
-    min-width: 680px;
     border-collapse: collapse;
 }
-.records-table th {
-    padding: 0.75rem 1.5rem;
-    color: var(--text-muted);
-    background: var(--surface-muted);
-    font-size: 0.7rem;
-    text-align: left;
-    text-transform: uppercase;
+
+/*
+ * On a phone the table stops behaving like one. Every row becomes a
+ * two-line card: name and amount on the first line, type, date and the
+ * row's actions on the second. The header row has nothing to label once
+ * the columns are gone, so it is hidden rather than read out.
+ */
+.records-table thead {
+    display: none;
 }
+
+.records-table tbody {
+    display: block;
+}
+
+.records-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "name name amount"
+        "type date actions";
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    padding: 0.875rem 1rem;
+    border-top: 1px solid var(--glass-hairline);
+}
+
+.records-table tbody tr:first-child {
+    border-top: 0;
+}
+
 .records-table td {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-subtle);
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
     font-size: 0.85rem;
 }
+
+.record-name-cell {
+    grid-area: name;
+}
+
 .record-name {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    min-width: 0;
 }
-.record-avatar {
-    display: grid;
-    width: 2rem;
-    height: 2rem;
-    place-items: center;
-    border-radius: 0.4rem;
-    color: var(--positive-text);
-    background: var(--positive-surface);
-    font-size: 0.65rem;
+
+.record-name strong {
+    overflow: hidden;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.record-amount {
+    grid-area: amount;
+    justify-self: end;
+    font-size: 1rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
 }
-.liability-avatar {
-    color: var(--negative-text);
-    background: var(--negative-surface);
+
+.record-type {
+    grid-area: type;
 }
+
 .type-pill {
+    display: inline-flex;
+    align-items: center;
     color: var(--positive-text);
     font-size: 0.75rem;
+    font-weight: 500;
 }
+
 .type-pill > span {
     display: inline-block;
     width: 0.45rem;
@@ -252,89 +357,198 @@ button {
     border-radius: 50%;
     background: var(--positive);
 }
+
 .liability-pill {
     color: var(--negative-text);
 }
+
 .liability-pill > span {
     background: var(--negative);
 }
-.record-amount {
-    font-weight: 600;
-}
+
 .record-date {
+    grid-area: date;
     color: var(--text-muted);
+    font-size: 0.75rem;
     white-space: nowrap;
 }
+
 .record-actions {
-    text-align: right;
+    grid-area: actions;
+    display: flex;
+    justify-content: flex-end;
     white-space: nowrap;
 }
+
 .record-actions button {
-    border: 0;
-    padding: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--glass-hairline);
+    border-radius: var(--radius-pill);
     color: var(--brand);
-    background: transparent;
+    background: var(--glass-bg-strong);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition:
+        transform var(--dur-fast) var(--ease-spring),
+        background-color var(--dur-fast) var(--ease-standard);
 }
+
+.record-actions button:active {
+    transform: scale(0.95);
+}
+
 .record-actions .delete-action {
     margin-left: 0.35rem;
     color: var(--negative-text);
 }
+
 .empty-records {
-    padding: 3rem 1rem;
+    padding: 2.5rem 1.25rem;
     text-align: center;
 }
+
 .empty-icon {
-    margin-bottom: 0.5rem;
-    font-size: 2rem;
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto 0.75rem;
+    place-items: center;
+    border-radius: var(--radius-md);
+    color: var(--brand);
+    background: var(--brand-surface);
+    font-size: 1.5rem;
 }
+
 .empty-records h3 {
     margin: 0;
-    font-family:
-        Times New Roman,
-        serif;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
     font-weight: 400;
 }
+
 .empty-records p {
+    margin: 0.35rem 0 0;
     color: var(--text-muted);
     font-size: 0.85rem;
 }
-.data-disclaimer {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    text-align: center;
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
+
+/* ===================================================================
+ * Add / edit sheet
+ * ===================================================================
+ * Rises from the bottom like an iOS sheet on a phone, slides in from the
+ * right on a desktop. Bootstrap also ships a `.modal-backdrop`, so the
+ * z-indexes here are set high enough to clear it, the tab bar and
+ * Blazor's error toast, rather than relying on which stylesheet happens
+ * to be ordered last.
+ */
 
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 10;
+    z-index: 1200;
+    /* Bootstrap sizes its own backdrop with 100vw/100vh, which overflows
+       by the width of a desktop scrollbar. inset alone is enough. */
+    width: auto;
+    height: auto;
     background: var(--overlay);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: backdrop-fade-in var(--dur) var(--ease-standard);
 }
+
 .record-drawer {
     position: fixed;
-    inset: 0 0 0 auto;
-    z-index: 11;
-    width: min(26rem, 100%);
-    padding: 2rem;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1201;
+    max-height: 92dvh;
+    padding: 0.625rem 1.25rem calc(1.5rem + var(--safe-bottom));
     overflow-y: auto;
     box-sizing: border-box;
-    background: var(--surface);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--glass-bg-solid);
     box-shadow: var(--shadow-drawer);
+    animation: sheet-rise var(--dur-slow) var(--ease-spring);
 }
+
+/* The handle an iOS sheet is dragged by. Decorative: the sheet is still
+   dismissed with the close button or by tapping the backdrop. */
+.drawer-grabber {
+    width: 2.25rem;
+    height: 0.3125rem;
+    margin: 0 auto 0.875rem;
+    border-radius: var(--radius-pill);
+    background: var(--border);
+}
+
+@keyframes sheet-rise {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes sheet-slide-in {
+    from {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes backdrop-fade-in {
+    from {
+        opacity: 0;
+    }
+}
+
+.drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
 .drawer-header h2 {
-    margin-top: 0.4rem;
-    font-size: 2rem;
+    margin: 0.25rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    font-weight: 400;
 }
+
 .close-drawer {
+    display: grid;
+    flex: none;
+    width: 1.875rem;
+    height: 1.875rem;
+    place-items: center;
     border: 0;
+    border-radius: 50%;
     color: var(--text-muted);
-    background: transparent;
-    font-size: 1.75rem;
+    background: var(--surface-muted);
+    font-size: 1.25rem;
+    line-height: 1;
 }
+
 .drawer-copy {
-    margin: 0.75rem 0 1.5rem;
+    margin: 0.5rem 0 1.25rem;
+    color: var(--text-muted);
     font-size: 0.9rem;
 }
+
 /* The controls inside a .form-field are rendered by Blazor's Input*
    components, so they never receive this component's scope attribute -
    ::deep is the only way a scoped rule can reach them. */
@@ -342,6 +556,7 @@ button {
     display: grid;
     gap: 1rem;
 }
+
 .form-field label {
     display: block;
     margin-bottom: 0.35rem;
@@ -349,30 +564,36 @@ button {
     font-size: 0.8rem;
     font-weight: 600;
 }
+
+/* 1rem is load-bearing: Safari on iOS zooms the page in on a focused
+   field whose text is smaller, and will not zoom back out. */
 .form-field ::deep input,
 .form-field ::deep select {
     width: 100%;
     min-height: 2.75rem;
-    padding: 0.55rem 0.7rem;
+    padding: 0.6rem 0.75rem;
     box-sizing: border-box;
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-sm);
     color: var(--text);
     background: var(--surface-muted);
     font: inherit;
-    font-size: 0.9rem;
+    font-size: 1rem;
     transition:
-        border-color 0.15s ease,
-        background-color 0.15s ease,
-        box-shadow 0.15s ease;
+        border-color var(--dur-fast) var(--ease-standard),
+        background-color var(--dur-fast) var(--ease-standard),
+        box-shadow var(--dur-fast) var(--ease-standard);
 }
+
 .form-field ::deep input::placeholder {
     color: var(--text-muted);
 }
+
 .form-field ::deep input:hover,
 .form-field ::deep select:hover {
     border-color: var(--brand);
 }
+
 /* Same focus ring the rest of the app uses (see app.css). */
 .form-field ::deep input:focus,
 .form-field ::deep select:focus {
@@ -383,12 +604,15 @@ button {
         0 0 0 0.1rem var(--focus-ring-inner),
         0 0 0 0.25rem var(--focus-ring-outer);
 }
-/* Blazor stamps `invalid` on a control that fails validation; keep the border
-   in step with the outline app.css already draws, so the two don't disagree. */
+
+/* Blazor stamps `invalid` on a control that fails validation; keep the
+   border in step with the outline app.css already draws, so the two do
+   not disagree. */
 .form-field ::deep input.invalid,
 .form-field ::deep select.invalid {
     border-color: var(--input-invalid);
 }
+
 .form-field ::deep input:disabled,
 .form-field ::deep select:disabled {
     color: var(--text-muted);
@@ -396,18 +620,20 @@ button {
     cursor: not-allowed;
 }
 
-/* Drop the OS dropdown arrow and draw our own, so the select matches the rest
-   of the form instead of the platform. Must follow the .form-field rules
-   above: the two selectors tie on specificity. */
+/* Drop the OS dropdown arrow and draw our own, so the select matches the
+   rest of the form instead of the platform. Must follow the .form-field
+   rules above: the two selectors tie on specificity. */
 .select-field {
     position: relative;
 }
+
 .select-field ::deep select {
     appearance: none;
     -webkit-appearance: none;
     padding-right: 2.25rem;
     cursor: pointer;
 }
+
 .select-field::after {
     content: "";
     position: absolute;
@@ -430,41 +656,50 @@ button {
 .currency-field {
     position: relative;
 }
+
 .currency-field > span {
     position: absolute;
     top: 50%;
     left: 0.75rem;
     transform: translateY(-50%);
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 1rem;
 }
+
 .currency-field ::deep input {
-    padding-left: 1.6rem;
+    padding-left: 1.75rem;
 }
-/* The spinners fight the custom padding and add nothing to a dollar amount. */
+
+/* The spinners fight the custom padding and add nothing to a dollar
+   amount. */
 .currency-field ::deep input::-webkit-outer-spin-button,
 .currency-field ::deep input::-webkit-inner-spin-button {
     margin: 0;
     -webkit-appearance: none;
 }
+
 .currency-field ::deep input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
 }
+
 /* Tone down the native calendar button so it reads as part of the field. */
 .form-field ::deep input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.55;
 }
+
 .form-field ::deep input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
 }
+
 .form-field ::deep .validation-message {
     display: block;
     margin-top: 0.3rem;
     color: var(--negative-text);
     font-size: 0.75rem;
 }
+
 /* ValidationSummary renders its own <ul class="validation-errors">, which
    replaces the class we pass it - match both so the styling sticks. */
 .record-drawer ::deep .form-summary,
@@ -474,53 +709,144 @@ button {
     color: var(--negative-text);
     font-size: 0.8rem;
 }
+
 .drawer-actions {
-    justify-content: flex-end;
+    display: flex;
+    gap: 0.6rem;
     margin-top: 0.5rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--border-subtle);
-}
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    border-top: 1px solid var(--glass-hairline);
 }
 
-@media (max-width: 700px) {
-    .finance-page {
-        padding: 1.5rem 1rem 3rem;
-    }
+/* Full width on a phone, right aligned on a desktop. */
+.drawer-actions button {
+    flex: 1;
+}
+
+/* ===================================================================
+ * Desktop
+ * =================================================================== */
+
+@media (min-width: 48rem) {
     .finance-header {
-        align-items: flex-start;
-        flex-direction: column;
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
     }
+
+    .finance-header h1 {
+        font-size: clamp(2.25rem, 4vw, 3.25rem);
+    }
+
     .header-actions {
-        width: 100%;
+        width: auto;
     }
+
     .header-actions button {
-        flex: 1;
+        flex: none;
     }
+
+    .net-worth-summary {
+        margin-bottom: 1.75rem;
+        padding: 1.75rem;
+    }
+
+    .headline-amount {
+        font-size: clamp(3rem, 5vw, 3.75rem);
+    }
+
     .breakdown-row {
-        flex-direction: column;
-        gap: 1.25rem;
+        gap: 0.75rem;
     }
-    .breakdown-item {
-        padding-left: 0;
-        padding-top: 1rem;
-        border-left: 0;
-        border-top: 1px solid var(--border-subtle);
+
+    .record-tabs {
+        display: inline-flex;
     }
-    .breakdown-item:first-child {
-        padding-top: 0;
+
+    .record-tab {
+        flex: none;
+        padding: 0 1rem;
+    }
+
+    .records-heading {
+        padding: 1.125rem 1.25rem;
+    }
+
+    .records-heading h2 {
+        font-size: 1.35rem;
+    }
+
+    /* Back to being a table. */
+    .records-table {
+        display: table;
+    }
+
+    .records-table thead {
+        display: table-header-group;
+    }
+
+    .records-table tbody {
+        display: table-row-group;
+    }
+
+    .records-table tr {
+        display: table-row;
+        padding: 0;
         border-top: 0;
     }
-    .records-toolbar {
-        align-items: flex-start;
-        flex-direction: column;
+
+    .records-table th {
+        padding: 0.625rem 1.25rem;
+        color: var(--text-muted);
+        background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    .records-table td {
+        display: table-cell;
+        padding: 0.875rem 1.25rem;
+        border-top: 1px solid var(--glass-hairline);
+        vertical-align: middle;
+    }
+
+    .record-amount {
+        font-size: 0.9375rem;
+    }
+
+    .record-actions {
+        display: table-cell;
+        text-align: right;
+    }
+
+    .record-drawer {
+        top: 0;
+        left: auto;
+        width: min(26rem, 100%);
+        max-height: none;
+        padding: 2rem;
+        border-radius: 0;
+        animation-name: sheet-slide-in;
+    }
+
+    .drawer-grabber {
+        display: none;
+    }
+
+    .drawer-header h2 {
+        font-size: 2rem;
+    }
+
+    .drawer-actions {
+        justify-content: flex-end;
+    }
+
+    .drawer-actions button {
+        flex: none;
     }
 }

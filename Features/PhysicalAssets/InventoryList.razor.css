@@ -1,79 +1,167 @@
+/*
+ * Inventory.
+ *
+ * Total at the top, items underneath: the running value is the thing you
+ * came to see, and the list is how you change it.
+ *
+ * The rows are an iOS grouped list - one glass pane, hairline separators,
+ * tap anywhere on a row to expand it. Mobile first, with a desktop
+ * breakpoint at 48rem to match the rest of the app.
+ */
+
+/* ===================================================================
+ * Running total
+ * =================================================================== */
+
+.asset-total {
+    margin-bottom: 1rem;
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--glass-bg);
+    background-image: radial-gradient(
+        16rem 9rem at 92% -30%,
+        color-mix(in srgb, var(--accent) 22%, transparent),
+        transparent 70%
+    );
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
+}
+
+.asset-total-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.asset-total-amount {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--text);
+    font-family: var(--font-numeric);
+    font-size: clamp(1.875rem, 9vw, 2.5rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+}
+
+.asset-total-note {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8125rem;
+}
+
+/* ===================================================================
+ * The list
+ * =================================================================== */
+
 .asset-list {
     list-style: none;
     margin: 0 0 1.5rem;
     padding: 0;
-    border: 1px solid var(--border);
-    border-radius: 0.7rem;
     overflow: hidden;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-2);
 }
 
 .asset-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface);
+    border-bottom: 1px solid var(--glass-hairline);
 }
 
 .asset-row:last-child {
     border-bottom: none;
 }
 
+/*
+ * Name and value on the first line, category and provenance on the
+ * second, with the caret spanning both. Laid out on a grid rather than
+ * left to wrap, so a long item name cannot push the value onto its own
+ * line on a narrow screen.
+ */
 .asset-row-summary {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+        "name  value caret"
+        "meta  meta  caret";
     align-items: center;
-    min-width: 0;
+    gap: 0.15rem 0.75rem;
     width: 100%;
-    padding: 0.9rem 1rem;
-    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.875rem 1rem;
     border: 0;
     background: none;
     color: inherit;
+    font: inherit;
     text-align: left;
     cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
-.asset-row-summary:hover {
-    background: var(--surface-muted);
+.asset-row-summary:active {
+    background: var(--nav-surface-pressed);
+}
+
+@media (hover: hover) {
+    .asset-row-summary:hover {
+        background: var(--surface-muted);
+    }
 }
 
 .asset-row-name {
-    flex: 1 1 auto;
+    grid-area: name;
     min-width: 0;
-    font-weight: 600;
     overflow: hidden;
+    font-size: 0.9375rem;
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .asset-row-meta {
-    flex: 0 1 auto;
+    grid-area: meta;
     min-width: 0;
     overflow-wrap: anywhere;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .asset-row-value {
-    flex: 0 1 auto;
+    grid-area: value;
     min-width: 0;
-    overflow-wrap: anywhere;
-    font-weight: 600;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
 }
 
 .asset-row-caret {
+    grid-area: caret;
+    align-self: center;
     flex: 0 0 auto;
     width: 0.7rem;
     height: 0.7rem;
     background-color: var(--text-muted);
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    transition: transform var(--dur) var(--ease-spring);
     mask-repeat: no-repeat;
     mask-position: center;
-    mask-size: cover;
+    mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
-    -webkit-mask-size: cover;
+    -webkit-mask-size: contain;
 }
 
 .asset-row-summary[aria-expanded="true"] .asset-row-caret {
@@ -83,21 +171,23 @@
 .asset-row-quick-actions {
     display: flex;
     gap: 0.35rem;
-    padding: 0.6rem 0.75rem 0.6rem 0;
+    justify-self: end;
+    padding: 0 1rem 0.6rem;
 }
 
 .asset-row-detail {
     grid-column: 1 / -1;
     min-width: 0;
-    padding: 0 1.25rem 1.25rem;
-    border-top: 1px solid var(--border-subtle);
+    padding: 0 1rem 1.125rem;
+    border-top: 1px solid var(--glass-hairline);
 }
 
 .asset-detail-image {
     display: block;
     max-width: 240px;
     margin: 1rem 0;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-1);
 }
 
 .asset-detail-facts {
@@ -106,16 +196,24 @@
 
 .asset-detail-facts dt {
     color: var(--text-muted);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .asset-detail-facts dd {
-    margin: 0 0 0.5rem;
+    margin: 0.15rem 0 0.5rem;
 }
 
 .asset-detail-revalue {
     margin-bottom: 1rem;
+}
+
+.asset-row-detail h3 {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 400;
 }
 
 .asset-edit-form {
@@ -123,7 +221,7 @@
     min-width: 0;
     display: grid;
     gap: 0.5rem;
-    padding: 0.9rem 1rem;
+    padding: 0.875rem 1rem;
 }
 
 .asset-row-actions {
@@ -131,20 +229,91 @@
     gap: 0.5rem;
 }
 
-@media (min-width: 641px) {
-    .asset-edit-form {
-        grid-template-columns: 2fr 1.5fr 1.5fr 1fr auto;
-        align-items: center;
-    }
+.asset-row-actions .btn {
+    flex: 1;
 }
 
-@media (max-width: 640px) {
+/* ===================================================================
+ * Add item
+ * ===================================================================
+ * The form is built from Bootstrap `.col`s, which stay equal-width at
+ * every screen size - three text fields and a button at a quarter each
+ * is unusable on a phone. Stack them until there is room.
+ */
+
+#add-item {
+    margin-top: 1.5rem;
+}
+
+#add-item h2 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 400;
+}
+
+#add-item .col,
+#add-item .col-auto {
+    flex: 0 0 100%;
+}
+
+#add-item .col-auto .btn {
+    width: 100%;
+}
+
+/* ===================================================================
+ * Desktop
+ * =================================================================== */
+
+@media (min-width: 48rem) {
+    .asset-total {
+        padding: 1.25rem 1.5rem;
+    }
+
     .asset-row {
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .asset-row-quick-actions {
-        justify-self: end;
-        padding: 0 1rem 0.6rem;
+        justify-self: auto;
+        padding: 0.6rem 0.75rem 0.6rem 0;
     }
+
+    .asset-row-summary {
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        grid-template-areas: "name meta value caret";
+        gap: 0.75rem;
+        padding: 0.9rem 1.25rem;
+    }
+
+    .asset-row-detail {
+        padding: 0 1.25rem 1.25rem;
+    }
+
+    .asset-edit-form {
+        grid-template-columns: 2fr 1.5fr 1.5fr 1fr auto;
+        align-items: center;
+        padding: 0.9rem 1.25rem;
+    }
+
+    .asset-row-actions .btn {
+        flex: none;
+    }
+
+    #add-item .col {
+        flex: 1 0 0%;
+    }
+
+    #add-item .col-auto {
+        flex: 0 0 auto;
+    }
+
+    #add-item .col-auto .btn {
+        width: auto;
+    }
+}
+
+/* The chevron, carried over unchanged. */
+.asset-row-caret {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
 }

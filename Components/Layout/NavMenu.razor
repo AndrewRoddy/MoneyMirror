@@ -1,56 +1,56 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">
-            <span class="brand-logo" aria-hidden="true"></span>Money Mirror
-        </a>
-    </div>
+@*
+    Primary navigation.
+
+    One set of links, two presentations: a bottom tab bar on a phone, a
+    side rail on a desktop. Which one you get is decided entirely in
+    NavMenu.razor.css at the 48rem breakpoint - this markup is identical
+    either way, so there is no second copy of the links to keep in step.
+
+    Each link is an icon plus a label. The icon spans are written here
+    rather than inside NavLink so they pick up this component's scope
+    attribute; the <a> that NavLink renders does not, which is why the
+    stylesheet reaches it through ::deep.
+*@
+
+<div class="top-row">
+    <a class="navbar-brand" href="">
+        <span class="brand-logo" aria-hidden="true"></span>
+        <span class="brand-name">Money Mirror</span>
+    </a>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<div class="nav-scrollable">
+    <nav class="nav-list" aria-label="Primary">
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <span class="nav-icon bi-house-door-fill-nav-menu" aria-hidden="true"></span>
+            <span class="nav-label">Dashboard</span>
+        </NavLink>
 
-        <!-- Dashboard -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
-            </NavLink>
-        </div>
+        <NavLink class="nav-link" href="financials">
+            <span class="nav-icon bi-coin-fill-nav-menu" aria-hidden="true"></span>
+            <span class="nav-label">Financial</span>
+        </NavLink>
 
-        <!-- Financial -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="financials">
-                <span class="bi bi-coin-fill-nav-menu" aria-hidden="true"></span> Financial
-            </NavLink>
-        </div>
+        <NavLink class="nav-link" href="physical-assets">
+            <span class="nav-icon bi-plus-square-fill-nav-menu" aria-hidden="true"></span>
+            <span class="nav-label">Physical Assets</span>
+        </NavLink>
 
-        <!-- Physical Assets -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="physical-assets">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Physical Assets
-            </NavLink>
-        </div>
+        <NavLink class="nav-link" href="inventory">
+            <span class="nav-icon bi-backpack-fill-nav-menu" aria-hidden="true"></span>
+            <span class="nav-label">Inventory</span>
+        </NavLink>
 
-        <!-- Inventory -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="inventory">
-                <span class="bi bi-backpack-fill-nav-menu" aria-hidden="true"></span> Inventory
-            </NavLink>
-        </div>
+        <NavLink class="nav-link" href="human-capital">
+            <span class="nav-icon bi-mortarboard-fill-nav-menu" aria-hidden="true"></span>
+            <span class="nav-label">Human Capital</span>
+        </NavLink>
 
-        <!-- Human Capital -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="human-capital">
-                <span class="bi bi-mortarboard-fill-nav-menu" aria-hidden="true"></span> Human Capital
-            </NavLink>
-        </div>
+        <NavLink class="nav-link" href="/market-potential" Match="NavLinkMatch.All">
+            <span class="nav-icon bi-bar-chart-line-fill-nav-menu" aria-hidden="true"></span>
+            <span class="nav-label">Market Potential</span>
+        </NavLink>
 
-        <!-- Market Potential -->
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/market-potential" Match="NavLinkMatch.All">
-                <span class="bi bi-bar-chart-line-fill-nav-menu" aria-hidden="true"></span> Market Potential
-            </NavLink>
-        </div>
     </nav>
 </div>

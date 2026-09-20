@@ -1,111 +1,91 @@
+/*
+ * App shell.
+ *
+ * Phone: one column. The brand bar is sticky at the top, content scrolls
+ * under it, and the tab bar is pinned to the bottom. To let those two be
+ * placed independently, `.sidebar` is dissolved with `display: contents`
+ * so the elements NavMenu renders become direct children of `.page`.
+ * NavMenu.razor.css owns how they look in both layouts.
+ *
+ * Desktop (>= 48rem): `.sidebar` becomes a real box again and the page
+ * turns into a two-column row with a sticky glass rail on the left.
+ */
+
 .page {
-    position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100dvh;
+}
+
+.sidebar {
+    display: contents;
 }
 
 main {
     flex: 1;
     /* Without this, a page whose content has a wide intrinsic minimum
        width (e.g. Financials' summary grid/tables) refuses to shrink
-       below that width by default, forcing .page wider than the
-       viewport and squeezing .sidebar - "crushing" the nav text (#196). */
+       below that width by default, forcing .page wider than the viewport
+       and squeezing the nav - "crushing" it (#196). */
     min-width: 0;
+    padding-top: 0.75rem;
+    padding-right: calc(1rem + var(--safe-right));
+    padding-left: calc(1rem + var(--safe-left));
+    /* Clear the fixed tab bar, and the home indicator underneath it. */
+    padding-bottom: calc(var(--tab-bar-height) + var(--safe-bottom) + 1.5rem);
 }
 
-.sidebar {
-    background-image: linear-gradient(180deg, var(--sidebar-from) 0%, var(--sidebar-to) 70%);
-    /* Keep the sidebar at its intended width regardless of how wide any
-       page's content gets - main should scroll internally, not compress
-       the nav (#196). */
-    flex-shrink: 0;
+/*
+ * Blazor's unhandled-error toast is fixed to the bottom of the viewport,
+ * which is exactly where the tab bar now lives. Lift it clear.
+ */
+#blazor-error-ui {
+    color-scheme: light only;
+    position: fixed;
+    bottom: calc(var(--tab-bar-height) + var(--safe-bottom));
+    left: 0;
+    z-index: 1000;
+    display: none;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.6rem 1.25rem 0.7rem;
+    background: var(--error-toast-bg);
+    box-shadow: var(--shadow-toast);
 }
 
-.top-row {
-    background-color: var(--topbar-bg);
-    border-bottom: 1px solid var(--topbar-border);
-    justify-content: flex-end;
-    height: 3.5rem;
-    display: flex;
-    align-items: center;
+#blazor-error-ui .dismiss {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    cursor: pointer;
 }
 
-.top-row ::deep a,
-.top-row ::deep .btn-link {
-    white-space: nowrap;
-    margin-left: 1.5rem;
-    text-decoration: none;
-}
-
-.top-row ::deep a:hover,
-.top-row ::deep .btn-link:hover {
-    text-decoration: underline;
-}
-
-.top-row ::deep a:first-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-@media (max-width: 640.98px) {
-    .top-row {
-        justify-content: space-between;
-    }
-
-    .top-row ::deep a,
-    .top-row ::deep .btn-link {
-        margin-left: 0;
-    }
-}
-
-@media (min-width: 641px) {
+@media (min-width: 48rem) {
     .page {
         flex-direction: row;
     }
 
     .sidebar {
-        width: 250px;
-        height: 100vh;
+        display: block;
         position: sticky;
         top: 0;
+        /* Hold the rail at its intended width however wide the page's
+           content gets: main should scroll internally, not compress the
+           nav (#196). */
+        flex-shrink: 0;
+        width: var(--nav-rail-width);
+        height: 100dvh;
+        border-right: 1px solid var(--glass-hairline);
+        background: var(--glass-bg);
+        backdrop-filter: var(--glass-blur-strong);
+        -webkit-backdrop-filter: var(--glass-blur-strong);
     }
 
-    .top-row {
-        position: sticky;
-        top: 0;
-        z-index: 1;
+    main {
+        padding: 2rem 2.5rem 3rem;
     }
 
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
+    #blazor-error-ui {
+        bottom: 0;
     }
-
-    .top-row,
-    article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
-    }
-}
-
-#blazor-error-ui {
-    color-scheme: light only;
-    background: var(--error-toast-bg);
-    bottom: 0;
-    box-shadow: var(--shadow-toast);
-    box-sizing: border-box;
-    display: none;
-    left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
-    position: fixed;
-    width: 100%;
-    z-index: 1000;
-}
-
-#blazor-error-ui .dismiss {
-    cursor: pointer;
-    position: absolute;
-    right: 0.75rem;
-    top: 0.5rem;
 }
