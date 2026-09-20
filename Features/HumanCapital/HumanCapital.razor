@@ -15,7 +15,7 @@
     <header class="page-header">
         <div>
             <h1>Human Capital</h1>
-            <p class="page-subtitle">Upload a resume to estimate your Market Potential.</p>
+            <p class="page-subtitle">Upload a resume, or build your profile manually, to estimate your Market Potential.</p>
         </div>
     </header>
 
@@ -23,7 +23,15 @@
         <h2 class="page-section-title">Resume</h2>
         <p class="text-muted">PDF and DOCX files are supported. Your resume is used to build an editable professional profile.</p>
         <label for="resume-file" class="btn btn-primary @(_isProcessing ? "disabled" : "")">Upload a Resume</label>
-        <InputFile id="resume-file" class="visually-hidden" OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />    </section>
+        <InputFile id="resume-file" class="visually-hidden" OnChange="OnFileSelectedAsync" accept=".pdf,.docx" disabled="@_isProcessing" />
+        @if (_profile is null)
+        {
+            <span class="mx-2 text-muted">or</span>
+            <button type="button" class="btn btn-outline-secondary" @onclick="StartFromScratch" disabled="@_isProcessing">
+                Start from scratch
+            </button>
+        }
+    </section>
 
 @if (_isProcessing)
 {
@@ -41,8 +49,8 @@
 @if (_profile is not null)
 {
     <section class="page-card">
-        <h2 class="page-section-title">Review Extracted Profile</h2>
-        <p>Fix anything the extraction got wrong, then save your corrections.</p>
+        <h2 class="page-section-title">Your Professional Profile</h2>
+        <p>Add or correct anything below, then save.</p>
 
     @if (_savedMessage is not null)
     {
@@ -140,6 +148,38 @@
     private List<EditableCertification> _certifications = [];
     private List<EditableSkill> _skills = [];
     private List<EditableProject> _projects = [];
+
+    /// <summary>
+    /// #264: without this, an already-saved profile was invisible on this
+    /// page until you re-uploaded a resume - there was no way to view or
+    /// edit it (or to create one without a resume at all) otherwise.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var profile = await ProfileRepository.GetAsync();
+        if (HasAnyContent(profile))
+        {
+            _profile = profile;
+            LoadEditableLists(profile);
+        }
+    }
+
+    private static bool HasAnyContent(ProfessionalProfile profile) =>
+        profile.Education.Count > 0
+        || profile.Experience.Count > 0
+        || profile.Certifications.Count > 0
+        || profile.Skills.Count > 0
+        || profile.Projects.Count > 0
+        || profile.Publications.Count > 0
+        || profile.Awards.Count > 0;
+
+    private void StartFromScratch()
+    {
+        _errorMessage = null;
+        _savedMessage = null;
+        _profile = ProfessionalProfile.Empty;
+        LoadEditableLists(_profile);
+    }
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
