@@ -3,8 +3,9 @@ using System.Text.Json;
 
 namespace MoneyMirror.PhysicalAssets;
 
-/// <summary>Caches successful SerpApi searches on disk so app restarts do not spend the same search again.</summary>
-public sealed class SerpApiSearchCache(string cacheDirectory)
+/// <summary>Caches successful market-data provider searches on disk so app restarts do not
+/// spend the same search again, and coalesces concurrent identical in-flight searches.</summary>
+public sealed class MarketDataSearchCache(string cacheDirectory)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly ConcurrentDictionary<

@@ -1,3 +1,4 @@
+using MoneyMirror.Ai;
 using MoneyMirror.PhysicalAssets;
 
 namespace MoneyMirror.Tests.PhysicalAssets;
@@ -24,6 +25,7 @@ public class EvidenceBasedAssetValuationServiceTests
         ]);
         var service = new EvidenceBasedAssetValuationService(
             source,
+            UnusedFallback(),
             new FixedTimeProvider(ValuationDate)
         );
 
@@ -45,6 +47,7 @@ public class EvidenceBasedAssetValuationServiceTests
         var source = new FakeMarketDataService([]);
         var service = new EvidenceBasedAssetValuationService(
             source,
+            UnusedFallback(),
             new FixedTimeProvider(ValuationDate)
         );
 
@@ -58,26 +61,54 @@ public class EvidenceBasedAssetValuationServiceTests
     }
 
     [Fact]
-    public async Task EstimateAsync_ProviderFailureBecomesDomainException()
+    public async Task EstimateAsync_ProviderFailureFallsBackToAiEstimate()
     {
         var source = new FakeMarketDataService(
-            new SerpApiMarketDataException("provider unavailable")
+            new EbayMarketDataException("provider unavailable")
+        );
+        var fallback = new AiEstimatedValuationService(
+            new FakeLlmService(
+                """{"estimatedValueUsd": 75.00, "reasoning": "A typical used guitar in this condition sells for about $75."}"""
+            ),
+            new FixedTimeProvider(ValuationDate)
         );
         var service = new EvidenceBasedAssetValuationService(
             source,
+            fallback,
             new FixedTimeProvider(ValuationDate)
         );
 
-        var exception = await Assert.ThrowsAsync<AssetValuationException>(() =>
-            service.EstimateAsync("guitar", null, null)
+        var valuation = await service.EstimateAsync("guitar", null, null);
+
+        Assert.Equal(75.00m, valuation.EstimatedValueUsd);
+        Assert.True(valuation.IsAiEstimated);
+        Assert.Equal("AI estimate (low confidence; not based on live market data)", valuation.SourceLabel);
+        Assert.Empty(valuation.Evidence);
+    }
+
+    [Fact]
+    public async Task EstimateAsync_ProviderFailureAndFallbackFailureThrowsTheFallbacksException()
+    {
+        var source = new FakeMarketDataService(
+            new EbayMarketDataException("provider unavailable")
+        );
+        var fallback = new AiEstimatedValuationService(
+            new ThrowingLlmService(),
+            new FixedTimeProvider(ValuationDate)
+        );
+        var service = new EvidenceBasedAssetValuationService(
+            source,
+            fallback,
+            new FixedTimeProvider(ValuationDate)
         );
 
-        Assert.Equal("Failed to retrieve comparable market listings.", exception.Message);
-        Assert.IsType<SerpApiMarketDataException>(exception.InnerException);
+        await Assert.ThrowsAsync<AssetValuationException>(() =>
+            service.EstimateAsync("guitar", null, null)
+        );
     }
 
     private sealed class FakeMarketDataService(IReadOnlyList<AssetValuationEvidence> result)
-        : ISerpApiMarketDataService
+        : IMarketDataService
     {
         private readonly Exception? _exception = null;
 
@@ -106,6 +137,23 @@ public class EvidenceBasedAssetValuationServiceTests
                 : Task.FromException<IReadOnlyList<AssetValuationEvidence>>(_exception);
         }
     }
+
+    private sealed class FakeLlmService(string completion) : ILlmService
+    {
+        public Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default) =>
+            Task.FromResult(completion);
+    }
+
+    private sealed class ThrowingLlmService : ILlmService
+    {
+        public Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default) =>
+            Task.FromException<string>(new LlmServiceException("The LLM is unavailable."));
+    }
+
+    // A fallback that must never actually be called - used by tests where the market
+    // data provider succeeds, so the fallback path should never execute.
+    private static AiEstimatedValuationService UnusedFallback() =>
+        new(new ThrowingLlmService());
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
