@@ -42,6 +42,14 @@ function blobFromCanvas(canvas) {
     );
 }
 
+function requireFrame(video, index) {
+    const session = sessions.get(video);
+    if (!session) throw new Error("No active video session. Try scanning again.");
+    const frame = session.frames[index];
+    if (!frame) throw new Error("This frame is no longer available. Try scanning again.");
+    return frame;
+}
+
 export async function prepare(input, video) {
     dispose(video);
     const file = input.files?.[0];
@@ -52,9 +60,9 @@ export async function prepare(input, video) {
     const session = { url: URL.createObjectURL(file), frames: [], cancelled: false };
     sessions.set(video, session);
     try {
+        video.pause();
         await waitFor(video, "loadeddata", () => {
             video.src = session.url;
-            video.load();
         });
         if (
             !Number.isFinite(video.duration) ||
@@ -84,24 +92,32 @@ export async function prepare(input, video) {
         }
         video.pause();
         return timestamps;
-  } catch (error) {
-    // An older decoding task must not dispose a replacement video's session.
-    if (sessions.get(video) === session) dispose(video);
+    } catch (error) {
+        // An older decoding task must not dispose a replacement video's session.
+        if (sessions.get(video) === session) dispose(video);
         throw error;
     }
 }
 
 export function frameUrl(video, index) {
-    return sessions.get(video).frames[index].url;
+    return requireFrame(video, index).url;
 }
 
 export function frameStream(video, index) {
-    return DotNet.createJSStreamReference(sessions.get(video).frames[index].blob);
+    const { blob } = requireFrame(video, index);
+    if (!(blob instanceof Blob)) {
+        throw new Error("This frame could not be read. Try scanning again.");
+    }
+    return blob;
 }
-
 export async function cropStream(video, index, region) {
-    const source = sessions.get(video).frames[index];
-    if (!region) return DotNet.createJSStreamReference(source.blob);
+    const source = requireFrame(video, index);
+    if (!region) {
+        if (!(source.blob instanceof Blob)) {
+            throw new Error("This frame could not be read. Try scanning again.");
+        }
+        return source.blob;
+    }
     const canvas = document.createElement("canvas");
     const x = Math.floor(region.x * source.canvas.width);
     const y = Math.floor(region.y * source.canvas.height);
@@ -126,7 +142,7 @@ export async function cropStream(video, index, region) {
             canvas.width,
             canvas.height,
         );
-    return DotNet.createJSStreamReference(await blobFromCanvas(canvas));
+    return await blobFromCanvas(canvas);
 }
 
 export function dispose(video) {

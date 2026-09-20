@@ -14,8 +14,20 @@ class Video extends EventTarget {
     videoWidth = 1920;
     videoHeight = 1080;
     positions = [];
+    #src = "";
+    get src() {
+        return this.#src;
+    }
+    set src(value) {
+        this.#src = value;
+        if (value) {
+            queueMicrotask(() => (this._onSrc ? this._onSrc() : this.dispatchEvent(new Event("loadeddata"))));
+        }
+    }
     load() {
-        if (this.src) queueMicrotask(() => this.dispatchEvent(new Event("loadeddata")));
+        if (this.src) {
+            queueMicrotask(() => (this._onSrc ? this._onSrc() : this.dispatchEvent(new Event("loadeddata"))));
+        }
     }
     pause() {}
     removeAttribute(name) {
@@ -147,11 +159,18 @@ test("replacing a video revokes all prior source and frame URLs", async () => {
 
 test("a decoder error is actionable and releases the source URL", async () => {
     const video = new Video();
-    video.load = () => {
-        if (video.src) queueMicrotask(() => video.dispatchEvent(new Event("error")));
-    };
+    video._onSrc = () => video.dispatchEvent(new Event("error"));
     await assert.rejects(scan.prepare(input(), video), /could not decode/);
     assert.deepEqual(revoked, urls);
+});
+
+test("accessing frames after dispose throws instead of passing undefined to DotNet", async () => {
+    const video = new Video();
+    await scan.prepare(input(), video);
+    scan.dispose(video);
+    assert.throws(() => scan.frameUrl(video, 0), /No active video session/);
+    assert.throws(() => scan.frameStream(video, 0), /No active video session/);
+    await assert.rejects(scan.cropStream(video, 0, null), /No active video session/);
 });
 
 test("disposing during frame encoding does not leak a new frame URL", async () => {
