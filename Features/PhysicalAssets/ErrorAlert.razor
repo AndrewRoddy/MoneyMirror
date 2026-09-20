@@ -1,0 +1,49 @@
+@*
+    An error alert that can reveal the provider's verbatim reply on demand.
+    Both AI providers fail in ways that are indistinguishable from a bug in this
+    app unless you can read what they actually said: the vision model answers in
+    prose instead of JSON, and NVIDIA's shared endpoint returns 503
+    "ResourceExhausted" when all its workers are busy. The raw text is hidden
+    until asked for so the normal error stays short.
+*@
+
+<div class="alert alert-danger" role="alert">
+    <div>@Message</div>
+    @if (!string.IsNullOrWhiteSpace(RawResponse))
+    {
+        <button type="button" class="btn btn-sm btn-outline-danger mt-2" @onclick="Toggle">
+            @(_showRaw ? "Hide provider response" : "Show provider response")
+        </button>
+        @if (_showRaw)
+        {
+            <pre class="mt-2 mb-0 p-2 bg-light text-dark border rounded"
+                 style="max-height: 20rem; overflow: auto; white-space: pre-wrap; word-break: break-word;"><code>@RawResponse</code></pre>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string Message { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? RawResponse { get; set; }
+
+    private bool _showRaw;
+    private string? _shownFor;
+
+    // A new failure collapses the panel again, so the text on screen always
+    // belongs to the error above it.
+    protected override void OnParametersSet()
+    {
+        var key = $"{Message}\u001f{RawResponse}";
+        if (_shownFor != key)
+        {
+            _shownFor = key;
+            _showRaw = false;
+        }
+    }
+
+    private void Toggle() => _showRaw = !_showRaw;
+}

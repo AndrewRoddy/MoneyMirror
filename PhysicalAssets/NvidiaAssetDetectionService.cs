@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Json;
 using MoneyMirror.Ai;
 
@@ -26,18 +28,55 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         string mediaType,
         CancellationToken cancellationToken = default)
     {
-        string completion;
+        // Observed live against meta/llama-3.2-11b-vision-instruct: for the same
+        // photo it honours "respond with ONLY a single JSON object" about four
+        // runs in five, and otherwise answers in prose, or scatters the fields
+        // across a markdown bullet list with no wrapper object. Both are recovered
+        // by simply asking again with a blunter instruction, so a failed parse
+        // costs one extra call rather than the whole scan.
+        var completion = await RequestAsync(imageBytes, mediaType, Prompt, cancellationToken);
+        if (TryParseDetections(completion, out var detections, out _))
+        {
+            return detections;
+        }
+
+        completion = await RequestAsync(imageBytes, mediaType, RetryPrompt, cancellationToken);
+        if (TryParseDetections(completion, out detections, out var parseError))
+        {
+            return detections;
+        }
+
+        const string message =
+            "The vision model returned a response that could not be parsed as detected objects.";
+
+        throw parseError is null
+            ? new AssetDetectionException(message) { RawResponse = completion }
+            : new AssetDetectionException(message, parseError) { RawResponse = completion };
+    }
+
+    private async Task<string> RequestAsync(
+        byte[] imageBytes,
+        string mediaType,
+        string prompt,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            completion = await _visionService.DetectAsync(imageBytes, mediaType, Prompt, cancellationToken);
+            return await _visionService.DetectAsync(imageBytes, mediaType, prompt, cancellationToken);
         }
         catch (VisionServiceException ex)
         {
             throw new AssetDetectionException(
                 "Failed to detect objects: the vision provider call failed.", ex);
         }
+    }
 
-        JsonException? lastError = null;
+    private static bool TryParseDetections(
+        string completion,
+        [NotNullWhen(true)] out IReadOnlyList<DetectedAsset>? detections,
+        out JsonException? parseError)
+    {
+        parseError = null;
 
         foreach (var candidate in JsonObjectCandidates(completion))
         {
@@ -46,23 +85,127 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
                 if (JsonSerializer.Deserialize<DetectionResponse>(candidate, JsonOptions)
                     is { Objects: { } objects })
                 {
-                    return objects;
+                    detections = Normalize(objects);
+                    return true;
                 }
             }
             catch (JsonException ex)
             {
                 // Not the detection object - an earlier brace in the model's
                 // commentary opened something else. Fall through to the next span.
-                lastError = ex;
+                parseError = ex;
             }
         }
 
-        const string message =
-            "The vision model returned a response that could not be parsed as detected objects.";
+        if (RepairBrackets(completion) is { } repaired)
+        {
+            try
+            {
+                if (JsonSerializer.Deserialize<DetectionResponse>(repaired, JsonOptions)
+                    is { Objects: { } repairedObjects })
+                {
+                    detections = Normalize(repairedObjects);
+                    return true;
+                }
+            }
+            catch (JsonException ex)
+            {
+                parseError = ex;
+            }
+        }
 
-        throw lastError is null
-            ? new AssetDetectionException(message)
-            : new AssetDetectionException(message, lastError);
+        detections = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Rebuilds the response's bracket structure from the first <c>{</c> onwards,
+    /// closing each open bracket with the closer it actually needs. Observed live,
+    /// both with <c>finish_reason: stop</c> so nothing was truncated: the model
+    /// drops the final brace (<c>{"objects": [{...}]</c>) or closes with the wrong
+    /// one (<c>{"objects": [{...}}}</c>). Only ever tried after every intact span
+    /// has failed, and the result still has to deserialize, so a genuinely
+    /// unparseable reply is not coerced into a bogus detection.
+    /// </summary>
+    private static string? RepairBrackets(string text)
+    {
+        var start = text.IndexOf('{');
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var builder = new StringBuilder();
+        var expected = new Stack<char>();
+        var inString = false;
+        var escaped = false;
+
+        for (var i = start; i < text.Length; i++)
+        {
+            var c = text[i];
+
+            if (inString)
+            {
+                builder.Append(c);
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else if (c == '\\')
+                {
+                    escaped = true;
+                }
+                else if (c == '"')
+                {
+                    inString = false;
+                }
+
+                continue;
+            }
+
+            if (c is '}' or ']')
+            {
+                if (expected.Count == 0)
+                {
+                    break;
+                }
+
+                // Close with what is actually open, which repairs a mismatch.
+                builder.Append(expected.Pop());
+                if (expected.Count == 0)
+                {
+                    return builder.ToString();
+                }
+
+                continue;
+            }
+
+            builder.Append(c);
+            switch (c)
+            {
+                case '"':
+                    inString = true;
+                    break;
+                case '{':
+                    expected.Push('}');
+                    break;
+                case '[':
+                    expected.Push(']');
+                    break;
+            }
+        }
+
+        if (inString)
+        {
+            builder.Append('"');
+        }
+
+        while (expected.Count > 0)
+        {
+            builder.Append(expected.Pop());
+        }
+
+        return builder.ToString();
     }
 
     private const string Prompt = """
@@ -93,6 +236,22 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
           for an uncertain brand or model, and return an empty array when no useful descriptors are visible.
         - If no objects are found, return {"objects": []}.
         """;
+
+    /// <summary>
+    /// Second attempt after a failed parse. Kept as a suffix rather than a
+    /// rewrite so the schema and rules stay identical - only the insistence
+    /// changes. Written without literal braces so it composes as a const.
+    /// </summary>
+    private const string RetrySuffix = """
+
+        Your previous reply was rejected because it was not a single JSON object.
+        Do not describe the image. Do not use markdown, bullet points, or headings.
+        Do not split the fields across separate objects. Reply with the one JSON
+        object and nothing else: the first character must be an opening brace and
+        the last must be a closing brace.
+        """;
+
+    private const string RetryPrompt = Prompt + RetrySuffix;
 
     /// <summary>
     /// Yields every balanced <c>{...}</c> span in <paramref name="text"/>, outermost
@@ -166,6 +325,17 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
 
         return null;
     }
+
+    // The model routinely omits "tags" (or sends it as null) even though the
+    // prompt asks for an array. DetectedAsset.Tags is typed non-nullable, but
+    // System.Text.Json does not enforce that - it just assigns null - and the
+    // review UI dereferences Tags.Count while rendering. An unhandled exception
+    // there kills the Blazor circuit, which leaves the scan stuck on its
+    // spinner, so normalize here and let every caller trust the shape.
+    private static IReadOnlyList<DetectedAsset> Normalize(IReadOnlyList<DetectedAsset> objects) =>
+        [.. objects
+            .Where(detected => detected is not null)
+            .Select(detected => detected.Tags is null ? detected with { Tags = [] } : detected)];
 
     private record DetectionResponse(IReadOnlyList<DetectedAsset> Objects);
 }

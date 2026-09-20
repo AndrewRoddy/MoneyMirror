@@ -72,7 +72,10 @@ public class NemotronLlmService : ILlmService
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 throw new LlmServiceException(
                     $"Nemotron LLM provider returned {(int)response.StatusCode} {response.StatusCode}: {errorBody}"
-                );
+                )
+                {
+                    RawResponse = errorBody,
+                };
             }
 
             ChatCompletionResponse? completion;
@@ -92,7 +95,10 @@ public class NemotronLlmService : ILlmService
             {
                 throw new LlmServiceException(
                     "Nemotron LLM response contained no completion content."
-                );
+                )
+                {
+                    RawResponse = content,
+                };
             }
 
             return content;

@@ -14,5 +14,14 @@ public class AssetValuationException : Exception
     public AssetValuationException(string message, Exception innerException) : base(message, innerException)
     {
     }
+
+    /// <summary>
+    /// The provider's verbatim reply, when there was one: an error body such as
+    /// NVIDIA's "ResourceExhausted: Worker local total request limit reached",
+    /// or a completion that could not be used. Null when the call never got a
+    /// response at all. Surfaced in the UI so a transient provider outage is
+    /// distinguishable from a fault in this app.
+    /// </summary>
+    public string? RawResponse { get; init; }
 }
 

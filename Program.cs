@@ -34,8 +34,14 @@ builder.Services.Configure<ResumeUploadOptions>(
 builder.Services.Configure<ImageUploadOptions>(
     builder.Configuration.GetSection(ImageUploadOptions.SectionName));
 
-builder.Services.AddHttpClient<ILlmService, NemotronLlmService>();
-builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>();
+builder.Services.AddTransient<TransientFaultRetryHandler>();
+
+// Both AI clients share NVIDIA's endpoint, which sheds load with a 503 when its
+// workers are saturated - see TransientFaultRetryHandler.
+builder.Services.AddHttpClient<ILlmService, NemotronLlmService>()
+    .AddHttpMessageHandler<TransientFaultRetryHandler>();
+builder.Services.AddHttpClient<IVisionService, NvidiaVisionService>()
+    .AddHttpMessageHandler<TransientFaultRetryHandler>();
 builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>();
 builder.Services.AddScoped<IMarketPotentialExplanationService, NemotronMarketPotentialExplanationService>();
 builder.Services.AddScoped<IMarketPotentialPipeline, MarketPotentialPipeline>();

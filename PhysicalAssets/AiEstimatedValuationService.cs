@@ -36,7 +36,13 @@ public class AiEstimatedValuationService : IAssetValuationService
         }
         catch (LlmServiceException ex)
         {
-            throw new AssetValuationException("Failed to estimate a value: the LLM provider call failed.", ex);
+            // Carry the provider's own words through: a 503 capacity error and a
+            // bug in this app read identically as "the LLM provider call failed".
+            throw new AssetValuationException(
+                "Failed to estimate a value: the LLM provider call failed.", ex)
+            {
+                RawResponse = ex.RawResponse,
+            };
         }
 
         var json = StripCodeFence(completion);
@@ -49,12 +55,18 @@ public class AiEstimatedValuationService : IAssetValuationService
         catch (JsonException ex)
         {
             throw new AssetValuationException(
-                "The LLM returned a response that could not be parsed as a valuation estimate.", ex);
+                "The LLM returned a response that could not be parsed as a valuation estimate.", ex)
+            {
+                RawResponse = completion,
+            };
         }
 
         if (estimate is null || estimate.EstimatedValueUsd < 0)
         {
-            throw new AssetValuationException("The LLM returned an unusable valuation estimate.");
+            throw new AssetValuationException("The LLM returned an unusable valuation estimate.")
+            {
+                RawResponse = completion,
+            };
         }
 
         return new AssetValuation(
