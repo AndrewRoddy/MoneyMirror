@@ -425,7 +425,8 @@ public sealed class VideoScanPickerTests : IDisposable
             int,
             CancellationToken,
             Task<IReadOnlyList<DetectedAsset>>
-        > Detect { get; set; } =
+        > Detect
+        { get; set; } =
             (_, _) =>
                 Task.FromResult<IReadOnlyList<DetectedAsset>>([
                     new("Chair", 0.9, new(0.1, 0.1, 0.3, 0.3), null, []),
