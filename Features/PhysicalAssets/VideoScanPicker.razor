@@ -15,7 +15,7 @@
            capture="environment" disabled="@(_busy || Disabled)" @onchange="FileChanged" />
     <video @ref="_video" class="video-preview" controls="@(!_busy)" muted playsinline aria-label="Room video preview"></video>
     <div class="d-flex gap-2 my-3">
-        <button type="button" class="btn btn-primary" disabled="@(_busy || Disabled || !_hasFile)" @onclick="AnalyzeAsync">Find items in video</button>
+        <button type="button" class="btn btn-primary" disabled="@(_busy || Disabled)" @onclick="AnalyzeAsync">Find items in video</button>
         @if (_busy)
         {
             <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
