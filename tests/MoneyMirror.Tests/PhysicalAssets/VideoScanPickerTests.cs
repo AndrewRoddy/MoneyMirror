@@ -74,7 +74,8 @@ public sealed class VideoScanPickerTests : IDisposable
             await saveButton.ClickAsync(new MouseEventArgs());
             Assert.DoesNotContain("Failed to save to inventory:", page.Markup);
             Assert.Equal(i + 1, (await _repository.GetAllAsync()).Count);
-            page.WaitForAssertion(() => Assert.True(page.FindAll("a").Count(a => a.TextContent.Trim() == "View item") == i + 1, page.Markup));
+            page.WaitForAssertion(() => Assert.Equal(i + 1,
+                page.FindAll(".alert-success").Count(a => a.TextContent.Contains("Saved to inventory."))));
         }
 
         var saved = await _repository.GetAllAsync();
