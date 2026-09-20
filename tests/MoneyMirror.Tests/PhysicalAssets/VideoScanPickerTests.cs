@@ -20,6 +20,7 @@ public sealed class VideoScanPickerTests : IDisposable
     private readonly EfPhysicalAssetRepository _repository;
     private readonly FakeDetector _detector = new();
     private readonly FakeStorage _storage = new();
+    private readonly FakeValuation _valuation = new();
     private readonly BunitJSModuleInterop _module;
 
     public VideoScanPickerTests()
@@ -33,7 +34,7 @@ public sealed class VideoScanPickerTests : IDisposable
         _context.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
         _context.Services.AddSingleton<IPhysicalAssetDetectionService>(_detector);
         _context.Services.AddSingleton<IPossessionImageStorage>(_storage);
-        _context.Services.AddSingleton<IAssetValuationService>(new FakeValuation());
+        _context.Services.AddSingleton<IAssetValuationService>(_valuation);
         _context.Services.AddSingleton<IPhysicalAssetRepository>(_repository);
         _module = _context.JSInterop.SetupModule("./js/video-scan.js");
         _module.Setup<double[]>("prepare", _ => true).SetResult([0.5, 1.5]);
@@ -192,6 +193,59 @@ public sealed class VideoScanPickerTests : IDisposable
         Assert.Empty(_storage.References);
     }
 
+    [Fact]
+    public async Task NoMarketEvidence_ShowsUnavailable_WithoutSaveOrMergeActions()
+    {
+        await _repository.AddAsync(new PhysicalAssetInput("Chair", null, null, 50));
+        _valuation.Result = MarketValuationCalculator.Calculate([], DateTimeOffset.UtcNow);
+        var page = _context.Render<ScanPage>();
+        page.Find("#room-video").Change("room.mp4");
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Find items in video").ClickAsync(new MouseEventArgs());
+        page.FindAll(".item-region")[0].Click();
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").ClickAsync(new MouseEventArgs());
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Estimate value").ClickAsync(new MouseEventArgs());
+
+        Assert.Contains("No market value available", page.Markup);
+        Assert.Contains("Market evidence (low confidence)", page.Markup);
+        Assert.DoesNotContain("Save as new item", page.Markup);
+        Assert.DoesNotContain("Merge into", page.Markup);
+        Assert.Single(await _repository.GetAllAsync());
+        Assert.Single(_db.AssetValuationRecords);
+    }
+
+    [Fact]
+    public async Task SparseMarketEvidence_PreservesConfidenceLabelWhenSaved()
+    {
+        _valuation.Result = MarketValuationCalculator.Calculate([new(25, "Market", "Chair", "Used")], DateTimeOffset.UtcNow);
+        var page = _context.Render<ScanPage>();
+        page.Find("#room-video").Change("room.mp4");
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Find items in video").ClickAsync(new MouseEventArgs());
+        page.FindAll(".item-region")[0].Click();
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Review selected items").ClickAsync(new MouseEventArgs());
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Estimate value").ClickAsync(new MouseEventArgs());
+        Assert.Contains("Market evidence (low confidence)", page.Markup);
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Save as new item").ClickAsync(new MouseEventArgs());
+
+        var record = Assert.Single(_db.AssetValuationRecords);
+        Assert.Equal(25m, record.EstimatedValue);
+        Assert.Equal("Market evidence (low confidence)", record.Source);
+        Assert.Contains("Low confidence", record.Notes);
+    }
+
+    [Fact]
+    public async Task NoMarketEvidence_OnRevalue_PreservesPreviousValuation()
+    {
+        var id = await _repository.AddAsync(new PhysicalAssetInput("Chair", null, null, 50));
+        _valuation.Result = MarketValuationCalculator.Calculate([], DateTimeOffset.UtcNow);
+        var page = _context.Render<InventoryList>();
+        await page.Find(".asset-row-summary").ClickAsync(new MouseEventArgs());
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Revalue").ClickAsync(new MouseEventArgs());
+
+        Assert.Contains("no usable comparable listings", page.Find("[role=alert]").TextContent);
+        var detail = await _repository.GetByIdAsync(id);
+        Assert.Equal(50m, Assert.Single(detail!.ValuationHistory).EstimatedValue);
+    }
+
     public void Dispose()
     {
         _context.Dispose();
@@ -237,7 +291,8 @@ public sealed class VideoScanPickerTests : IDisposable
 
     private sealed class FakeValuation : IAssetValuationService
     {
+        public AssetValuation Result { get; set; } = new(100, "Test estimate", DateTimeOffset.UtcNow, true);
         public Task<AssetValuation> EstimateAsync(string label, string? brand, string? model, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new AssetValuation(100, "Test estimate", DateTimeOffset.UtcNow, true));
+            Task.FromResult(Result);
     }
 }

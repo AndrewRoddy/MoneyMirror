@@ -36,6 +36,7 @@ public class AiEstimatedValuationServiceTests
         Assert.Equal(150.50m, valuation.EstimatedValueUsd);
         Assert.Equal("Typical used price for this model.", valuation.Reasoning);
         Assert.True(valuation.IsAiEstimated);
+        Assert.True(valuation.IsLowConfidence);
         Assert.Equal(FixedNow, valuation.ValuationDate);
     }
 

@@ -11,4 +11,5 @@ public record ScannedAssetInput(
     string? IdentifiedProductModel,
     string? ImageReference,
     decimal EstimatedValue,
-    string? ValuationEvidence);
+    string? ValuationEvidence,
+    string ValuationSource = "AI estimate (not evidence-based - see #138)");

@@ -165,6 +165,27 @@ npm run check
 
 ## Status
 
+### Market valuation evidence
+
+`MarketValuationCalculator.Calculate(comps, valuationDate)` provides the PA6
+evidence-based calculation. It ignores non-positive prices and missing sources,
+removes identical records, and computes the median of the remaining USD prices
+(rounded to cents, midpoint away from zero). Matching comparable items/conditions
+and converting currencies are the retrieval provider's responsibility.
+
+No usable listings returns `EstimatedValueUsd = null`, empty evidence, and an
+explicit low-confidence explanation. One or two usable listings returns their
+median with a low-confidence warning. Three listings is only the minimum sample
+threshold; it does not guarantee market accuracy. AI estimates are always marked
+low confidence. Scan review hides save/merge actions for unavailable values, and
+revaluation preserves the existing history when no new value is available.
+
+The registered service remains the AI placeholder from #138. Connecting real
+retrieval to this calculator and storing/displaying structured comps is tracked
+in [#234](https://github.com/AndrewRoddy/MoneyMirror/issues/234), following #65/#66
+and the eBay client in #179. Calculator and rendered-component tests exercise
+empty, invalid, sparse, and sufficient evidence without external credentials.
+
 Actively being built. See the [project board](https://github.com/users/AndrewRoddy/projects/8)
 for current progress and `docs/backlog-proposal.md` for the full issue backlog and scope
 rationale.
