@@ -22,9 +22,14 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
 
     public async Task<IReadOnlyList<OccupationMatch>> MatchAsync(
         ProfessionalProfile profile,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        if (profile.Skills.Count == 0 && profile.Experience.Count == 0 && profile.Education.Count == 0)
+        if (
+            profile.Skills.Count == 0
+            && profile.Experience.Count == 0
+            && profile.Education.Count == 0
+        )
         {
             return [];
         }
@@ -37,7 +42,9 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
         catch (LlmServiceException ex)
         {
             throw new OccupationMatchingException(
-                "Failed to match occupations: the LLM provider call failed.", ex);
+                "Failed to match occupations: the LLM provider call failed.",
+                ex
+            );
         }
 
         var json = StripCodeFence(completion);
@@ -50,34 +57,45 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
         catch (JsonException ex)
         {
             throw new OccupationMatchingException(
-                "The LLM returned a response that could not be parsed as occupation matches.", ex);
+                "The LLM returned a response that could not be parsed as occupation matches.",
+                ex
+            );
         }
 
         if (response?.Occupations is not { } occupations)
         {
             throw new OccupationMatchingException(
-                "The LLM returned an occupation response without a structured occupations list.");
+                "The LLM returned an occupation response without a structured occupations list."
+            );
         }
 
         var matches = new List<OccupationMatch>(occupations.Count);
         foreach (var occupation in occupations)
         {
-            if (occupation is null
+            if (
+                occupation is null
                 || string.IsNullOrWhiteSpace(occupation.Title)
-                || string.IsNullOrWhiteSpace(occupation.Explanation))
+                || string.IsNullOrWhiteSpace(occupation.Explanation)
+            )
             {
                 throw new OccupationMatchingException(
-                    "The LLM returned an occupation match without a title or explanation.");
+                    "The LLM returned an occupation match without a title or explanation."
+                );
             }
 
-            if (occupation.TypicalMinUsd is < 0
+            if (
+                occupation.TypicalMinUsd is < 0
                 || occupation.TypicalMaxUsd is < 0
-                || (occupation.TypicalMinUsd is not null
+                || (
+                    occupation.TypicalMinUsd is not null
                     && occupation.TypicalMaxUsd is not null
-                    && occupation.TypicalMinUsd > occupation.TypicalMaxUsd))
+                    && occupation.TypicalMinUsd > occupation.TypicalMaxUsd
+                )
+            )
             {
                 throw new OccupationMatchingException(
-                    "The LLM returned an invalid compensation range for an occupation match.");
+                    "The LLM returned an invalid compensation range for an occupation match."
+                );
             }
 
             var keySkills = (occupation.KeySkills ?? [])
@@ -86,17 +104,41 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            matches.Add(new OccupationMatch(
-                occupation.Title.Trim(),
-                occupation.Explanation.Trim(),
-                IsAiEstimated: true,
-                keySkills,
-                occupation.TypicalMinUsd,
-                occupation.TypicalMaxUsd));
+            // The LLM occasionally returns an abbreviated figure (e.g. 80,
+            // presumably meaning "$80k") instead of a full annual-salary
+            // number - a positive value, so the min<0/max<0/min>max checks
+            // above don't catch it, but clearly not a real US salary. Treat
+            // it the same as the prompt's own "omit both if you cannot give
+            // a reasonable estimate" instruction: drop it rather than show
+            // a nonsensical range like "$80 - $120".
+            var (typicalMinUsd, typicalMaxUsd) =
+                IsPlausibleAnnualSalary(occupation.TypicalMinUsd)
+                && IsPlausibleAnnualSalary(occupation.TypicalMaxUsd)
+                    ? (occupation.TypicalMinUsd, occupation.TypicalMaxUsd)
+                    : (null, null);
+
+            matches.Add(
+                new OccupationMatch(
+                    occupation.Title.Trim(),
+                    occupation.Explanation.Trim(),
+                    IsAiEstimated: true,
+                    keySkills,
+                    typicalMinUsd,
+                    typicalMaxUsd
+                )
+            );
         }
 
         return matches;
     }
+
+    // No real full-time US annual salary is this low; a value below this
+    // is almost certainly the model returning an abbreviated figure (e.g.
+    // 80 instead of 80000) rather than a genuine estimate.
+    private const int MinPlausibleAnnualSalaryUsd = 1_000;
+
+    private static bool IsPlausibleAnnualSalary(int? value) =>
+        value is null || value >= MinPlausibleAnnualSalaryUsd;
 
     private static string BuildPrompt(ProfessionalProfile profile)
     {
@@ -112,7 +154,9 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
             summary.AppendLine("Experience:");
             foreach (var exp in profile.Experience)
             {
-                var description = exp.Description is not null ? $": {exp.Description}" : string.Empty;
+                var description = exp.Description is not null
+                    ? $": {exp.Description}"
+                    : string.Empty;
                 summary.AppendLine($"- {exp.Title ?? "Role"} at {exp.Organization}{description}");
             }
         }
@@ -150,7 +194,8 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
             occupation (not limited to skills already in the profile above).
 
             "typicalMinUsd"/"typicalMaxUsd" should be a rough typical US annual
-            salary range for that specific occupation (not the whole profile).
+            salary range for that specific occupation (not the whole profile),
+            as a full number in dollars - e.g. 85000, never 85 or "85k".
             Omit both if you cannot give a reasonable estimate.
             """;
     }
@@ -185,5 +230,6 @@ public class AiSuggestedOccupationMatchingService : IOccupationMatchingService
         string? Explanation,
         IReadOnlyList<string?>? KeySkills,
         int? TypicalMinUsd,
-        int? TypicalMaxUsd);
+        int? TypicalMaxUsd
+    );
 }
