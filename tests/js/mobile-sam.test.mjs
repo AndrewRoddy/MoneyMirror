@@ -100,6 +100,8 @@ afterEach(() => {
     globalThis.caches = originalCaches;
     globalThis.fetch = originalFetch;
     globalThis.document = originalDocument;
+    delete globalThis.crossOriginIsolated;
+    delete globalThis.ort;
     sam.disposeEngine();
 });
 
@@ -160,15 +162,49 @@ test("OrtDriver attempts WebGPU and falls back to WASM if WebGPU is unsupported"
         },
     };
 
+    // A device that advertises a GPU, so the attempt is worth making here.
+    const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    Object.defineProperty(globalThis, "navigator", {
+        value: { gpu: {} },
+        configurable: true,
+        writable: true,
+    });
+
+    try {
+        const driver = new sam.OrtDriver({ ort: mockOrt });
+        const sessionResult = await driver.createSession(
+            mockOrt,
+            new ArrayBuffer(8),
+            sam.ExecutionDevice.Auto,
+        );
+
+        assert.equal(sessionResult.device, sam.ExecutionDevice.Wasm);
+        assert.equal(callCount, 2);
+    } finally {
+        if (originalNavigator) {
+            Object.defineProperty(globalThis, "navigator", originalNavigator);
+        }
+    }
+});
+
+test("OrtDriver does not attempt WebGPU on a device that has no GPU", async () => {
+    const mockOrt = createMockOrt();
     const driver = new sam.OrtDriver({ ort: mockOrt });
+
     const sessionResult = await driver.createSession(
         mockOrt,
         new ArrayBuffer(8),
         sam.ExecutionDevice.Auto,
     );
 
+    // The WebGPU runtime was never loaded here, so a session attempt could only
+    // allocate and then fail.
     assert.equal(sessionResult.device, sam.ExecutionDevice.Wasm);
-    assert.equal(callCount, 2);
+    assert.equal(mockOrt.InferenceSession.create.mock.callCount(), 1);
+    assert.deepEqual(
+        mockOrt.InferenceSession.create.mock.calls[0].arguments[1].executionProviders,
+        ["wasm"],
+    );
 });
 
 test("ImageProcessor resizes input preserving aspect ratio and normalizes RGB channels", () => {
@@ -364,4 +400,96 @@ test("Module helpers provide singleton access for Blazor interop", async () => {
 
     const afterDispose = sam.getEngineStatus();
     assert.equal(afterDispose.state, sam.EngineState.Uninitialized);
+});
+
+test("OrtDriver loads the WebGPU runtime only where there is a GPU to use it", () => {
+    const withoutGpu = new sam.OrtDriver();
+    // ort.all drags in a 23 MB WebAssembly binary; the plain WASM build is 12 MB,
+    // and on a phone that gap is the difference between running and being killed.
+    assert.match(withoutGpu.resolveCdnUrl(), /ort\.wasm\.bundle\.min\.mjs$/);
+
+    const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    Object.defineProperty(globalThis, "navigator", {
+        value: { gpu: {} },
+        configurable: true,
+        writable: true,
+    });
+
+    try {
+        assert.match(new sam.OrtDriver().resolveCdnUrl(), /ort\.webgpu\.bundle\.min\.mjs$/);
+    } finally {
+        if (originalNavigator) {
+            Object.defineProperty(globalThis, "navigator", originalNavigator);
+        }
+    }
+
+    assert.equal(
+        new sam.OrtDriver({ cdnUrl: "https://example.com/ort.mjs" }).resolveCdnUrl(),
+        "https://example.com/ort.mjs",
+    );
+});
+
+test("OrtDriver asks for a single WASM thread when the page is not cross-origin isolated", async () => {
+    const mockOrt = createMockOrt();
+    mockOrt.env.wasm.numThreads = 4;
+
+    globalThis.crossOriginIsolated = false;
+
+    globalThis.ort = mockOrt;
+
+    const driver = new sam.OrtDriver();
+    await driver.getOrt();
+
+    // Threads need SharedArrayBuffer, which needs COOP/COEP headers the app does
+    // not send. Asking for four buys worker infrastructure and nothing else.
+    assert.equal(mockOrt.env.wasm.numThreads, 1);
+});
+
+test("MobileSamEngine releases each model before reaching for the next", async () => {
+    const mockOrt = createMockOrt();
+    const order = [];
+
+    const storage = {
+        loadBuffer: mock.fn(async (url) => {
+            order.push(`load:${url.includes("encoder") ? "encoder" : "decoder"}`);
+            return new ArrayBuffer(16);
+        }),
+    };
+    const driver = {
+        getOrt: async () => mockOrt,
+        createSession: mock.fn(async () => {
+            order.push("create");
+            return {
+                session: await mockOrt.InferenceSession.create(),
+                device: sam.ExecutionDevice.Wasm,
+            };
+        }),
+    };
+
+    const engine = new sam.MobileSamEngine({
+        storage,
+        driver,
+        processor: { prepareTensor: () => ({}) },
+    });
+    await engine.init({
+        device: sam.ExecutionDevice.Wasm,
+        encoderUrl: "https://example.com/encoder.onnx",
+        decoderUrl: "https://example.com/decoder.onnx",
+    });
+
+    // Strictly one model in flight: loading both up front held two ONNX buffers
+    // and the runtime's copy of each at the same time, roughly doubling the peak.
+    assert.deepEqual(order, ["load:encoder", "create", "load:decoder", "create"]);
+});
+
+test("ImageProcessor hands the scratch canvas back once the pixels are copied out", () => {
+    const canvas = createMockCanvas(512, 288);
+    globalThis.document = { createElement: () => canvas };
+
+    new sam.ImageProcessor().prepareTensor({ width: 1920, height: 1080 }, createMockOrt());
+
+    // Safari keeps canvas backing stores alive well past the last reference to
+    // them, so this one is given up explicitly.
+    assert.equal(canvas.width, 0);
+    assert.equal(canvas.height, 0);
 });

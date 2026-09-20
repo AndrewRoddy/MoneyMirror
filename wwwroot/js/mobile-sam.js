@@ -24,9 +24,17 @@ const DEFAULT_MODEL_BASE_URL = "https://huggingface.co/Acly/MobileSAM/resolve/ma
 const DEFAULT_ENCODER_PATH = "mobile_sam_image_encoder.onnx";
 const DEFAULT_DECODER_PATH = "sam_mask_decoder_single.onnx";
 const CACHE_NAME = "mobilesam-model-v1";
-const ORT_CDN_URL =
-    "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.all.bundle.min.mjs";
 const ORT_WASM_PATH = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/";
+
+// onnxruntime publishes one bundle per set of execution providers, and they are
+// not close in size. ort.all pulls in WebGPU, WebGL, WebNN and the training
+// runtime, and with them the 23 MB JSEP WebAssembly binary - which it loads
+// whether or not the device has a GPU to point it at. The plain WASM build is
+// 12 MB. That difference is the whole budget on a phone: iOS gives a tab a few
+// hundred megabytes and kills it outright when it goes over, with no error and
+// no way to catch it, so the page simply reloads itself mid-tap.
+const ORT_WEBGPU_BUNDLE = "ort.webgpu.bundle.min.mjs";
+const ORT_WASM_BUNDLE = "ort.wasm.bundle.min.mjs";
 
 const TARGET_SIZE = 1024;
 const CHANNELS = 3;
@@ -95,13 +103,18 @@ export class ModelStorage {
 
         if ("caches" in globalThis) {
             try {
+                // Response copies what it is handed, so slicing first meant three
+                // copies of a 40 MB model alive at once: ours, the slice, and the
+                // body. Hand it the buffer directly and there are two.
                 const cache = await globalThis.caches.open(this.#cacheName);
-                const cacheResponse = new Response(buffer.slice(0), {
-                    headers: {
-                        "content-type": "application/octet-stream",
-                    },
-                });
-                await cache.put(url, cacheResponse);
+                await cache.put(
+                    url,
+                    new Response(buffer, {
+                        headers: {
+                            "content-type": "application/octet-stream",
+                        },
+                    }),
+                );
             } catch {
                 // Storage quota exceeded or private mode restriction
             }
@@ -151,8 +164,19 @@ export class OrtDriver {
 
     constructor(options = {}) {
         this.#ort = options.ort || null;
-        this.#cdnUrl = options.cdnUrl || ORT_CDN_URL;
+        this.#cdnUrl = options.cdnUrl || null;
         this.#wasmPath = options.wasmPath || ORT_WASM_PATH;
+    }
+
+    // Loading the WebGPU runtime on a device with no navigator.gpu costs ~11 MB
+    // of WebAssembly that can never run anything.
+    resolveCdnUrl() {
+        if (this.#cdnUrl) {
+            return this.#cdnUrl;
+        }
+
+        const bundle = globalThis.navigator?.gpu ? ORT_WEBGPU_BUNDLE : ORT_WASM_BUNDLE;
+        return `${ORT_WASM_PATH}${bundle}`;
     }
 
     async getOrt() {
@@ -166,7 +190,7 @@ export class OrtDriver {
             return this.#ort;
         }
 
-        const loaded = await import(/* webpackIgnore: true */ this.#cdnUrl);
+        const loaded = await import(/* webpackIgnore: true */ this.resolveCdnUrl());
         this.#ort = loaded.default || loaded;
         this.#configureWasm(this.#ort);
         return this.#ort;
@@ -181,8 +205,16 @@ export class OrtDriver {
             ort.env.wasm.wasmPaths = this.#wasmPath;
         }
 
-        const cores = navigator.hardwareConcurrency || 2;
-        ort.env.wasm.numThreads = Math.min(4, cores);
+        // Threaded WASM runs on SharedArrayBuffer, which the browser only exposes
+        // to a cross-origin-isolated page - COOP and COEP headers this app does
+        // not send. Asking for threads anyway has onnxruntime stand up worker
+        // and memory infrastructure it can never use.
+        const isolated =
+            globalThis.crossOriginIsolated === true && typeof SharedArrayBuffer !== "undefined";
+
+        ort.env.wasm.numThreads = isolated
+            ? Math.min(4, globalThis.navigator?.hardwareConcurrency || 2)
+            : 1;
     }
 
     async createSession(ort, bufferOrUrl, preferredDevice = ExecutionDevice.Auto) {
@@ -198,6 +230,13 @@ export class OrtDriver {
     }
 
     async #tryWebGpuThenWasm(ort, bufferOrUrl, strictGpu) {
+        // resolveCdnUrl only loads the WebGPU runtime where the device reported a
+        // GPU, so without one this attempt cannot do anything except fail - after
+        // allocating its way there, which is the part worth avoiding.
+        if (!strictGpu && !globalThis.navigator?.gpu) {
+            return await this.#createWasmSession(ort, bufferOrUrl);
+        }
+
         try {
             const session = await ort.InferenceSession.create(bufferOrUrl, {
                 executionProviders: [ExecutionDevice.WebGpu],
@@ -236,6 +275,13 @@ export class ImageProcessor {
         const ctx = canvas.getContext("2d");
         const imageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight);
         const pixels = imageData.data;
+
+        // Safari holds on to canvas backing stores long after the element is
+        // unreachable, and this one exists only for the pixels just copied out
+        // of it. Zeroing the dimensions releases it now rather than whenever a
+        // collection happens to run.
+        canvas.width = 0;
+        canvas.height = 0;
 
         const totalPixels = scaledWidth * scaledHeight;
         const tensorData = new Float32Array(totalPixels * CHANNELS);
@@ -561,15 +607,33 @@ export class MobileSamEngine {
                 new URL(options.decoderPath || DEFAULT_DECODER_PATH, baseUrl).href;
             const preferredDevice = options.device || ExecutionDevice.Auto;
 
-            const [encoderBuffer, decoderBuffer] = await Promise.all([
-                this.#storage.loadBuffer(encoderUrl, options.onEncoderProgress),
-                this.#storage.loadBuffer(decoderUrl, options.onDecoderProgress),
-            ]);
+            // One model at a time. Loading both in parallel held two ONNX buffers
+            // and the runtime's own copy of each in memory simultaneously, which
+            // roughly doubles the peak for no wall-clock gain worth having - the
+            // download is the slow part and it is cached after the first run.
+            // Releasing each buffer before reaching for the next keeps the high
+            // water mark at one model rather than two.
+            let encoderBuffer = await this.#storage.loadBuffer(
+                encoderUrl,
+                options.onEncoderProgress,
+            );
+            const encoderResult = await this.#driver.createSession(
+                this.#ort,
+                encoderBuffer,
+                preferredDevice,
+            );
+            encoderBuffer = null;
 
-            const [encoderResult, decoderResult] = await Promise.all([
-                this.#driver.createSession(this.#ort, encoderBuffer, preferredDevice),
-                this.#driver.createSession(this.#ort, decoderBuffer, preferredDevice),
-            ]);
+            let decoderBuffer = await this.#storage.loadBuffer(
+                decoderUrl,
+                options.onDecoderProgress,
+            );
+            const decoderResult = await this.#driver.createSession(
+                this.#ort,
+                decoderBuffer,
+                preferredDevice,
+            );
+            decoderBuffer = null;
 
             this.#encoderSession = encoderResult.session;
             this.#decoderSession = decoderResult.session;
