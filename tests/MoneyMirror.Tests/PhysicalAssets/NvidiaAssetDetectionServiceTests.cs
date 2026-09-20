@@ -21,6 +21,8 @@ public class NvidiaAssetDetectionServiceTests
 
     private static readonly byte[] Image = [1, 2, 3];
 
+    private const string Fence = "```";
+
     private const string SingleObjectJson = """
         {
           "objects": [
@@ -107,6 +109,101 @@ public class NvidiaAssetDetectionServiceTests
     public async Task DetectAsync_MalformedJson_ThrowsAssetDetectionException()
     {
         var service = new NvidiaAssetDetectionService(new FakeVisionService("not json at all"));
+
+        await Assert.ThrowsAsync<AssetDetectionException>(() => service.DetectAsync(Image, "image/jpeg"));
+    }
+
+    // #(scan) The configured vision model routinely ignores "respond with ONLY a
+    // single JSON object". These are response shapes observed from
+    // meta/llama-3.2-11b-vision-instruct for real scanned photos.
+    [Fact]
+    public async Task DetectAsync_ProsePrecedingJson_ReturnsDetectedAssets()
+    {
+        const string response = """
+            The image shows a Minion from the Despicable Me franchise. The Minion is
+            wearing goggles, a denim overall, and gloves.
+
+            Here is the JSON object describing the Minion:
+
+            { "objects": [ { "label": "Minion", "confidence": 1, "region": null, "identification": null, "tags": ["yellow"] } ] }
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        Assert.Equal("Minion", Assert.Single(results).Label);
+    }
+
+    [Fact]
+    public async Task DetectAsync_JsonInMarkdownFence_ReturnsDetectedAssets()
+    {
+        var response = "Sure! Here you go:\n\n" + Fence + "json\n" + SingleObjectJson + "\n" + Fence;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        Assert.Equal("acoustic guitar", Assert.Single(results).Label);
+    }
+
+    [Fact]
+    public async Task DetectAsync_TrailingCommentaryAfterJson_ReturnsDetectedAssets()
+    {
+        var service = new NvidiaAssetDetectionService(
+            new FakeVisionService(SingleObjectJson + "\n\nLet me know if you want more detail!"));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        Assert.Equal("acoustic guitar", Assert.Single(results).Label);
+    }
+
+    // The model sometimes restates the schema from the prompt before answering.
+    // That block is not valid JSON, so the real object after it must still win.
+    [Fact]
+    public async Task DetectAsync_SchemaEchoBeforeJson_ReturnsDetectedAssets()
+    {
+        const string response = """
+            I will match this shape:
+            {"objects": [{"label": string, "confidence": number, "region": null, "identification": null, "tags": [string]}]}
+
+            {"objects": [{"label": "sofa", "confidence": 0.9, "region": null, "identification": null, "tags": []}]}
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        Assert.Equal("sofa", Assert.Single(results).Label);
+    }
+
+    // A brace inside a label must not be mistaken for the end of the object.
+    [Fact]
+    public async Task DetectAsync_BraceInsideStringValue_ReturnsDetectedAssets()
+    {
+        const string response = """
+            Here it is: {"objects": [{"label": "sign reading {open}", "confidence": 0.5, "region": null, "identification": null, "tags": []}]}
+            """;
+        var service = new NvidiaAssetDetectionService(new FakeVisionService(response));
+
+        var results = await service.DetectAsync(Image, "image/jpeg");
+
+        Assert.Equal("sign reading {open}", Assert.Single(results).Label);
+    }
+
+    // A response cut off mid-object has no balanced span, so it must surface as a
+    // detection failure rather than being reported as zero objects found.
+    [Fact]
+    public async Task DetectAsync_TruncatedJson_ThrowsAssetDetectionException()
+    {
+        var service = new NvidiaAssetDetectionService(
+            new FakeVisionService("""{"objects": [{"label": "sofa", "confidence": 0.9"""));
+
+        await Assert.ThrowsAsync<AssetDetectionException>(() => service.DetectAsync(Image, "image/jpeg"));
+    }
+
+    [Fact]
+    public async Task DetectAsync_ProseWithNoJsonAtAll_ThrowsAssetDetectionException()
+    {
+        var service = new NvidiaAssetDetectionService(
+            new FakeVisionService("I'm sorry, I can't identify objects in this image."));
 
         await Assert.ThrowsAsync<AssetDetectionException>(() => service.DetectAsync(Image, "image/jpeg"));
     }
