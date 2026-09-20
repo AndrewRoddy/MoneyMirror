@@ -14,5 +14,12 @@ public record AssetValuation(
     decimal EstimatedValueUsd,
     string Reasoning,
     DateTimeOffset ValuationDate,
-    bool IsAiEstimated);
+    bool IsAiEstimated)
+{
+    /// <summary>
+    /// Comparable market listings used to derive this valuation. This is empty
+    /// for estimates that are not grounded in listing evidence.
+    /// </summary>
+    public IReadOnlyList<AssetValuationEvidence> Evidence { get; init; } = Array.Empty<AssetValuationEvidence>();
+}
 
