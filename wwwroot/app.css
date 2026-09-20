@@ -160,3 +160,32 @@ h1:focus {
 .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Restyles the native file input's browse button in place - no markup
+   change needed on the pages that use <InputFile>. */
+input[type="file"] {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+input[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--brand);
+    border-radius: 0.5rem;
+    color: var(--text-inverse);
+    background: var(--brand);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background: var(--brand-strong);
+    border-color: var(--brand-strong);
+}
+
+input[type="file"]:disabled::file-selector-button {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
