@@ -28,7 +28,8 @@ public class NvidiaAssetDetectionServiceTests
               "label": "acoustic guitar",
               "confidence": 0.95,
               "region": {"x": 0.1, "y": 0.1, "width": 0.5, "height": 0.8},
-              "identification": {"brand": "Fender", "model": "CD-60S", "confidence": 0.7}
+              "identification": {"brand": "Fender", "model": "CD-60S", "confidence": 0.7},
+              "tags": ["brown", "wood", "stringed"]
             }
           ]
         }
@@ -37,9 +38,9 @@ public class NvidiaAssetDetectionServiceTests
     private const string MultiObjectJson = """
         {
           "objects": [
-            {"label": "sofa", "confidence": 0.9, "region": null, "identification": null},
-            {"label": "lamp", "confidence": 0.8, "region": null, "identification": null},
-            {"label": "coffee table", "confidence": 0.85, "region": null, "identification": null}
+            {"label": "sofa", "confidence": 0.9, "region": null, "identification": null, "tags": ["blue", "fabric"]},
+            {"label": "lamp", "confidence": 0.8, "region": null, "identification": null, "tags": ["metal"]},
+            {"label": "coffee table", "confidence": 0.85, "region": null, "identification": null, "tags": ["wood", "brown"]}
           ]
         }
         """;
@@ -47,7 +48,7 @@ public class NvidiaAssetDetectionServiceTests
     private const string LowConfidenceJson = """
         {
           "objects": [
-            {"label": "power tool", "confidence": 0.6, "region": null, "identification": null}
+            {"label": "power tool", "confidence": 0.6, "region": null, "identification": null, "tags": []}
           ]
         }
         """;
@@ -63,6 +64,7 @@ public class NvidiaAssetDetectionServiceTests
         Assert.Equal("acoustic guitar", asset.Label);
         Assert.NotNull(asset.Identification);
         Assert.Equal("Fender", asset.Identification!.Brand);
+        Assert.Equal(["brown", "wood", "stringed"], asset.Tags);
         Assert.NotNull(asset.Region);
     }
 
@@ -77,6 +79,7 @@ public class NvidiaAssetDetectionServiceTests
         Assert.Contains(results, a => a.Label == "sofa");
         Assert.Contains(results, a => a.Label == "lamp");
         Assert.Contains(results, a => a.Label == "coffee table");
+        Assert.Equal(["blue", "fabric"], results.Single(a => a.Label == "sofa").Tags);
     }
 
     [Fact]
@@ -116,4 +119,3 @@ public class NvidiaAssetDetectionServiceTests
         await Assert.ThrowsAsync<AssetDetectionException>(() => service.DetectAsync(Image, "image/jpeg"));
     }
 }
-

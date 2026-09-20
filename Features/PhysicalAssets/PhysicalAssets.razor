@@ -107,6 +107,16 @@
                     </label>
                 </div>
 
+                @if (detection.Original.Tags.Count > 0)
+                {
+                    <div class="mt-2" aria-label="Detected tags">
+                        @foreach (var tag in detection.Original.Tags)
+                        {
+                            <span class="badge bg-light text-dark border me-1">@tag</span>
+                        }
+                    </div>
+                }
+
                 @if (detection.Included)
                 {
                     <div class="row mt-2">

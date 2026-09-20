@@ -63,7 +63,8 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
               "label": string,
               "confidence": number between 0 and 1,
               "region": {"x": number, "y": number, "width": number, "height": number} | null,
-              "identification": {"brand": string|null, "model": string|null, "confidence": number between 0 and 1} | null
+              "identification": {"brand": string|null, "model": string|null, "confidence": number between 0 and 1} | null,
+              "tags": [string]
             }
           ]
         }
@@ -73,6 +74,9 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         - "region" gives the object's bounding box as fractions of image width/height (0-1); use null if you can't estimate it.
         - Only include "identification" when you can infer a specific brand or model with reasonable confidence.
           If you can't, set "identification" to null - never invent a specific product.
+        - "tags" contains short, visible descriptors useful for lookup and filtering, such as color,
+          material, pattern, or texture (for example: ["blue", "metal", "fuzzy"]). Do not use tags
+          for an uncertain brand or model, and return an empty array when no useful descriptors are visible.
         - If no objects are found, return {"objects": []}.
         """;
 
@@ -101,4 +105,3 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
 
     private record DetectionResponse(IReadOnlyList<DetectedAsset> Objects);
 }
-
