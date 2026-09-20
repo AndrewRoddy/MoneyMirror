@@ -1,0 +1,100 @@
+/* "Pocket Ledger" mobile concept (see design/mobile-mockups/c-pocket-ledger.html)
+   built for real here. Tokens are declared on this wrapper rather than :root -
+   scoped .razor.css files must never redeclare :root, see theme.css - and
+   inherit down into InventoryList.razor's markup through the normal CSS
+   cascade regardless of each component's own scope attribute. Sora/Inter are
+   loaded from App.razor's <head> - scoped CSS files cannot use @import. */
+.ledger-page {
+    --pl-bg: #f5f3ff;
+    --pl-card: #ffffff;
+    --pl-violet: #7c6ff0;
+    --pl-violet-deep: #5d4fd6;
+    --pl-violet-tint: #efecff;
+    --pl-ink: #1b1832;
+    --pl-muted: #746e8c;
+    --pl-shadow: 0 10px 24px -14px rgba(60, 50, 120, 0.35);
+
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+    border-radius: 1.5rem;
+    background: var(--pl-bg);
+    color: var(--pl-ink);
+    font-family: "Inter", sans-serif;
+}
+
+.ledger-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.ledger-eyebrow {
+    margin: 0 0 0.25rem;
+    color: var(--pl-violet-deep);
+    font-family: "Inter", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.ledger-header h1 {
+    margin: 0 0 0.35rem;
+    color: var(--pl-ink);
+    font-family: "Sora", sans-serif;
+    font-size: clamp(1.6rem, 5vw, 2.1rem);
+    font-weight: 700;
+}
+
+.ledger-subtitle {
+    max-width: 32ch;
+    margin: 0;
+    color: var(--pl-muted);
+    font-size: 0.85rem;
+}
+
+.ledger-cta {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    background: var(--pl-violet);
+    color: #fff;
+    font-family: "Sora", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 0 8px 18px -8px rgba(124, 111, 240, 0.7);
+}
+
+.ledger-cta svg {
+    width: 15px;
+    height: 15px;
+}
+
+.ledger-cta:hover {
+    background: var(--pl-violet-deep);
+    color: #fff;
+}
+
+@media (max-width: 480px) {
+    .ledger-page {
+        padding: 1.5rem 1rem 3rem;
+        border-radius: 0;
+    }
+
+    .ledger-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ledger-cta {
+        justify-content: center;
+    }
+}

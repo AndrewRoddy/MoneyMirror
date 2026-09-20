@@ -1,87 +1,122 @@
-/*
- * Inventory.
- *
- * Total at the top, items underneath: the running value is the thing you
- * came to see, and the list is how you change it.
- *
- * The rows are an iOS grouped list - one glass pane, hairline separators,
- * tap anywhere on a row to expand it. Mobile first, with a desktop
- * breakpoint at 48rem to match the rest of the app.
- */
-
-/* ===================================================================
- * Running total
- * =================================================================== */
-
-.asset-total {
-    margin-bottom: 1rem;
-    padding: 1rem 1.125rem;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    background-color: var(--glass-bg);
-    background-image: radial-gradient(
-        16rem 9rem at 92% -30%,
-        color-mix(in srgb, var(--accent) 22%, transparent),
-        transparent 70%
-    );
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    box-shadow: var(--shadow-2);
+.ledger-loading {
+    color: var(--pl-muted);
 }
 
-.asset-total-label {
-    display: block;
-    color: var(--text-muted);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.asset-total-amount {
-    display: block;
-    margin-top: 0.15rem;
-    color: var(--text);
-    font-family: var(--font-numeric);
-    font-size: clamp(1.875rem, 9vw, 2.5rem);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-}
-
-.asset-total-note {
-    display: block;
-    margin-top: 0.3rem;
-    font-size: 0.8125rem;
-}
-
-/* ===================================================================
- * The list
- * =================================================================== */
-
-.asset-list {
-    list-style: none;
-    margin: 0 0 1.5rem;
-    padding: 0;
+/* ---- Total value hero ---- */
+.ledger-total-card {
+    position: relative;
     overflow: hidden;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    box-shadow: var(--shadow-2);
+    margin-bottom: 1rem;
+    padding: 1.1rem 1.2rem 1rem;
+    border-radius: 1.4rem;
+    background: linear-gradient(135deg, var(--pl-violet) 0%, #9b8ff5 100%);
+    color: #fff;
+    box-shadow: 0 14px 30px -16px rgba(124, 111, 240, 0.65);
+}
+
+.ledger-total-card::after {
+    content: "";
+    position: absolute;
+    top: -60px;
+    right: -40px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.ledger-total-card .ledger-eyebrow {
+    position: relative;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.ledger-total-figure {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-family: "Sora", sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.ledger-total-figure small {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.ledger-total-foot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.6rem;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.ledger-total-pill {
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+}
+
+/* ---- Icon badge (shared by the empty state and every row) ---- */
+.ledger-icon-badge {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 0.8rem;
+    background: var(--pl-violet-tint);
+    color: var(--pl-violet-deep);
+}
+
+.ledger-icon-badge svg {
+    width: 19px;
+    height: 19px;
+}
+
+.ledger-icon-badge-lg {
+    width: 52px;
+    height: 52px;
+}
+
+.ledger-icon-badge-lg svg {
+    width: 26px;
+    height: 26px;
+}
+
+/* ---- Empty state ---- */
+.ledger-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--pl-muted);
+}
+
+/* ---- Item list ---- */
+.asset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    list-style: none;
 }
 
 .asset-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    border-bottom: 1px solid var(--glass-hairline);
-}
-
-.asset-row:last-child {
-    border-bottom: none;
+    overflow: hidden;
+    border-radius: 1.1rem;
+    background: var(--pl-card);
+    box-shadow: var(--pl-shadow);
 }
 
 /*
@@ -91,16 +126,12 @@
  * line on a narrow screen.
  */
 .asset-row-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas:
-        "name  value caret"
-        "meta  meta  caret";
+    display: flex;
     align-items: center;
-    gap: 0.15rem 0.75rem;
+
     width: 100%;
-    min-width: 0;
-    padding: 0.875rem 1rem;
+    gap: 0.7rem;
+    padding: 0.7rem 0.85rem;
     border: 0;
     background: none;
     color: inherit;
@@ -110,84 +141,73 @@
     transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
-.asset-row-summary:active {
-    background: var(--nav-surface-pressed);
+.asset-row-summary:hover {
+    background: var(--pl-violet-tint);
 }
 
-@media (hover: hover) {
-    .asset-row-summary:hover {
-        background: var(--surface-muted);
-    }
+.asset-row-main {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
 }
 
 .asset-row-name {
-    grid-area: name;
-    min-width: 0;
     overflow: hidden;
-    font-size: 0.9375rem;
+    font-family: "Sora", sans-serif;
+    font-size: 0.88rem;
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .asset-row-meta {
-    grid-area: meta;
-    min-width: 0;
-    overflow-wrap: anywhere;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-}
-
-.asset-row-value {
-    grid-area: value;
-    min-width: 0;
-    font-size: 0.9375rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.015em;
+    overflow: hidden;
+    color: var(--pl-muted);
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.asset-row-value {
+    flex: none;
+    font-family: "Sora", sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
 .asset-row-caret {
-    grid-area: caret;
-    align-self: center;
-    flex: 0 0 auto;
-    width: 0.7rem;
-    height: 0.7rem;
-    background-color: var(--text-muted);
-    transition: transform var(--dur) var(--ease-spring);
+    flex: none;
+    width: 0.65rem;
+    height: 0.65rem;
+    margin-left: 0.15rem;
+    background-color: var(--pl-muted);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
     mask-repeat: no-repeat;
     mask-position: center;
     mask-size: contain;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
-    -webkit-mask-size: contain;
+    -webkit-mask-size: cover;
+    transform: rotate(-90deg);
+    transition: transform 0.15s ease;
 }
 
 .asset-row-summary[aria-expanded="true"] .asset-row-caret {
-    transform: rotate(180deg);
-}
-
-.asset-row-quick-actions {
-    display: flex;
-    gap: 0.35rem;
-    justify-self: end;
-    padding: 0 1rem 0.6rem;
+    transform: rotate(0deg);
 }
 
 .asset-row-detail {
-    grid-column: 1 / -1;
-    min-width: 0;
-    padding: 0 1rem 1.125rem;
-    border-top: 1px solid var(--glass-hairline);
+    padding: 0 1rem 1.1rem;
+    border-top: 1px solid var(--pl-violet-tint);
 }
 
 .asset-detail-image {
     display: block;
-    max-width: 240px;
-    margin: 1rem 0;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-1);
+    max-width: 220px;
+    margin: 0.9rem 0;
+    border-radius: 0.9rem;
 }
 
 .asset-detail-facts {
@@ -195,33 +215,44 @@
 }
 
 .asset-detail-facts dt {
-    color: var(--text-muted);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    color: var(--pl-muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
 .asset-detail-facts dd {
-    margin: 0.15rem 0 0.5rem;
+    margin: 0 0 0.5rem;
+    font-weight: 600;
 }
 
-.asset-detail-revalue {
-    margin-bottom: 1rem;
+/* Bootstrap's .badge defaults to white-space:nowrap, which overflows this
+   narrower card - the source label is often a full sentence, not a tag. */
+.asset-row-detail .badge {
+    display: inline-block;
+    white-space: normal;
+    text-align: left;
+    vertical-align: top;
 }
 
-.asset-row-detail h3 {
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    font-weight: 400;
+.ledger-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.75rem 0;
+}
+
+.ledger-subheading {
+    margin: 1rem 0 0.5rem;
+    font-family: "Sora", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
 }
 
 .asset-edit-form {
-    grid-column: 1 / -1;
-    min-width: 0;
     display: grid;
     gap: 0.5rem;
-    padding: 0.875rem 1rem;
+    padding: 0.85rem;
 }
 
 .asset-row-actions {
@@ -229,53 +260,29 @@
     gap: 0.5rem;
 }
 
-.asset-row-actions .btn {
-    flex: 1;
+/* ---- Add item ---- */
+.ledger-add-card {
+    padding: 1.1rem;
+    border-radius: 1.1rem;
+    background: var(--pl-card);
+    box-shadow: var(--pl-shadow);
 }
 
-/* ===================================================================
- * Add item
- * ===================================================================
- * The form is built from Bootstrap `.col`s, which stay equal-width at
- * every screen size - three text fields and a button at a quarter each
- * is unusable on a phone. Stack them until there is room.
- */
-
-#add-item {
-    margin-top: 1.5rem;
+.ledger-hint {
+    margin: 0 0 0.75rem;
+    color: var(--pl-muted);
+    font-size: 0.78rem;
 }
 
-#add-item h2 {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 400;
+.ledger-add-grid {
+    display: grid;
+    gap: 0.5rem;
 }
 
-#add-item .col,
-#add-item .col-auto {
-    flex: 0 0 100%;
-}
-
-#add-item .col-auto .btn {
-    width: 100%;
-}
-
-/* ===================================================================
- * Desktop
- * =================================================================== */
-
-@media (min-width: 48rem) {
-    .asset-total {
-        padding: 1.25rem 1.5rem;
-    }
-
-    .asset-row {
-        grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .asset-row-quick-actions {
-        justify-self: auto;
-        padding: 0.6rem 0.75rem 0.6rem 0;
+@media (min-width: 480px) {
+    .ledger-add-grid {
+        grid-template-columns: 1.4fr 1fr 1fr auto;
+        align-items: center;
     }
 
     .asset-row-summary {
