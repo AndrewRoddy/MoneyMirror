@@ -6,20 +6,44 @@ monolith, one database, one implicit user — no auth or multi-tenancy.
 
 ## Configuration
 
-AI and BLS settings live under `Ai:Nemotron`, `Ai:VisionModel`, and `Bls`
-(`BaseUrl`, `Model` / `ApiKey` as applicable). `appsettings.json` ships empty
-`ApiKey` placeholders — never commit real keys. Set them locally:
+AI, BLS, and eBay Browse API settings live under `Ai:Nemotron`,
+`Ai:VisionModel`, `Bls`, and `Ebay` (`ClientId`, `ClientSecret`, `AuthUrl`,
+`SearchUrl`, `MarketplaceId`, and `CacheDurationHours`). `appsettings.json`
+ships empty secret placeholders — never commit real keys. Set them locally:
 
 ```sh
 dotnet user-secrets set "Ai:Nemotron:ApiKey" "<your-key>"
 dotnet user-secrets set "Ai:VisionModel:ApiKey" "<your-key>"
 dotnet user-secrets set "Bls:ApiKey" "<your-key>"
+dotnet user-secrets set "Ebay:ClientId" "<your-ebay-client-id>"
+dotnet user-secrets set "Ebay:ClientSecret" "<your-ebay-client-secret>"
 ```
 
-Or use env vars: `Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`, `Bls__ApiKey`.
+Or use env vars: `Ai__Nemotron__ApiKey`, `Ai__VisionModel__ApiKey`,
+`Bls__ApiKey`, `Ebay__ClientId`, `Ebay__ClientSecret`.
 
-A free BLS v2 key from [data.bls.gov/registrationEngine](https://data.bls.gov/registrationEngine/)
-raises rate limits; the app works without one at the unregistered limit.
+Physical asset valuations authenticate to eBay's Browse API with an
+OAuth2 client-credentials app token (cached in memory for its ~2-hour
+lifetime), then search for up to 50 listings filtered to used/refurbished
+condition and calculate a median from USD-priced results. eBay's own
+condition filter does not reliably exclude new items, so results are
+re-checked client-side against each listing's `conditionId`. No usable
+listings produce a null value and an explicit low-confidence explanation.
+If eBay itself fails - missing credentials, network error, rate limit -
+the valuation falls back to an LLM price guess (`AiEstimatedValuationService`)
+rather than failing the request outright. The valuation returns each
+comparable's price, source, title, and condition in `AssetValuation.Evidence`;
+that evidence is persisted and displayed alongside each valuation in
+inventory history. Successful results, including empty results, are cached
+for 30 days in `App_Data/ebay-search-cache`, which is on the persistent
+Docker app-data volume. Repeated or concurrent searches for the same item
+reuse that result.
+
+The default `AuthUrl`/`SearchUrl` point at eBay's **sandbox** environment,
+whose inventory is seeded test data - it answers real requests but rarely
+has comps for a real product name. Swap both URLs to the production hosts
+(`api.ebay.com` instead of `api.sandbox.ebay.com`) once the app has
+production-approved keys from the [eBay Developer Program](https://developer.ebay.com/).
 
 ## Run with Docker
 
@@ -37,6 +61,8 @@ on Postgres volumes and host-local `dotnet run`: [backend/postgresql_setup.md](.
 | `NEMOTRON_API_KEY` | `Ai:Nemotron:ApiKey` |
 | `VISION_API_KEY` | `Ai:VisionModel:ApiKey` |
 | `BLS_API_KEY` | `Bls:ApiKey` |
+| `EBAY_CLIENT_ID` | `Ebay:ClientId` |
+| `EBAY_CLIENT_SECRET` | `Ebay:ClientSecret` |
 
 `docker compose down` stops the stack; add `-v` to wipe DB and image volumes.
 

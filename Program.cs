@@ -8,6 +8,7 @@ using MoneyMirror.Features.Financial;
 using MoneyMirror.HumanCapital;
 using MoneyMirror.HumanCapital.Configuration;
 using MoneyMirror.PhysicalAssets;
+using MoneyMirror.PhysicalAssets.Configuration;
 
 // Containers start with no LANG/LC_ALL, so .NET falls back to the invariant culture
 // and renders currency as "¤" instead of "$". Pin the formatting culture so money
@@ -29,6 +30,9 @@ builder.Services.Configure<NemotronOptions>(
     builder.Configuration.GetSection(NemotronOptions.SectionName)
 );
 builder.Services.Configure<BlsOptions>(builder.Configuration.GetSection(BlsOptions.SectionName));
+builder.Services.Configure<EbayOptions>(
+    builder.Configuration.GetSection(EbayOptions.SectionName)
+);
 builder.Services.Configure<VisionModelOptions>(
     builder.Configuration.GetSection(VisionModelOptions.SectionName)
 );
@@ -41,6 +45,15 @@ builder.Services.Configure<ImageUploadOptions>(
 
 builder.Services.AddTransient<TransientFaultRetryHandler>();
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<EbayTokenCache>();
+builder.Services.AddSingleton(sp =>
+{
+    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<EbayOptions>>().Value;
+    var cacheDirectory = Path.IsPathRooted(options.CacheDirectory)
+        ? options.CacheDirectory
+        : Path.Combine(builder.Environment.ContentRootPath, options.CacheDirectory);
+    return new MarketDataSearchCache(cacheDirectory);
+});
 
 // Both AI clients share NVIDIA's endpoint, which sheds load with a 503 when its
 // workers are saturated - see TransientFaultRetryHandler. HttpClient.Timeout
@@ -65,6 +78,13 @@ builder
 builder.Services.AddHttpClient<IBlsWageDataService, BlsWageDataService>(client =>
     client.Timeout = TimeSpan.FromSeconds(15)
 );
+builder.Services.AddHttpClient<IMarketDataService, EbayMarketDataService>(client =>
+    client.Timeout = TimeSpan.FromSeconds(15)
+);
+
+// eBay's OAuth token is a Bearer header, not a query-string secret, but keep routine
+// HTTP logs at Warning so a future log-level bump cannot echo it either.
+builder.Logging.AddFilter("System.Net.Http.HttpClient.IMarketDataService", LogLevel.Warning);
 builder.Services.AddScoped<
     IMarketPotentialExplanationService,
     NemotronMarketPotentialExplanationService
@@ -83,7 +103,11 @@ builder.Services.AddScoped<ISamSegmentationEngine, BlazorSamSegmentationEngine>(
 builder.Services.AddSingleton<IFinancialEntryStore, InMemoryFinancialEntryStore>();
 builder.Services.AddSingleton<IImageUploadValidator, ImageUploadValidator>();
 builder.Services.AddSingleton<IPossessionImageStorage, FilesystemPossessionImageStorage>();
-builder.Services.AddScoped<IAssetValuationService, AiEstimatedValuationService>();
+// Registered concretely (not just via IAssetValuationService) so
+// EvidenceBasedAssetValuationService can take it as its fallback without a
+// circular resolution through the interface both of them implement.
+builder.Services.AddScoped<AiEstimatedValuationService>();
+builder.Services.AddScoped<IAssetValuationService, EvidenceBasedAssetValuationService>();
 builder.Services.AddScoped<IOccupationMatchingService, AiSuggestedOccupationMatchingService>();
 builder.Services.AddScoped<ICompensationEstimationService, AiEstimatedCompensationService>();
 builder.Services.AddScoped<IMarketPotentialSummaryService, CachedMarketPotentialSummaryService>();

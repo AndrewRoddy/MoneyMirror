@@ -21,7 +21,9 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
 
-        var options = new DbContextOptionsBuilder<MoneyMirrorDbContext>().UseSqlite(_connection).Options;
+        var options = new DbContextOptionsBuilder<MoneyMirrorDbContext>()
+            .UseSqlite(_connection)
+            .Options;
         _db = new MoneyMirrorDbContext(options);
         _db.Database.EnsureCreated();
 
@@ -37,7 +39,9 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task AddAsync_WithInitialValuation_IsReturnedByGetAllWithThatValuation()
     {
-        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+        await _repository.AddAsync(
+            new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m)
+        );
 
         var all = await _repository.GetAllAsync();
 
@@ -62,9 +66,14 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task UpdateAsync_ExistingItem_ChangesItsFields()
     {
-        var id = await _repository.AddAsync(new PhysicalAssetInput("Old Name", "Old Category", null, null));
+        var id = await _repository.AddAsync(
+            new PhysicalAssetInput("Old Name", "Old Category", null, null)
+        );
 
-        var updated = await _repository.UpdateAsync(id, new PhysicalAssetInput("New Name", "New Category", "Model X", null));
+        var updated = await _repository.UpdateAsync(
+            id,
+            new PhysicalAssetInput("New Name", "New Category", "Model X", null)
+        );
 
         Assert.True(updated);
         var asset = Assert.Single(await _repository.GetAllAsync());
@@ -87,7 +96,10 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task UpdateAsync_UnknownId_ReturnsFalse()
     {
-        var updated = await _repository.UpdateAsync(Guid.NewGuid(), new PhysicalAssetInput("X", null, null, null));
+        var updated = await _repository.UpdateAsync(
+            Guid.NewGuid(),
+            new PhysicalAssetInput("X", null, null, null)
+        );
 
         Assert.False(updated);
     }
@@ -129,7 +141,15 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     public async Task AddFromScanAsync_CreatesScannedItemWithValuationAndEvidence()
     {
         var id = await _repository.AddFromScanAsync(
-            new ScannedAssetInput("Guitar", "Music", "Fender CD-60S", "abc123.jpg", 120m, "Typical used price."));
+            new ScannedAssetInput(
+                "Guitar",
+                "Music",
+                "Fender CD-60S",
+                "abc123.jpg",
+                120m,
+                "Typical used price."
+            )
+        );
 
         var summary = Assert.Single(await _repository.GetAllAsync());
         Assert.Equal(id, summary.Id);
@@ -172,7 +192,12 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     {
         var id = await _repository.AddAsync(new PhysicalAssetInput("Guitar", null, null, 100m));
 
-        var updated = await _repository.AddValuationAsync(id, 175m, "AI estimate (revalue)", "Prices went up.");
+        var updated = await _repository.AddValuationAsync(
+            id,
+            175m,
+            "AI estimate (revalue)",
+            "Prices went up."
+        );
 
         Assert.True(updated);
         var detail = await _repository.GetByIdAsync(id);
@@ -189,7 +214,12 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task AddValuationAsync_UnknownId_ReturnsFalse()
     {
-        var updated = await _repository.AddValuationAsync(Guid.NewGuid(), 100m, "AI estimate", null);
+        var updated = await _repository.AddValuationAsync(
+            Guid.NewGuid(),
+            100m,
+            "AI estimate",
+            null
+        );
 
         Assert.False(updated);
     }
@@ -201,12 +231,22 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     {
         IReadOnlyList<AssetValuationEvidence> comps =
         [
-            new(115m, "eBay", "Fender CD-60S, used", "Good"),
-            new(130m, "eBay", "Fender CD-60S dreadnought", null),
+            new(115m, "Reverb", "Fender CD-60S, used", "Good"),
+            new(130m, "Marketplace", "Fender CD-60S dreadnought", null),
         ];
 
         var id = await _repository.AddFromScanAsync(
-            new ScannedAssetInput("Guitar", "Music", "Fender CD-60S", "abc123.jpg", 122.5m, "Median of 2 listings.", "Market evidence", comps));
+            new ScannedAssetInput(
+                "Guitar",
+                "Music",
+                "Fender CD-60S",
+                "abc123.jpg",
+                122.5m,
+                "Median of 2 listings.",
+                "Market evidence",
+                comps
+            )
+        );
 
         var detail = await _repository.GetByIdAsync(id);
 
@@ -214,7 +254,7 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
         var entry = Assert.Single(detail!.ValuationHistory);
         Assert.Equal(2, entry.ComparableListings.Count);
         Assert.Equal(115m, entry.ComparableListings[0].PriceUsd);
-        Assert.Equal("eBay", entry.ComparableListings[0].Source);
+        Assert.Equal("Reverb", entry.ComparableListings[0].Source);
         Assert.Equal("Fender CD-60S, used", entry.ComparableListings[0].ListingTitle);
         Assert.Equal("Good", entry.ComparableListings[0].Condition);
         Assert.Null(entry.ComparableListings[1].Condition);
@@ -223,11 +263,25 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task AddValuationAsync_RevalueWithNewEvidence_DoesNotAffectPriorEntrysEvidence()
     {
-        IReadOnlyList<AssetValuationEvidence> firstComps = [new(100m, "eBay", null, null)];
-        IReadOnlyList<AssetValuationEvidence> secondComps = [new(140m, "eBay", null, null), new(160m, "Craigslist", null, null)];
+        IReadOnlyList<AssetValuationEvidence> firstComps = [new(100m, "Reverb", null, null)];
+        IReadOnlyList<AssetValuationEvidence> secondComps =
+        [
+            new(140m, "Marketplace", null, null),
+            new(160m, "Craigslist", null, null),
+        ];
 
         var id = await _repository.AddFromScanAsync(
-            new ScannedAssetInput("Guitar", null, null, null, 100m, "First estimate.", "Market evidence", firstComps));
+            new ScannedAssetInput(
+                "Guitar",
+                null,
+                null,
+                null,
+                100m,
+                "First estimate.",
+                "Market evidence",
+                firstComps
+            )
+        );
         await _repository.AddValuationAsync(id, 150m, "Market evidence", "Revalued.", secondComps);
 
         var detail = await _repository.GetByIdAsync(id);
@@ -257,9 +311,14 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task FindPossibleDuplicatesAsync_MatchingProductModel_ReturnsExistingItem()
     {
-        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+        await _repository.AddAsync(
+            new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m)
+        );
 
-        var duplicates = await _repository.FindPossibleDuplicatesAsync("Acoustic guitar", "fender cd-60s");
+        var duplicates = await _repository.FindPossibleDuplicatesAsync(
+            "Acoustic guitar",
+            "fender cd-60s"
+        );
 
         var duplicate = Assert.Single(duplicates);
         Assert.Equal("Guitar", duplicate.Name);
@@ -278,7 +337,9 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task FindPossibleDuplicatesAsync_NoMatch_ReturnsEmpty()
     {
-        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+        await _repository.AddAsync(
+            new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m)
+        );
 
         var duplicates = await _repository.FindPossibleDuplicatesAsync("Lamp", "IKEA Foto");
 
@@ -288,7 +349,9 @@ public class EfPhysicalAssetRepositoryTests : IDisposable
     [Fact]
     public async Task FindPossibleDuplicatesAsync_DifferentProductModelButSameName_StillMatchesOnName()
     {
-        await _repository.AddAsync(new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m));
+        await _repository.AddAsync(
+            new PhysicalAssetInput("Guitar", "Music", "Fender CD-60S", 120m)
+        );
 
         var duplicates = await _repository.FindPossibleDuplicatesAsync("Guitar", "Gibson Les Paul");
 
