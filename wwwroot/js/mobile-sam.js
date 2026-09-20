@@ -298,34 +298,40 @@ export class ImageProcessor {
 
 export class ContourExtractor {
     processMask(maskData, maskWidth, maskHeight, confidence = 1.0) {
-        const totalPixels = maskWidth * maskHeight;
-        const binaryMask = new Uint8Array(totalPixels);
+        const maxDim = 256;
+        const step = Math.max(1, Math.floor(Math.max(maskWidth, maskHeight) / maxDim));
+        const gridW = Math.ceil(maskWidth / step);
+        const gridH = Math.ceil(maskHeight / step);
+        const grid = new Uint8Array(gridW * gridH);
 
-        let minX = maskWidth;
+        let minX = gridW;
         let maxX = -1;
-        let minY = maskHeight;
+        let minY = gridH;
         let maxY = -1;
         let foregroundCount = 0;
 
-        for (let y = 0; y < maskHeight; y++) {
-            const rowOffset = y * maskWidth;
-            for (let x = 0; x < maskWidth; x++) {
-                const idx = rowOffset + x;
-                if (maskData[idx] > MASK_THRESHOLD) {
-                    binaryMask[idx] = 1;
+        for (let gy = 0; gy < gridH; gy++) {
+            const my = Math.min(maskHeight - 1, gy * step);
+            const maskRow = my * maskWidth;
+            const gridRow = gy * gridW;
+
+            for (let gx = 0; gx < gridW; gx++) {
+                const mx = Math.min(maskWidth - 1, gx * step);
+                if (maskData[maskRow + mx] > MASK_THRESHOLD) {
+                    grid[gridRow + gx] = 1;
                     foregroundCount++;
 
-                    if (x < minX) {
-                        minX = x;
+                    if (gx < minX) {
+                        minX = gx;
                     }
-                    if (x > maxX) {
-                        maxX = x;
+                    if (gx > maxX) {
+                        maxX = gx;
                     }
-                    if (y < minY) {
-                        minY = y;
+                    if (gy < minY) {
+                        minY = gy;
                     }
-                    if (y > maxY) {
-                        maxY = y;
+                    if (gy > maxY) {
+                        maxY = gy;
                     }
                 }
             }
@@ -336,44 +342,44 @@ export class ContourExtractor {
                 polygon: [],
                 bounds: { x: 0, y: 0, width: 0, height: 0 },
                 confidence,
-                binaryMask,
-                maskWidth,
-                maskHeight,
+                binaryMask: grid,
+                maskWidth: gridW,
+                maskHeight: gridH,
             };
         }
 
-        const rawContour = this.#traceBorder(binaryMask, maskWidth, maskHeight, minX, minY);
+        const rawContour = this.#traceBorder(grid, gridW, gridH, minX, minY);
         const simplified = this.#simplifyRdp(rawContour, SIMPLIFICATION_EPSILON);
 
         const polygon = simplified.map((p) => ({
-            x: Math.max(0, Math.min(1, p.x / maskWidth)),
-            y: Math.max(0, Math.min(1, p.y / maskHeight)),
+            x: Math.max(0, Math.min(1, (p.x * step) / maskWidth)),
+            y: Math.max(0, Math.min(1, (p.y * step) / maskHeight)),
         }));
 
         const bounds = {
-            x: minX / maskWidth,
-            y: minY / maskHeight,
-            width: (maxX - minX + 1) / maskWidth,
-            height: (maxY - minY + 1) / maskHeight,
+            x: Math.max(0, (minX * step) / maskWidth),
+            y: Math.max(0, (minY * step) / maskHeight),
+            width: Math.min(1, ((maxX - minX + 1) * step) / maskWidth),
+            height: Math.min(1, ((maxY - minY + 1) * step) / maskHeight),
         };
 
         return {
             polygon,
             bounds,
             confidence,
-            binaryMask,
-            maskWidth,
-            maskHeight,
+            binaryMask: grid,
+            maskWidth: gridW,
+            maskHeight: gridH,
         };
     }
 
-    #traceBorder(binaryMask, width, height, startX, startY) {
+    #traceBorder(grid, width, height, startX, startY) {
         let firstX = -1;
         let firstY = -1;
 
         for (let y = startY; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                if (binaryMask[y * width + x] === 1) {
+                if (grid[y * width + x] === 1) {
                     firstX = x;
                     firstY = y;
                     break;
@@ -391,17 +397,16 @@ export class ContourExtractor {
         const contour = [];
         let currX = firstX;
         let currY = firstY;
-        let enterDir = 0;
-        const maxSteps = width * height * 2;
+        let checkDir = 7;
+        const maxSteps = 1000;
         let steps = 0;
 
         do {
             contour.push({ x: currX, y: currY });
             let foundNext = false;
 
-            const checkStart = (enterDir + 4 + 1) % 8;
             for (let i = 0; i < 8; i++) {
-                const dir = (checkStart + i) % 8;
+                const dir = (checkDir + i) % 8;
                 const nextX = currX + NEIGHBOR_DX[dir];
                 const nextY = currY + NEIGHBOR_DY[dir];
 
@@ -409,10 +414,10 @@ export class ContourExtractor {
                     continue;
                 }
 
-                if (binaryMask[nextY * width + nextX] === 1) {
+                if (grid[nextY * width + nextX] === 1) {
                     currX = nextX;
                     currY = nextY;
-                    enterDir = dir;
+                    checkDir = (dir + 5) % 8;
                     foundNext = true;
                     break;
                 }
@@ -436,40 +441,49 @@ export class ContourExtractor {
             return points;
         }
 
-        let maxDist = 0;
-        let maxIdx = 0;
-        const last = points.length - 1;
+        const keep = new Uint8Array(points.length);
+        keep[0] = 1;
+        keep[points.length - 1] = 1;
 
-        for (let i = 1; i < last; i++) {
-            const dist = this.#pointToLineDist(points[i], points[0], points[last]);
-            if (dist > maxDist) {
-                maxDist = dist;
-                maxIdx = i;
+        const stack = [[0, points.length - 1]];
+
+        while (stack.length > 0) {
+            const [start, end] = stack.pop();
+            let maxDist = 0;
+            let maxIdx = 0;
+
+            const sx = points[start].x;
+            const sy = points[start].y;
+            const ex = points[end].x;
+            const ey = points[end].y;
+            const dx = ex - sx;
+            const dy = ey - sy;
+            const lenSq = dx * dx + dy * dy;
+
+            for (let i = start + 1; i < end; i++) {
+                let dist;
+                if (lenSq === 0) {
+                    dist = Math.hypot(points[i].x - sx, points[i].y - sy);
+                } else {
+                    dist =
+                        Math.abs(dy * points[i].x - dx * points[i].y + ex * sy - ey * sx) /
+                        Math.sqrt(lenSq);
+                }
+
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    maxIdx = i;
+                }
+            }
+
+            if (maxDist > epsilon) {
+                keep[maxIdx] = 1;
+                stack.push([start, maxIdx]);
+                stack.push([maxIdx, end]);
             }
         }
 
-        if (maxDist > epsilon) {
-            const left = this.#simplifyRdp(points.slice(0, maxIdx + 1), epsilon);
-            const right = this.#simplifyRdp(points.slice(maxIdx), epsilon);
-            return left.slice(0, -1).concat(right);
-        }
-
-        return [points[0], points[last]];
-    }
-
-    #pointToLineDist(point, start, end) {
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const lenSq = dx * dx + dy * dy;
-
-        if (lenSq === 0) {
-            const px = point.x - start.x;
-            const py = point.y - start.y;
-            return Math.sqrt(px * px + py * py);
-        }
-
-        const numerator = Math.abs(dy * point.x - dx * point.y + end.x * start.y - end.y * start.x);
-        return numerator / Math.sqrt(lenSq);
+        return points.filter((_, i) => keep[i] === 1);
     }
 }
 
