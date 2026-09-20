@@ -5,9 +5,15 @@
 
 <PageTitle>Inventory</PageTitle>
 
-<h1>Physical Asset Inventory</h1>
-
-<p>Every item you own, however it got here - scanned or manually added.</p>
+<div class="standard-page">
+<header class="page-header">
+    <div>
+        <div class="page-eyebrow">PHYSICAL CAPITAL</div>
+        <h1>Physical Asset Inventory</h1>
+        <p class="page-subtitle">Every item you own, whether scanned or manually added.</p>
+    </div>
+    <a class="primary-button" href="#add-item">+ Add item</a>
+</header>
 
 @if (_errorMessage is not null)
 {
@@ -20,6 +26,7 @@
 }
 else
 {
+    <section class="page-card">
     <p>
         <strong>Total value: $@_assets.Sum(a => a.CurrentValuation ?? 0).ToString("N2")</strong>
         @if (_assets.Any(a => a.CurrentValuation is null))
@@ -34,7 +41,7 @@ else
     }
     else
     {
-        <table class="table">
+        <table class="table records-table">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -87,9 +94,11 @@ else
             </tbody>
         </table>
     }
+    </section>
 }
 
-<h2>Add Item</h2>
+<section class="page-card" id="add-item">
+<h2 class="page-section-title">Add Item</h2>
 <div class="row g-2">
     <div class="col"><input class="form-control" placeholder="Name" @bind="_newName" /></div>
     <div class="col"><input class="form-control" placeholder="Category" @bind="_newCategory" /></div>
@@ -100,6 +109,8 @@ else
     <div class="col-auto">
         <button class="btn btn-primary" @onclick="AddAsync" disabled="@string.IsNullOrWhiteSpace(_newName)">Add</button>
     </div>
+</div>
+</section>
 </div>
 
 @code {

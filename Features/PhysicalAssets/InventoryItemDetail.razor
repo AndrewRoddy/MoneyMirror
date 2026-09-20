@@ -6,6 +6,7 @@
 
 <PageTitle>@(_asset?.Name ?? "Inventory Item")</PageTitle>
 
+<div class="standard-page">
 @if (_errorMessage is not null)
 {
     <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -20,7 +21,13 @@
 }
 else
 {
-    <h1>@_asset.Name</h1>
+    <header class="page-header">
+        <div>
+            <div class="page-eyebrow">PHYSICAL CAPITAL / INVENTORY</div>
+            <h1>@_asset.Name</h1>
+        </div>
+        <a class="secondary-button" href="/inventory">&larr; Back to inventory</a>
+    </header>
 
     @if (_asset.ImageReference is not null)
     {
@@ -31,7 +38,8 @@ else
             class="mb-3 d-block" />
     }
 
-    <dl class="row">
+    <section class="page-card">
+    <dl class="row mb-0">
         <dt class="col-sm-3">Category</dt>
         <dd class="col-sm-9">@(_asset.Category ?? "—")</dd>
 
@@ -41,6 +49,7 @@ else
         <dt class="col-sm-3">Source</dt>
         <dd class="col-sm-9">@(_asset.IsManuallyAdded ? "Manually added" : "Scanned")</dd>
     </dl>
+    </section>
 
     <div class="d-flex align-items-center gap-2 mb-3">
         <button class="btn btn-outline-primary btn-sm" disabled="@_isRevaluing" @onclick="RevalueAsync">
@@ -53,7 +62,8 @@ else
         <div class="alert alert-danger" role="alert">@_revalueError</div>
     }
 
-    <h2>Valuation History</h2>
+    <section class="page-card">
+    <h2 class="page-section-title">Valuation History</h2>
     @if (_asset.ValuationHistory.Count == 0)
     {
         <p><em>No valuations yet.</em></p>
@@ -78,9 +88,9 @@ else
             }
         </ul>
     }
-
-    <a href="/inventory">&larr; Back to inventory</a>
+    </section>
 }
+</div>
 
 @code {
     [Parameter]
