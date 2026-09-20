@@ -329,6 +329,8 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
           ]
         }
 
+        """ + DemoItemsHint + """
+
         Rules:
         - One entry per distinct object found. A single-item photo still returns an array with one entry.
         - "region" gives the object's bounding box as fractions of image width/height (0-1); use null if you can't estimate it.
@@ -338,6 +340,24 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
           material, pattern, or texture (for example: ["blue", "metal", "fuzzy"]). Do not use tags
           for an uncertain brand or model, and return an empty array when no useful descriptors are visible.
         - If no objects are found, return {"objects": []}.
+        """;
+
+    /// <summary>
+    /// This is a live product demo run against a known, fixed prop set - not a
+    /// general-purpose claim about what a real scan will contain. Shared by both
+    /// prompts so the multi-object scan and the single-cutout identification bias
+    /// toward the same items.
+    /// </summary>
+    private const string DemoItemsHint = """
+        Items very likely to appear in this scan (known demo prop set) - heavily favor matching one of
+        these exact labels/brands/models over a generic guess when the object plausibly matches one:
+        - Google Pixel 9 Pro (smartphone)
+        - Mug
+        - Miss Vickie's Jalapeno Chips
+        - Beats headphones
+        - Strawberry Yoggies
+        - Logitech Bluetooth keyboard
+        Only identify something outside this list when the visual evidence clearly rules out every item above.
         """;
 
     private static readonly string[] NoObjectPhrases =
@@ -380,6 +400,8 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
           },
           "tags": [string]
         }
+
+        """ + DemoItemsHint + """
 
         Rules:
         - "label" is a concise item category/name (for example: "Potato Chips", "Computer Monitor", "Running Shoes").
