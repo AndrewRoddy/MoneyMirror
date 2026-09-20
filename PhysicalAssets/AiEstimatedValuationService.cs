@@ -52,13 +52,16 @@ public class AiEstimatedValuationService : IAssetValuationService
                 "The LLM returned a response that could not be parsed as a valuation estimate.", ex);
         }
 
-        if (estimate is null || estimate.EstimatedValueUsd < 0)
+        if (estimate is null
+            || estimate.EstimatedValueUsd is not { } value
+            || value < 0
+            || string.IsNullOrWhiteSpace(estimate.Reasoning))
         {
             throw new AssetValuationException("The LLM returned an unusable valuation estimate.");
         }
 
         return new AssetValuation(
-            estimate.EstimatedValueUsd,
+            value,
             estimate.Reasoning,
             _timeProvider.GetUtcNow(),
             IsAiEstimated: true);
@@ -112,6 +115,5 @@ public class AiEstimatedValuationService : IAssetValuationService
         return trimmed.Trim();
     }
 
-    private record EstimateResponse(decimal EstimatedValueUsd, string Reasoning);
+    private record EstimateResponse(decimal? EstimatedValueUsd, string? Reasoning);
 }
-
