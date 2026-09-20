@@ -38,7 +38,8 @@ public record LiveScannedItem(
     double Confidence,
     int Width,
     int Height,
-    string? ImageReference = null
+    string? ImageReference = null,
+    byte[]? CutoutBytes = null
 );
 
 public interface ISamSegmentationEngine : IAsyncDisposable

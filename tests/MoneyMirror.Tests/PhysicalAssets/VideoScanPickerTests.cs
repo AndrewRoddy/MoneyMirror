@@ -438,6 +438,21 @@ public sealed class VideoScanPickerTests : IDisposable
             string mediaType,
             CancellationToken cancellationToken = default
         ) => Detect(++_calls, cancellationToken);
+
+        public Task<DetectedAsset> IdentifyCutoutAsync(
+            byte[] imageBytes,
+            string mediaType,
+            CancellationToken cancellationToken = default
+        ) =>
+            Task.FromResult(
+                new DetectedAsset(
+                    "Chair",
+                    0.95,
+                    new BoundingBox(0.1, 0.1, 0.3, 0.3),
+                    new AssetIdentification("Brand", "Model", 0.95),
+                    []
+                )
+            );
     }
 
     private sealed class FakeStorage : IPossessionImageStorage

@@ -19,6 +19,16 @@ public interface IPhysicalAssetDetectionService
     Task<IReadOnlyList<DetectedAsset>> DetectAsync(
         byte[] imageBytes,
         string mediaType,
-        CancellationToken cancellationToken = default);
-}
+        CancellationToken cancellationToken = default
+    );
 
+    /// <summary>
+    /// Identifies a single physical possession from an isolated cutout image (background stripped).
+    /// Focuses on brand, model/flavor/edition, condition, and category tags with high precision.
+    /// </summary>
+    Task<DetectedAsset> IdentifyCutoutAsync(
+        byte[] imageBytes,
+        string mediaType,
+        CancellationToken cancellationToken = default
+    );
+}

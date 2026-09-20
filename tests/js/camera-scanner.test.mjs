@@ -176,3 +176,46 @@ test("normalizePoint converts viewport coordinates to clamped [0, 1] range", () 
     assert.equal(outside.x, 1);
     assert.equal(outside.y, 1);
 });
+
+test("extractCutout creates cropped canvas with polygon clipping and returns blob", async () => {
+    let clipped = false;
+    let drawn = false;
+    const paths = [];
+
+    globalThis.document = {
+        createElement: () => ({
+            width: 0,
+            height: 0,
+            getContext: () => ({
+                beginPath: () => {},
+                moveTo: (x, y) => paths.push({ op: "move", x, y }),
+                lineTo: (x, y) => paths.push({ op: "line", x, y }),
+                closePath: () => {},
+                clip: () => {
+                    clipped = true;
+                },
+                drawImage: () => {
+                    drawn = true;
+                },
+            }),
+            toBlob: (cb) => cb(new Blob(["cutout-png"], { type: "image/png" })),
+        }),
+    };
+
+    const sourceCanvas = { width: 1000, height: 1000 };
+    const mask = [
+        { x: 0.2, y: 0.2 },
+        { x: 0.6, y: 0.2 },
+        { x: 0.6, y: 0.6 },
+        { x: 0.2, y: 0.6 },
+    ];
+    const bounds = { x: 0.2, y: 0.2, width: 0.4, height: 0.4 };
+
+    const blob = await camera.extractCutout(sourceCanvas, mask, bounds);
+
+    assert.ok(blob instanceof Blob);
+    assert.equal(blob.type, "image/png");
+    assert.ok(clipped);
+    assert.ok(drawn);
+    assert.equal(paths.length, 4);
+});

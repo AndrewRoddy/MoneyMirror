@@ -26,7 +26,8 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
     public async Task<IReadOnlyList<DetectedAsset>> DetectAsync(
         byte[] imageBytes,
         string mediaType,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         // Observed live against meta/llama-3.2-11b-vision-instruct: for the same
         // photo it honours "respond with ONLY a single JSON object" about four
@@ -54,27 +55,77 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
             : new AssetDetectionException(message, parseError) { RawResponse = completion };
     }
 
+    public async Task<DetectedAsset> IdentifyCutoutAsync(
+        byte[] imageBytes,
+        string mediaType,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var completion = await RequestAsync(
+            imageBytes,
+            mediaType,
+            SingleItemPrompt,
+            cancellationToken
+        );
+        if (TryParseSingleItem(completion, out var asset, out _))
+        {
+            return asset;
+        }
+
+        completion = await RequestAsync(
+            imageBytes,
+            mediaType,
+            SingleItemRetryPrompt,
+            cancellationToken
+        );
+        if (TryParseSingleItem(completion, out asset, out var parseError))
+        {
+            return asset;
+        }
+
+        var general = await DetectAsync(imageBytes, mediaType, cancellationToken);
+        if (general.Count > 0)
+        {
+            return general[0];
+        }
+
+        const string message =
+            "The vision model returned a response that could not be parsed as a detected item.";
+        throw parseError is null
+            ? new AssetDetectionException(message) { RawResponse = completion }
+            : new AssetDetectionException(message, parseError) { RawResponse = completion };
+    }
+
     private async Task<string> RequestAsync(
         byte[] imageBytes,
         string mediaType,
         string prompt,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         try
         {
-            return await _visionService.DetectAsync(imageBytes, mediaType, prompt, cancellationToken);
+            return await _visionService.DetectAsync(
+                imageBytes,
+                mediaType,
+                prompt,
+                cancellationToken
+            );
         }
         catch (VisionServiceException ex)
         {
             throw new AssetDetectionException(
-                "Failed to detect objects: the vision provider call failed.", ex);
+                "Failed to detect objects: the vision provider call failed.",
+                ex
+            );
         }
     }
 
     private static bool TryParseDetections(
         string completion,
         [NotNullWhen(true)] out IReadOnlyList<DetectedAsset>? detections,
-        out JsonException? parseError)
+        out JsonException? parseError
+    )
     {
         parseError = null;
 
@@ -88,8 +139,10 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         {
             try
             {
-                if (JsonSerializer.Deserialize<DetectionResponse>(candidate, JsonOptions)
-                    is { Objects: { } objects })
+                if (
+                    JsonSerializer.Deserialize<DetectionResponse>(candidate, JsonOptions) is
+                    { Objects: { } objects }
+                )
                 {
                     detections = Normalize(objects);
                     return true;
@@ -107,8 +160,10 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         {
             try
             {
-                if (JsonSerializer.Deserialize<DetectionResponse>(repaired, JsonOptions)
-                    is { Objects: { } repairedObjects })
+                if (
+                    JsonSerializer.Deserialize<DetectionResponse>(repaired, JsonOptions) is
+                    { Objects: { } repairedObjects }
+                )
                 {
                     detections = Normalize(repairedObjects);
                     return true;
@@ -121,6 +176,48 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
         }
 
         detections = null;
+        return false;
+    }
+
+    private static bool TryParseSingleItem(
+        string completion,
+        [NotNullWhen(true)] out DetectedAsset? asset,
+        out JsonException? parseError
+    )
+    {
+        parseError = null;
+        asset = null;
+
+        foreach (var candidate in JsonObjectCandidates(completion))
+        {
+            try
+            {
+                var single = JsonSerializer.Deserialize<DetectedAsset>(candidate, JsonOptions);
+                if (single is not null && !string.IsNullOrWhiteSpace(single.Label))
+                {
+                    asset = single.Tags is null ? single with { Tags = [] } : single;
+                    return true;
+                }
+
+                if (
+                    JsonSerializer.Deserialize<DetectionResponse>(candidate, JsonOptions) is
+                    { Objects: { Count: > 0 } objects }
+                )
+                {
+                    var first = objects[0];
+                    if (first is not null && !string.IsNullOrWhiteSpace(first.Label))
+                    {
+                        asset = first.Tags is null ? first with { Tags = [] } : first;
+                        return true;
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                parseError = ex;
+            }
+        }
+
         return false;
     }
 
@@ -268,6 +365,32 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
 
     private const string RetryPrompt = Prompt + RetrySuffix;
 
+    private const string SingleItemPrompt = """
+        You identify a single physical possession from an isolated cutout photo (background removed).
+        Carefully examine all visible logos, brand text, packaging labels, model badges, materials, and form factors.
+        Respond with ONLY a single JSON object - no markdown code fences, no commentary - matching exactly this shape:
+
+        {
+          "label": string,
+          "confidence": number between 0 and 1,
+          "identification": {
+            "brand": string|null,
+            "model": string|null,
+            "confidence": number between 0 and 1
+          },
+          "tags": [string]
+        }
+
+        Rules:
+        - "label" is a concise item category/name (for example: "Potato Chips", "Computer Monitor", "Running Shoes").
+        - "identification.brand" is the visible or inferred brand/manufacturer (for example: "Miss Vickie's", "Dell", "Nike"). If unknown, set null.
+        - "identification.model" is the specific product name, flavor, or model (for example: "Jalapeño", "UltraSharp U2720Q", "Air Force 1"). If unknown, set null.
+        - "tags" contains visible descriptors, such as color, flavor, material, or packaging (for example: ["green", "bag", "snack", "jalapeno"]).
+        - Never hallucinate brands or models not supported by visual evidence.
+        """;
+
+    private const string SingleItemRetryPrompt = SingleItemPrompt + RetrySuffix;
+
     /// <summary>
     /// Yields every balanced <c>{...}</c> span in <paramref name="text"/>, outermost
     /// first. The model regularly ignores the "JSON only" instruction and precedes
@@ -284,7 +407,6 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
                 yield return candidate;
             }
         }
-
     }
 
     /// <summary>
@@ -349,9 +471,11 @@ public class NvidiaAssetDetectionService : IPhysicalAssetDetectionService
     // there kills the Blazor circuit, which leaves the scan stuck on its
     // spinner, so normalize here and let every caller trust the shape.
     private static IReadOnlyList<DetectedAsset> Normalize(IReadOnlyList<DetectedAsset> objects) =>
-        [.. objects
-            .Where(detected => detected is not null)
-            .Select(detected => detected.Tags is null ? detected with { Tags = [] } : detected)];
+        [
+            .. objects
+                .Where(detected => detected is not null)
+                .Select(detected => detected.Tags is null ? detected with { Tags = [] } : detected),
+        ];
 
     private record DetectionResponse(IReadOnlyList<DetectedAsset> Objects);
 }

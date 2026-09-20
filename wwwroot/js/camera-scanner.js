@@ -156,7 +156,9 @@ export function normalizePoint(clientX, clientY, containerElement, videoElement)
     }
 
     const video =
-        videoElement || containerElement.querySelector?.("video") || containerElement.querySelector?.("canvas");
+        videoElement ||
+        containerElement.querySelector?.("video") ||
+        containerElement.querySelector?.("canvas");
     const videoWidth = video?.videoWidth || video?.width || 0;
     const videoHeight = video?.videoHeight || video?.height || 0;
 
@@ -220,4 +222,65 @@ export async function captureBlob(canvas) {
 
 export async function getCanvasBlob(canvas) {
     return await defaultCapture.toBlob(canvas);
+}
+
+export async function extractCutout(canvas, mask, bounds) {
+    if (!canvas) {
+        throw new Error("Canvas is required for cutout extraction.");
+    }
+
+    let effectiveBounds = bounds;
+    if (!effectiveBounds && mask && mask.length >= 3) {
+        const xs = mask.map((p) => p.x);
+        const ys = mask.map((p) => p.y);
+        const minX = Math.max(0, Math.min(...xs));
+        const minY = Math.max(0, Math.min(...ys));
+        const maxX = Math.min(1, Math.max(...xs));
+        const maxY = Math.min(1, Math.max(...ys));
+        effectiveBounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    }
+
+    const srcW = canvas.width;
+    const srcH = canvas.height;
+
+    const cropX = Math.floor((effectiveBounds?.x || 0) * srcW);
+    const cropY = Math.floor((effectiveBounds?.y || 0) * srcH);
+    const cropW = Math.max(
+        1,
+        Math.min(srcW - cropX, Math.ceil((effectiveBounds?.width || 1) * srcW)),
+    );
+    const cropH = Math.max(
+        1,
+        Math.min(srcH - cropY, Math.ceil((effectiveBounds?.height || 1) * srcH)),
+    );
+
+    const cropCanvas = document.createElement("canvas");
+    cropCanvas.width = cropW;
+    cropCanvas.height = cropH;
+    const ctx = cropCanvas.getContext("2d");
+
+    if (mask && mask.length >= 3) {
+        ctx.beginPath();
+        const startX = mask[0].x * srcW - cropX;
+        const startY = mask[0].y * srcH - cropY;
+        ctx.moveTo(startX, startY);
+        for (let i = 1; i < mask.length; i++) {
+            ctx.lineTo(mask[i].x * srcW - cropX, mask[i].y * srcH - cropY);
+        }
+        ctx.closePath();
+        ctx.clip();
+    }
+
+    ctx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    return new Promise((resolve, reject) => {
+        cropCanvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error("Could not create cutout blob."))),
+            "image/png",
+        );
+    });
+}
+
+export async function getCutoutBlob(canvas, mask, bounds) {
+    return await extractCutout(canvas, mask, bounds);
 }
