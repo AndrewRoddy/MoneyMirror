@@ -81,4 +81,70 @@ public class VideoScanCandidatesTests
         Assert.Empty(detection.Tags);
         Assert.Equal(0, detection.Confidence);
     }
+
+    [Fact]
+    public void Representative_PicksBestObservation_BasedOnQualityAndConfidence()
+    {
+        var candidates = new VideoScanCandidates();
+        var edgeSighting = new DetectedAsset("Chair", 0.6, new BoundingBox(0.01, 0.01, 0.1, 0.1), null, []);
+        var centeredSighting = new DetectedAsset("Chair", 0.95, new BoundingBox(0.05, 0.05, 0.2, 0.2), null, []);
+        var lateSighting = new DetectedAsset("Chair", 0.7, new BoundingBox(0.08, 0.08, 0.2, 0.2), null, []);
+
+        candidates.AddFrame(0, [edgeSighting]);
+        candidates.AddFrame(1, [centeredSighting]);
+        candidates.AddFrame(2, [lateSighting]);
+
+        var candidate = Assert.Single(candidates.Items);
+        Assert.Equal(3, candidate.Observations.Count);
+        Assert.Equal(1, candidate.Representative.FrameIndex);
+        Assert.Equal(0.95, candidate.Representative.Detection.Confidence);
+    }
+
+    [Fact]
+    public void TrackingAcrossPan_MergesOverlappingSightingsWithModerateIoU()
+    {
+        var candidates = new VideoScanCandidates();
+        var frame0Chair = new DetectedAsset("Chair", 0.9, new BoundingBox(0.1, 0.1, 0.4, 0.4), null, []);
+        var frame1Panned = new DetectedAsset("Chair", 0.9, new BoundingBox(0.25, 0.1, 0.4, 0.4), null, []);
+
+        candidates.AddFrame(0, [frame0Chair]);
+        candidates.AddFrame(1, [frame1Panned]);
+
+        var candidate = Assert.Single(candidates.Items);
+        Assert.Equal(2, candidate.Observations.Count);
+    }
+
+    [Fact]
+    public void ValidMask_RejectsInvalidCountsAndCoordinates()
+    {
+        Assert.Null(VideoScanCandidates.ValidMask(null));
+        Assert.Null(VideoScanCandidates.ValidMask([new(0.1, 0.1), new(0.2, 0.2)])); // 2 points < 3
+        Assert.Null(VideoScanCandidates.ValidMask(Enumerable.Range(0, 51).Select(i => new NormalizedPoint(0.1, 0.1)).ToList()));
+        Assert.Null(VideoScanCandidates.ValidMask([new(-0.1, 0.1), new(0.5, 0.5), new(0.2, 0.8)]));
+        Assert.Null(VideoScanCandidates.ValidMask([new(double.NaN, 0.1), new(0.5, 0.5), new(0.2, 0.8)]));
+
+        IReadOnlyList<NormalizedPoint> valid = [new(0.1, 0.1), new(0.5, 0.1), new(0.5, 0.5), new(0.1, 0.5)];
+        var result = VideoScanCandidates.ValidMask(valid);
+        Assert.NotNull(result);
+        Assert.Equal(4, result!.Count);
+    }
+
+    [Fact]
+    public void BoundingBoxFromMask_DerivesRegionWhenRegionIsNull()
+    {
+        var candidates = new VideoScanCandidates();
+        IReadOnlyList<NormalizedPoint> mask = [new(0.1, 0.2), new(0.4, 0.2), new(0.4, 0.6), new(0.1, 0.6)];
+        var asset = new DetectedAsset("Chair", 0.9, null, null, [], mask);
+
+        candidates.AddFrame(0, [asset]);
+
+        var candidate = Assert.Single(candidates.Items);
+        var region = candidate.Representative.Detection.Region;
+        Assert.NotNull(region);
+        Assert.Equal(0.1, region!.X, 3);
+        Assert.Equal(0.2, region.Y, 3);
+        Assert.Equal(0.3, region.Width, 3);
+        Assert.Equal(0.4, region.Height, 3);
+        Assert.NotNull(candidate.Representative.Detection.Mask);
+    }
 }

@@ -50,6 +50,17 @@
         </div>
         <div class="frame-stage">
             <img src="@_frames[_frameIndex].Url" alt="Video frame at @_frames[_frameIndex].Seconds.ToString("F1") seconds" />
+            <svg class="mask-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                @foreach (var pair in CurrentObservations)
+                {
+                    if (pair.Observation.Detection.Mask is { Count: >= 3 } mask)
+                    {
+                        <polygon points="@PolygonPoints(mask)"
+                                 class="item-polygon @(pair.Candidate.Selected ? "selected" : "")"
+                                 @onclick="() => Toggle(pair.Candidate, pair.Observation)" />
+                    }
+                }
+            </svg>
             @foreach (var pair in CurrentObservations)
             {
                 if (pair.Observation.Detection.Region is { } box)
@@ -71,6 +82,10 @@
                         <input type="checkbox" checked="@pair.Candidate.Selected" disabled="@Disabled"
                                @onchange="() => Toggle(pair.Candidate, pair.Observation)" />
                         @pair.Observation.Detection.Label — @pair.Observation.Detection.Confidence.ToString("P0") confidence
+                        @if (pair.Observation.Detection.Mask is not null)
+                        {
+                            <span class="badge bg-secondary ms-1">Segmented</span>
+                        }
                     </label>
                     @if (pair.Observation.Detection.Region is null)
                     {
@@ -85,6 +100,17 @@
                 </li>
             }
         </ul>
+        <div class="d-flex gap-2 my-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" disabled="@Disabled" @onclick="SelectHighConfidence">
+                Select high-confidence items
+            </button>
+            @if (_candidates.Items.Any(c => c.Selected))
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@Disabled" @onclick="DeselectAll">
+                    Deselect all
+                </button>
+            }
+        </div>
         <p>@_candidates.Items.Count(c => c.Selected) selected across all frames. The same item may appear more than once after camera movement; select it once.</p>
         <button type="button" class="btn btn-success" disabled="@(Disabled || !_candidates.Items.Any(c => c.Selected))" @onclick="ContinueAsync">
             Review selected items
@@ -133,10 +159,38 @@
         candidate.StoredImageReference = null;
     }
 
+    private static string PolygonPoints(IReadOnlyList<NormalizedPoint> points) =>
+        string.Join(" ", points.Select(p => FormattableString.Invariant($"{p.X * 100:F1},{p.Y * 100:F1}")));
+
     private void Separate(VideoCandidate candidate, VideoObservation observation)
     {
         if (_busy || Disabled) return;
         _candidates.Separate(candidate, observation);
+    }
+
+    private const double HighConfidenceThreshold = 0.75;
+
+    private void SelectHighConfidence()
+    {
+        if (_busy || Disabled) return;
+        foreach (var candidate in _candidates.Items)
+        {
+            if (candidate.Representative.Detection.Confidence >= HighConfidenceThreshold)
+            {
+                candidate.Selected = true;
+                candidate.StoredImageReference = null;
+            }
+        }
+    }
+
+    private void DeselectAll()
+    {
+        if (_busy || Disabled) return;
+        foreach (var candidate in _candidates.Items)
+        {
+            candidate.Selected = false;
+            candidate.StoredImageReference = null;
+        }
     }
 
     private void Cancel() => _operation?.Cancel();
@@ -222,7 +276,7 @@
                 if (candidate.StoredImageReference is null)
                 {
                     await using var reference = await _module.InvokeAsync<IJSStreamReference>(
-                        "cropStream", _video, observation.FrameIndex, observation.Detection.Region);
+                        "cropStream", _video, observation.FrameIndex, observation.Detection.Region, observation.Detection.Mask);
                     await using var stream = await reference.OpenReadStreamAsync(2 * 1024 * 1024, token);
                     candidate.StoredImageReference = await ImageStorage.SaveAsync(stream, "video-item.jpg", token);
                 }

@@ -60,6 +60,11 @@ beforeEach(() => {
                     drawImage: (...args) => {
                         canvas.drawArgs = args;
                     },
+                    beginPath: () => { canvas.beganPath = true; },
+                    moveTo: (x, y) => { canvas.movedTo = [x, y]; },
+                    lineTo: (x, y) => { canvas.lines = canvas.lines || []; canvas.lines.push([x, y]); },
+                    closePath: () => { canvas.closedPath = true; },
+                    clip: () => { canvas.clipped = true; },
                 }),
                 toBlob(callback, type) {
                     callback(
@@ -115,6 +120,24 @@ test("a selected region produces an item-sized crop; absent region returns the f
     assert.deepEqual(JSON.parse(await crop.text()), { width: 320, height: 180 });
     assert.deepEqual(canvases.at(-1).drawArgs.slice(1), [320, 180, 320, 180, 0, 0, 320, 180]);
     assert.equal(await scan.cropStream(video, 0, null), scan.frameStream(video, 0));
+    scan.dispose(video);
+});
+
+test("a polygon mask clips the canvas path and derives region if absent", async () => {
+    const video = new Video();
+    await scan.prepare(input(), video);
+    const mask = [
+        { x: 0.1, y: 0.1 },
+        { x: 0.3, y: 0.1 },
+        { x: 0.3, y: 0.4 },
+        { x: 0.1, y: 0.4 },
+    ];
+    const crop = await scan.cropStream(video, 0, null, mask);
+    assert.ok(crop);
+    assert.equal(crop.type, "image/jpeg");
+    assert.ok(canvases.at(-1).clipped);
+    assert.ok(canvases.at(-1).beganPath);
+    assert.ok(canvases.at(-1).closedPath);
     scan.dispose(video);
 });
 
