@@ -7,14 +7,18 @@ public class AiSuggestedOccupationMatchingServiceTests
 {
     private class FakeLlmService(string response) : ILlmService
     {
-        public Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default) =>
-            Task.FromResult(response);
+        public Task<string> CompleteAsync(
+            string prompt,
+            CancellationToken cancellationToken = default
+        ) => Task.FromResult(response);
     }
 
     private class ThrowingLlmService : ILlmService
     {
-        public Task<string> CompleteAsync(string prompt, CancellationToken cancellationToken = default) =>
-            throw new LlmServiceException("provider unavailable");
+        public Task<string> CompleteAsync(
+            string prompt,
+            CancellationToken cancellationToken = default
+        ) => throw new LlmServiceException("provider unavailable");
     }
 
     private static readonly ProfessionalProfile SampleProfile = ProfessionalProfile.Empty with
@@ -80,7 +84,9 @@ public class AiSuggestedOccupationMatchingServiceTests
     {
         var service = new AiSuggestedOccupationMatchingService(new FakeLlmService("{}"));
 
-        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+        await Assert.ThrowsAsync<OccupationMatchingException>(() =>
+            service.MatchAsync(SampleProfile)
+        );
     }
 
     [Fact]
@@ -89,7 +95,9 @@ public class AiSuggestedOccupationMatchingServiceTests
         const string json = "{ \"occupations\": [{ \"title\": \"Software Engineer\" }] }";
         var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(json));
 
-        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+        await Assert.ThrowsAsync<OccupationMatchingException>(() =>
+            service.MatchAsync(SampleProfile)
+        );
     }
 
     [Fact]
@@ -104,7 +112,32 @@ public class AiSuggestedOccupationMatchingServiceTests
             """;
         var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(json));
 
-        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+        await Assert.ThrowsAsync<OccupationMatchingException>(() =>
+            service.MatchAsync(SampleProfile)
+        );
+    }
+
+    [Fact]
+    public async Task MatchAsync_ImplausiblySmallCompensationRange_NullsOutBothValuesRatherThanKeepingThem()
+    {
+        // The model sometimes returns an abbreviated figure (e.g. 80,
+        // presumably meaning "$80k") instead of a real annual-salary
+        // number. It's a valid, correctly-ordered positive range, so the
+        // negative/min>max checks don't catch it - it should still be
+        // dropped rather than shown as a nonsensical "$80 - $120".
+        const string json = """
+            {
+              "occupations": [
+                {"title": "Software Engineer", "explanation": "Strong C# background.", "typicalMinUsd": 80, "typicalMaxUsd": 120}
+              ]
+            }
+            """;
+        var service = new AiSuggestedOccupationMatchingService(new FakeLlmService(json));
+
+        var match = Assert.Single(await service.MatchAsync(SampleProfile));
+
+        Assert.Null(match.TypicalMinUsd);
+        Assert.Null(match.TypicalMaxUsd);
     }
 
     [Fact]
@@ -150,7 +183,9 @@ public class AiSuggestedOccupationMatchingServiceTests
     {
         var service = new AiSuggestedOccupationMatchingService(new FakeLlmService("not json"));
 
-        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+        await Assert.ThrowsAsync<OccupationMatchingException>(() =>
+            service.MatchAsync(SampleProfile)
+        );
     }
 
     [Fact]
@@ -158,6 +193,8 @@ public class AiSuggestedOccupationMatchingServiceTests
     {
         var service = new AiSuggestedOccupationMatchingService(new ThrowingLlmService());
 
-        await Assert.ThrowsAsync<OccupationMatchingException>(() => service.MatchAsync(SampleProfile));
+        await Assert.ThrowsAsync<OccupationMatchingException>(() =>
+            service.MatchAsync(SampleProfile)
+        );
     }
 }
