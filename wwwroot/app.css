@@ -1,6 +1,21 @@
 html,
 body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Pitt's brand system pairs a condensed gothic display face (Alternate
+   Gothic, licensed - Oswald stands in as a free equivalent) for headings
+   with Roboto for body copy. Applied globally so every page's headings
+   share one deliberate typographic identity instead of each page
+   defaulting to whatever the browser picks. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: "Oswald", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 600;
 }
 
 a,
@@ -12,6 +27,90 @@ a,
     color: var(--text-inverse);
     background-color: var(--button-primary-bg);
     border-color: var(--button-primary-border);
+}
+.btn-success {
+    color: var(--text-inverse);
+    background-color: var(--positive);
+    border-color: var(--positive);
+}
+.btn-outline-primary {
+    color: var(--brand);
+    border-color: var(--brand);
+}
+.btn-outline-primary:hover {
+    color: var(--text-inverse);
+    background-color: var(--brand);
+    border-color: var(--brand);
+}
+.btn-outline-success {
+    color: var(--positive-text);
+    border-color: var(--positive);
+}
+.btn-outline-success:hover {
+    color: var(--text-inverse);
+    background-color: var(--positive);
+    border-color: var(--positive);
+}
+.btn-outline-danger {
+    color: var(--negative-text);
+    border-color: var(--negative);
+}
+.btn-outline-danger:hover {
+    color: var(--text-inverse);
+    background-color: var(--negative);
+    border-color: var(--negative);
+}
+.btn-outline-warning {
+    color: var(--accent-text);
+    border-color: var(--accent);
+}
+.btn-outline-warning:hover {
+    color: var(--text);
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+.btn-outline-secondary {
+    color: var(--text-muted);
+    border-color: var(--border);
+}
+.btn-outline-secondary:hover {
+    color: var(--text-inverse);
+    background-color: var(--text-muted);
+    border-color: var(--text-muted);
+}
+
+/* Route Bootstrap's stock alert/badge colors through Pitt's role tokens
+   instead of Bootstrap's own blue/red/green/yellow/gray defaults - every
+   page uses these classes, so this is the one place that makes the whole
+   app read as Pitt-branded rather than default Bootstrap. */
+.alert-info {
+    color: var(--brand-strong);
+    background-color: var(--brand-surface);
+    border-color: var(--border);
+}
+.alert-danger {
+    color: var(--negative-text);
+    background-color: var(--negative-surface);
+    border-color: var(--negative);
+}
+.alert-success {
+    color: var(--positive-text);
+    background-color: var(--positive-surface);
+    border-color: var(--positive);
+}
+.alert-warning {
+    color: var(--accent-text);
+    background-color: var(--accent-surface);
+    border-color: var(--accent);
+}
+
+.badge.bg-secondary {
+    background-color: var(--surface-muted);
+    color: var(--text-muted);
+}
+.badge.bg-warning {
+    background-color: var(--accent-surface);
+    color: var(--accent-text);
 }
 
 .btn:focus,
